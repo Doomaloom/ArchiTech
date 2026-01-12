@@ -5,9 +5,9 @@ import { usePathname } from "next/navigation";
 
 const navItems = [
   { label: "Tech Stack", href: "/" },
-  { label: "Page 2", href: "/page2" },
-  { label: "Page 3", href: "/page3" },
-  { label: "Page 4", href: "/page4" },
+  { label: "Architecture", href: "/page2" },
+  { label: "UML", href: "/page3" },
+  { label: "Code", href: "/page4" },
 ];
 
 const isActiveRoute = (pathname, href) => {
