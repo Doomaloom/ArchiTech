@@ -1,5 +1,6 @@
 import "./globals.css";
 import { Sora } from "next/font/google";
+import TopbarNav from "./components/topbar-nav";
 
 const sora = Sora({
   subsets: ["latin"],
@@ -149,12 +150,7 @@ export default function RootLayout({ children }) {
           <header className="topbar" aria-label="Top bar">
             <div className="topbar-content">
               <div className="topbar-spacer" aria-hidden="true" />
-              <nav className="topbar-nav" aria-label="Primary">
-                <span className="nav-pill is-active">Page 1</span>
-                <span className="nav-link">Page 2</span>
-                <span className="nav-link">Page 3</span>
-                <span className="nav-link">Page 4</span>
-              </nav>
+              <TopbarNav />
               <div className="topbar-actions" aria-label="Actions">
                 <button className="circle-button" type="button" aria-label="Search">
                   <svg className="button-icon" viewBox="0 0 24 24" aria-hidden="true">
