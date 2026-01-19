@@ -1860,6 +1860,11 @@ body:has(.imageflow-shell) .page-canvas {
   gap: clamp(10px, 2vw, 16px);
 }
 
+.imageflow-layout.is-code {
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-areas: "drop info";
+}
+
 .imageflow-dropzone {
   grid-area: drop;
   position: relative;
@@ -1884,6 +1889,11 @@ body:has(.imageflow-shell) .page-canvas {
   border-style: solid;
 }
 
+.imageflow-dropzone.is-code {
+  border-style: solid;
+  background: rgba(255, 255, 255, 0.26);
+}
+
 .imageflow-dropzone.is-ready {
   border-color: rgba(249, 115, 22, 0.45);
   background: rgba(255, 255, 255, 0.2);
@@ -1899,6 +1909,95 @@ body:has(.imageflow-shell) .page-canvas {
 .imageflow-dropzone:focus-within {
   outline: 2px solid rgba(249, 115, 22, 0.4);
   outline-offset: 3px;
+}
+
+.imageflow-code-editor {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-height: 0;
+}
+
+
+.imageflow-code-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.35);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.35);
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.imageflow-code-tab {
+  border-radius: 10px;
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  background: rgba(255, 255, 255, 0.55);
+  padding: 6px 10px;
+  font-size: 11px;
+  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.imageflow-code-tab.is-active {
+  background: rgba(249, 115, 22, 0.18);
+  color: #b45309;
+  border-color: rgba(249, 115, 22, 0.6);
+}
+
+
+.imageflow-editor-frame {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.22);
+  border-bottom: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.imageflow-editor-frame .monaco-editor,
+.imageflow-editor-frame .monaco-editor .margin,
+.imageflow-editor-frame .monaco-editor-background,
+.imageflow-editor-frame .monaco-editor .editor-scrollable,
+.imageflow-editor-frame .monaco-editor .monaco-scrollable-element,
+.imageflow-editor-frame .monaco-editor .overflow-guard {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.imageflow-editor-frame .monaco-editor .scroll-decoration {
+  box-shadow: none;
+}
+
+.imageflow-editor-loader {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: #64748b;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.imageflow-drop-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  color: #f8fafc;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 16px;
 }
 
 .imageflow-file-input {
@@ -2027,6 +2126,23 @@ body:has(.imageflow-shell) .page-canvas {
   font-weight: 400;
   padding: 8px 14px;
   cursor: pointer;
+}
+
+.imageflow-secondary-button {
+  align-self: flex-start;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 23, 42, 0.2);
+  background: rgba(255, 255, 255, 0.4);
+  color: #0f172a;
+  font-size: 12px;
+  font-weight: 400;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+.imageflow-secondary-button:hover {
+  border-color: rgba(15, 23, 42, 0.32);
+  background: rgba(255, 255, 255, 0.6);
 }
 
 .imageflow-slider-row {
@@ -2202,6 +2318,156 @@ body:has(.imageflow-shell) .page-canvas {
   -webkit-backdrop-filter: none;
 }
 
+
+.imageflow-file-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: auto;
+  min-height: 0;
+  padding-right: 4px;
+}
+
+.imageflow-file-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.imageflow-file-group-title {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.imageflow-file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.imageflow-file-button {
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #475569;
+  text-align: left;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.imageflow-file-node {
+  width: 100%;
+  padding-left: calc(10px + (var(--indent, 0) * 14px));
+  padding-right: 10px;
+}
+
+.imageflow-file-button.imageflow-file-node,
+.imageflow-file-group-toggle.imageflow-file-node {
+  padding-left: calc(10px + (var(--indent, 0) * 14px));
+}
+
+.imageflow-file-button:hover {
+  background: rgba(15, 23, 42, 0.08);
+}
+
+.imageflow-file-button.is-active {
+  border-color: rgba(249, 115, 22, 0.6);
+  background: rgba(249, 115, 22, 0.16);
+  color: #b45309;
+}
+
+.imageflow-file-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.3);
+  flex-shrink: 0;
+}
+
+.imageflow-file-folder {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.imageflow-file-folder-name {
+  font-size: 12px;
+  color: #475569;
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
+.imageflow-file-icon {
+  min-width: 28px;
+  height: 18px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #0f172a;
+  background: rgba(148, 163, 184, 0.2);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+}
+
+.imageflow-file-icon.is-ts {
+  background: rgba(37, 99, 235, 0.18);
+  border-color: rgba(37, 99, 235, 0.4);
+  color: #1d4ed8;
+}
+
+.imageflow-file-icon.is-js {
+  background: rgba(250, 204, 21, 0.2);
+  border-color: rgba(250, 204, 21, 0.4);
+  color: #b45309;
+}
+
+.imageflow-file-icon.is-css {
+  background: rgba(14, 116, 144, 0.18);
+  border-color: rgba(14, 116, 144, 0.4);
+  color: #0e7490;
+}
+
+.imageflow-file-icon.is-json {
+  background: rgba(22, 163, 74, 0.18);
+  border-color: rgba(22, 163, 74, 0.4);
+  color: #15803d;
+}
+
+.imageflow-file-icon.is-md {
+  background: rgba(100, 116, 139, 0.2);
+  border-color: rgba(100, 116, 139, 0.4);
+  color: #475569;
+}
+
+.imageflow-file-icon.is-svg {
+  background: rgba(249, 115, 22, 0.18);
+  border-color: rgba(249, 115, 22, 0.45);
+  color: #c2410c;
+}
+
+.imageflow-file-icon.is-html {
+  background: rgba(244, 63, 94, 0.18);
+  border-color: rgba(244, 63, 94, 0.4);
+  color: #e11d48;
+}
+
+.imageflow-file-icon.is-text {
+  background: rgba(148, 163, 184, 0.2);
+  border-color: rgba(148, 163, 184, 0.4);
+  color: #64748b;
+}
+
+
 .imageflow-gallery-header {
   display: flex;
   align-items: baseline;
@@ -2308,6 +2574,129 @@ body:has(.imageflow-shell) .page-canvas {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.imageflow-panel-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.45);
+  align-self: flex-start;
+}
+
+.imageflow-switch-button {
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  padding: 6px 12px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: #64748b;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.imageflow-switch-button.is-active {
+  background: rgba(249, 115, 22, 0.2);
+  color: #b45309;
+}
+
+.imageflow-agent {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+}
+
+.imageflow-agent-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.imageflow-agent-messages {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-right: 4px;
+}
+
+.imageflow-agent-bubble {
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  color: #0f172a;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.imageflow-agent-bubble.is-user {
+  align-self: flex-end;
+  background: rgba(15, 118, 110, 0.16);
+  border-color: rgba(15, 118, 110, 0.35);
+}
+
+.imageflow-agent-input {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.imageflow-agent-textarea {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.32);
+  padding: 8px 10px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--imageflow-ink);
+  resize: none;
+}
+
+.imageflow-agent-textarea:focus {
+  outline: none;
+  border-color: rgba(249, 115, 22, 0.45);
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.imageflow-file-group-toggle {
+  border: none;
+  background: transparent;
+  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  cursor: pointer;
+  border-radius: 10px;
+  color: #475569;
+}
+
+.imageflow-file-group-toggle:hover {
+  background: rgba(15, 23, 42, 0.06);
+}
+
+.imageflow-file-chevron {
+  width: 10px;
+  height: 10px;
+  border-right: 2px solid rgba(148, 163, 184, 0.9);
+  border-bottom: 2px solid rgba(148, 163, 184, 0.9);
+  transform: rotate(45deg);
+  transition: transform 160ms ease;
+  margin-top: -2px;
+}
+
+.imageflow-file-chevron.is-collapsed {
+  transform: rotate(-45deg);
 }
 
 .imageflow-field {
