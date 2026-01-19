@@ -51,6 +51,15 @@ body {
   );
   color: #0f172a;
 }
+
+body:has(.imageflow-shell) .topbar {
+  display: none;
+}
+
+body:has(.imageflow-shell) .page-canvas {
+  padding-top: 0;
+}
+
 .app-shell {
   min-height: 100vh;
   position: relative;
@@ -122,6 +131,12 @@ body {
   align-items: center;
   justify-content: center;
   color: #4b5563;
+}
+
+.rail-button.is-active {
+  border-color: rgba(249, 115, 22, 0.5);
+  color: #b45309;
+  box-shadow: none;
 }
 
 .button-icon {
@@ -1832,6 +1847,7 @@ body {
   -webkit-backdrop-filter: none;
 }
 
+
 .imageflow-layout {
   flex: 1;
   min-height: 0;
@@ -1858,6 +1874,14 @@ body {
   overflow: hidden;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
+}
+
+.imageflow-dropzone.is-preview {
+  border-style: solid;
+}
+
+.imageflow-dropzone.is-tree {
+  border-style: solid;
 }
 
 .imageflow-dropzone.is-ready {
@@ -1944,6 +1968,147 @@ body {
   object-fit: cover;
   border-radius: 16px;
   box-shadow: none;
+}
+
+.imageflow-tree {
+  width: 100%;
+  height: 100%;
+}
+
+.imageflow-tree .react-flow {
+  background: transparent;
+}
+
+.imageflow-tree .react-flow__controls {
+  border-radius: 10px;
+  border: 1px solid var(--imageflow-card-border);
+  background: var(--imageflow-card-fill);
+  box-shadow: none;
+}
+
+.imageflow-tree .react-flow__controls-button {
+  border-bottom: 1px solid var(--imageflow-card-border);
+  color: #4b5563;
+}
+
+.imageflow-tree .react-flow__controls-button:last-child {
+  border-bottom: none;
+}
+
+.imageflow-tree .react-flow__handle {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 23, 42, 0.2);
+  background: #ffffff;
+}
+
+.imageflow-tree .react-flow__node-default {
+  border-radius: 12px;
+  border: 1px solid var(--imageflow-card-border);
+  background: var(--imageflow-card-fill);
+  color: #374151;
+  font-size: 12px;
+  padding: 6px 10px;
+}
+
+.imageflow-tree .react-flow__node-default.selected {
+  border-color: rgba(249, 115, 22, 0.6);
+  background: rgba(249, 115, 22, 0.15);
+}
+
+.imageflow-generate-button {
+  align-self: flex-start;
+  border-radius: 999px;
+  border: 1px solid var(--imageflow-card-border);
+  background: var(--imageflow-card-fill);
+  color: #374151;
+  font-size: 12px;
+  font-weight: 400;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+.imageflow-slider-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.imageflow-slider {
+  width: 100%;
+  accent-color: #f59e0b;
+}
+
+.imageflow-previews {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  gap: 10px;
+}
+
+.imageflow-previews--1 {
+  grid-template-columns: 1fr;
+}
+
+.imageflow-previews--2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.imageflow-previews--3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.imageflow-previews--4 {
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+}
+
+.imageflow-previews--5,
+.imageflow-previews--6 {
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+}
+
+.imageflow-preview-card {
+  border-radius: 16px;
+  border: 1px solid var(--imageflow-card-border);
+  background: rgba(255, 255, 255, 0.2);
+  color: #4b5563;
+  font-size: 12px;
+  font-weight: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.imageflow-preview-card.is-selected {
+  border-color: rgba(249, 115, 22, 0.6);
+}
+
+.imageflow-preview-label {
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 11px;
+}
+
+.imageflow-code-placeholder {
+  width: 100%;
+  height: 100%;
+  border-radius: 16px;
+  border: 1px solid var(--imageflow-card-border);
+  background: var(--imageflow-card-fill);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.imageflow-generate-button:hover {
+  border-color: rgba(249, 115, 22, 0.4);
+  background: rgba(249, 115, 22, 0.08);
 }
 
 .imageflow-media-controls {

@@ -22,51 +22,61 @@ export default function RootLayout({ children }) {
             <div className="sidebar-header" aria-hidden="true" />
             <div className="sidebar-body">
               <div className="rail-buttons">
-                <button className="rail-button" type="button" aria-label="Back">
+                <button className="rail-button" type="button" aria-label="Start" data-imageflow-step="start">
                   <svg className="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-                    <path
-                      d="M15 6l-6 6 6 6"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </button>
-                <button className="rail-button" type="button" aria-label="Share">
-                  <svg className="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-                    <path
-                      d="M15 8l-6 4 6 4"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <circle cx="6" cy="12" r="2.5" fill="currentColor" />
-                    <circle cx="18" cy="6.5" r="2.5" fill="currentColor" />
-                    <circle cx="18" cy="17.5" r="2.5" fill="currentColor" />
-                  </svg>
-                </button>
-                <button className="rail-button" type="button" aria-label="Add">
-                  <svg className="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-                    <path
-                      d="M12 6v12M6 12h12"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                </button>
-                <button className="rail-button" type="button" aria-label="Bookmark">
-                  <svg className="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-                    <path
-                      d="M7 5h10v14l-5-3-5 3V5z"
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="7"
                       fill="none"
                       stroke="currentColor"
                       strokeWidth="1.6"
+                    />
+                    <path d="M10 9l5 3-5 3V9z" fill="currentColor" />
+                  </svg>
+                </button>
+                <button className="rail-button" type="button" aria-label="Nodes" data-imageflow-step="nodes">
+                  <svg className="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="6" cy="6" r="2.4" fill="currentColor" />
+                    <circle cx="18" cy="6" r="2.4" fill="currentColor" />
+                    <circle cx="12" cy="18" r="2.4" fill="currentColor" />
+                    <path
+                      d="M8.5 7.5L10.5 10M15.5 7.5L13.5 10M12 10.5V15"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.4"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </button>
+                <button className="rail-button" type="button" aria-label="Preview" data-imageflow-step="preview">
+                  <svg className="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <rect
+                      x="4"
+                      y="5"
+                      width="16"
+                      height="14"
+                      rx="2.5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                    />
+                    <path
+                      d="M4 10h16"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                    />
+                  </svg>
+                </button>
+                <button className="rail-button" type="button" aria-label="Code" data-imageflow-step="code">
+                  <svg className="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                      d="M9 7l-4 5 4 5M15 7l4 5-4 5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
                       strokeLinejoin="round"
                     />
                   </svg>
