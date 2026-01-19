@@ -7,8 +7,15 @@
   --sidebar-divider: transparent;
   --topbar-bg: #e7ebf2;
   --app-bg: #dfe5ee;
-  --page-grad-top: #f9f8f2;
-  --page-grad-bottom: #b7c6e1;
+  --page-grad-top: #dbdbdb;
+  --page-grad-bottom: #b2c0db;
+  /* Imageflow panel controls */
+  --imageflow-panel-fill: rgba(255, 255, 255, 0.05);
+  --imageflow-panel-border: rgba(255, 255, 255, 0.4);
+  --imageflow-card-fill: rgba(255, 255, 255, 0.2);
+  --imageflow-card-border: rgba(255, 255, 255, 0.3);
+  --imageflow-dropzone-fill: rgba(255, 255, 255, 0.2);
+  --imageflow-dropzone-border: rgba(255, 255, 255, 0.3);
 
   --surface: rgba(255, 255, 255, 0.8);
   --glass-strong: rgba(255, 255, 255, 0.3);
@@ -36,7 +43,12 @@ body {
 
 body {
   margin: 0;
-  background: linear-gradient(180deg, var(--page-grad-top), var(--page-grad-bottom));
+  background: linear-gradient(
+    180deg,
+    var(--page-grad-top) 0%,
+    var(--page-grad-top) 50%,
+    var(--page-grad-bottom) 100%
+  );
   color: #0f172a;
 }
 .app-shell {
@@ -102,7 +114,7 @@ body {
   height: 40px;
   border-radius: 999px;
   border: 1px solid rgba(15, 23, 42, 0.08);
-  background: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.4);
   box-shadow: 0 10px 18px rgba(16, 24, 40, 0.08);
   padding: 0;
   cursor: pointer;
@@ -1754,6 +1766,433 @@ body {
   outline-offset: 3px;
 }
 
+@keyframes imageflow-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.imageflow-shell {
+  --imageflow-accent: #f97316;
+  --imageflow-accent-strong: #ea580c;
+  --imageflow-accent-soft: rgba(249, 115, 22, 0.18);
+  --imageflow-teal: #0f766e;
+  --imageflow-teal-soft: rgba(15, 118, 110, 0.14);
+  --imageflow-ink: #1f2937;
+  --imageflow-muted: #6b7280;
+  --imageflow-border: rgba(15, 23, 42, 0.12);
+  --imageflow-surface: rgba(255, 255, 255, 0.78);
+  --imageflow-surface-strong: rgba(255, 255, 255, 0.94);
+  --imageflow-shadow: none;
+  --imageflow-soft-shadow: none;
+  padding: 14px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  color: var(--imageflow-ink);
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 400;
+  isolation: isolate;
+  background: transparent;
+}
+
+.topbar-nav,
+.nav-link,
+.nav-pill {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 400;
+}
+
+.nav-pill {
+  font-weight: 400;
+}
+
+
+.imageflow-panel {
+  width: 100%;
+  height: 100%;
+  border-radius: 30px;
+  background: var(--imageflow-panel-fill);
+  border: 1px solid var(--imageflow-panel-border);
+  padding: clamp(14px, 3.2vw, 24px);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 1;
+  animation: imageflow-panel-in 600ms ease both;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.imageflow-layout {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  grid-template-rows: minmax(0, 3fr) minmax(0, 1fr);
+  grid-template-areas:
+    "drop info"
+    "gallery info";
+  gap: clamp(10px, 2vw, 16px);
+}
+
+.imageflow-dropzone {
+  grid-area: drop;
+  position: relative;
+  height: 100%;
+  border-radius: 18px;
+  border: 1.5px dashed var(--imageflow-dropzone-border);
+  background: var(--imageflow-dropzone-fill);
+  padding: 0;
+  text-align: center;
+  transition: border-color 160ms ease, box-shadow 160ms ease,
+    background 160ms ease, transform 160ms ease;
+  overflow: hidden;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.imageflow-dropzone.is-ready {
+  border-color: rgba(249, 115, 22, 0.45);
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: none;
+}
+
+.imageflow-dropzone.is-dragging {
+  border-color: rgba(15, 118, 110, 0.7);
+  background: rgba(255, 255, 255, 0.28);
+  transform: translateY(-2px);
+}
+
+.imageflow-dropzone:focus-within {
+  outline: 2px solid rgba(249, 115, 22, 0.4);
+  outline-offset: 3px;
+}
+
+.imageflow-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  margin: -1px;
+  clip: rect(0 0 0 0);
+  overflow: hidden;
+}
+
+.imageflow-drop-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  cursor: pointer;
+  height: 100%;
+  justify-content: center;
+  width: 100%;
+}
+
+.imageflow-drop-content:has(.imageflow-preview) {
+  padding: 0;
+}
+
+.imageflow-dropzone .imageflow-preview {
+  margin: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.imageflow-drop-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.3);
+  color: #b45309;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: none;
+}
+
+.imageflow-drop-icon svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
+.imageflow-drop-title {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--imageflow-ink);
+}
+
+.imageflow-drop-meta {
+  font-size: 10px;
+  color: var(--imageflow-muted);
+}
+
+.imageflow-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 16px;
+  box-shadow: none;
+}
+
+.imageflow-media-controls {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  gap: 6px;
+  z-index: 2;
+}
+
+.imageflow-control-button {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.45);
+  color: #4b5563;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 160ms ease, background 160ms ease, border-color 160ms ease;
+}
+
+.imageflow-control-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.imageflow-control-button svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.imageflow-file-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.imageflow-file-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.4);
+  font-size: 11px;
+  font-weight: 400;
+  color: #7c5a45;
+}
+
+.imageflow-file-name {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.imageflow-file-size {
+  font-weight: 400;
+}
+
+.imageflow-file-note {
+  font-size: 11px;
+  color: var(--imageflow-muted);
+}
+
+.imageflow-file-empty {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.imageflow-gallery {
+  grid-area: gallery;
+  border-radius: 18px;
+  border: 1px solid var(--imageflow-card-border);
+  background: var(--imageflow-card-fill);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.imageflow-gallery-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.imageflow-gallery-title {
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7b8794;
+}
+
+.imageflow-gallery-meta {
+  font-size: 11px;
+  color: var(--imageflow-muted);
+}
+
+.imageflow-thumbs {
+  flex: 1;
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+
+.imageflow-thumb {
+  flex: 0 0 23%;
+  height: 100%;
+  min-width: 140px;
+  max-width: 180px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.28);
+  box-shadow: none;
+  overflow: hidden;
+  padding: 0;
+  cursor: pointer;
+}
+
+.imageflow-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.imageflow-thumb.is-empty {
+  flex: 1;
+  min-width: 160px;
+}
+
+.imageflow-thumb.is-active {
+  border-color: rgba(249, 115, 22, 0.5);
+  box-shadow: none;
+}
+
+.imageflow-info {
+  grid-area: info;
+  border-radius: 20px;
+  border: 1px solid var(--imageflow-card-border);
+  background: var(--imageflow-card-fill);
+  padding: clamp(14px, 2.4vw, 20px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.imageflow-info-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.imageflow-info-kicker {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: #9aa5b1;
+  font-weight: 400;
+}
+
+.imageflow-info-title {
+  margin: 0;
+  font-size: clamp(18px, 2.1vw, 24px);
+  font-weight: 500;
+  color: var(--imageflow-ink);
+}
+
+.imageflow-info-subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: var(--imageflow-muted);
+  line-height: 1.5;
+}
+
+.imageflow-info-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.imageflow-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.imageflow-field-label {
+  font-size: 11px;
+  font-weight: 400;
+  color: #667085;
+}
+
+.imageflow-input-field,
+.imageflow-textarea {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.32);
+  padding: 8px 10px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--imageflow-ink);
+  transition: border-color 160ms ease, box-shadow 160ms ease,
+    background 160ms ease;
+}
+
+.imageflow-input-field:focus,
+.imageflow-textarea:focus {
+  outline: none;
+  border-color: rgba(249, 115, 22, 0.35);
+  box-shadow: none;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.imageflow-textarea {
+  resize: vertical;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .imageflow-panel {
+    animation: none;
+  }
+
+  .imageflow-dropzone {
+    transition: none;
+  }
+}
+
 .code-page .sidebar-rail {
   display: none;
 }
@@ -2206,9 +2645,32 @@ body {
     padding: 24px 20px 48px;
   }
 
+  .imageflow-shell {
+    padding: 24px 20px 48px;
+    align-items: stretch;
+  }
+
   .page2-panel,
   .page3-panel {
     border-radius: 22px;
+  }
+
+  .imageflow-panel {
+    border-radius: 22px;
+    height: auto;
+  }
+
+  .imageflow-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+    grid-template-areas:
+      "drop"
+      "gallery"
+      "info";
+  }
+
+  .imageflow-thumbs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .page2-header,
