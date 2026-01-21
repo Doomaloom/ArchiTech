@@ -60,6 +60,23 @@ const getPointerFromEvent = (event, bounds) => {
   };
 };
 
+const getTopLevelSelection = (ids, layout) => {
+  if (!ids?.length || !layout) {
+    return ids ?? [];
+  }
+  const selected = new Set(ids);
+  return ids.filter((id) => {
+    let parentId = layout[id]?.parentId;
+    while (parentId && parentId !== "root") {
+      if (selected.has(parentId)) {
+        return false;
+      }
+      parentId = layout[parentId]?.parentId;
+    }
+    return true;
+  });
+};
+
 const deriveLayoutAxis = (positions) => {
   if (positions.length < 2) {
     return "single";
@@ -693,11 +710,15 @@ export default function useImageToSiteState() {
     return normalizeTransform(elementTransforms[id]);
   };
 
+  const moveTargetIds = useMemo(() => {
+    return getTopLevelSelection(selectedElementIds, baseLayout);
+  }, [baseLayout, selectedElementIds]);
+
   const moveTargets = useMemo(() => {
     if (!isIterationMode || !iterationSiteRef.current) {
       return [];
     }
-    return selectedElementIds
+    return moveTargetIds
       .map((id) =>
         iterationSiteRef.current.querySelector(`[data-gem-id="${id}"]`)
       )
@@ -712,7 +733,7 @@ export default function useImageToSiteState() {
         }
         return true;
       });
-  }, [isIterationMode, iterationSize, selectedElementIds, layerState]);
+  }, [isIterationMode, iterationSize, layerState, moveTargetIds]);
 
   const layerEntries = useMemo(() => {
     return Object.values(baseLayout)
