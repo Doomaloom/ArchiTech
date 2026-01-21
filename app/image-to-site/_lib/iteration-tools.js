@@ -9,6 +9,11 @@ export const ITERATION_TOOL_CONFIG = [
     transform: true,
   },
   {
+    id: "zoom",
+    label: "Zoom",
+    ariaLabel: "Zoom tool",
+  },
+  {
     id: "text",
     label: "Text",
     ariaLabel: "Text tool",

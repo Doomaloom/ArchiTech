@@ -12,6 +12,25 @@ const TOOL_ICONS = {
       />
     </svg>
   ),
+  zoom: (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle
+        cx="11"
+        cy="11"
+        r="6.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+      />
+      <path
+        d="M11 8v6M8 11h6M16.5 16.5l3 3"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  ),
   text: (
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path
@@ -60,19 +79,22 @@ export default function IterationToolbar({
   selectedElementId,
   highlightedIds,
   onToggleHighlight,
+  canDelete,
+  onDeleteSelection,
   showTransformControls,
   onToggleTransformControls,
   showLayers,
   onToggleLayers,
   onRegenerate,
+  showPatch,
   onTogglePatch,
 }) {
   const highlightActive =
     selectedElementId && highlightedIds?.includes(selectedElementId);
 
   return (
-    <div className="imageflow-iteration-toolbar">
-      <div className="imageflow-iteration-toolgroup">
+    <aside className="imageflow-iteration-toolbar imageflow-iteration-rail">
+      <div className="imageflow-iteration-rail-group">
         {ITERATION_TOOL_CONFIG.map((tool) => (
           <button
             key={tool.id}
@@ -88,9 +110,12 @@ export default function IterationToolbar({
           </button>
         ))}
       </div>
-      <div className="imageflow-iteration-toolgroup">
+      <div className="imageflow-iteration-rail-divider" />
+      <div className="imageflow-iteration-rail-group">
         <button
-          className={`imageflow-iteration-tool${highlightActive ? " is-active" : ""}`}
+          className={`imageflow-iteration-tool${
+            highlightActive ? " is-active" : ""
+          }`}
           type="button"
           onClick={onToggleHighlight}
           disabled={!selectedElementId}
@@ -100,6 +125,24 @@ export default function IterationToolbar({
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path
               d="M6 14l4 4 8-8-4-4-8 8zM4 20h7"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+        <button
+          className="imageflow-iteration-tool"
+          type="button"
+          onClick={onDeleteSelection}
+          disabled={!canDelete}
+          aria-label="Delete selection"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M4 7h16M9 7V5h6v2M9 11v6M12 11v6M15 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12"
               fill="none"
               stroke="currentColor"
               strokeWidth="1.6"
@@ -147,13 +190,33 @@ export default function IterationToolbar({
             />
           </svg>
         </button>
-        <button className="imageflow-iteration-action" type="button" onClick={onRegenerate}>
-          Regenerate
-        </button>
-        <button className="imageflow-iteration-action" type="button" onClick={onTogglePatch}>
-          Patch
+        <button
+          className={`imageflow-iteration-tool${showPatch ? " is-active" : ""}`}
+          type="button"
+          onClick={onTogglePatch}
+          aria-label="Toggle patch payload"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M5 6h14v12H5zM8 9h8M8 12h8M8 15h6"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
         </button>
       </div>
-    </div>
+      <div className="imageflow-iteration-rail-actions">
+        <button
+          className="imageflow-iteration-action imageflow-iteration-rail-action"
+          type="button"
+          onClick={onRegenerate}
+        >
+          Regenerate
+        </button>
+      </div>
+    </aside>
   );
 }

@@ -25,6 +25,11 @@ import { getLanguageFromFilename } from "../_lib/language";
 const DEFAULT_TRANSFORM = { x: 0, y: 0, scaleX: 1, scaleY: 1, rotate: 0 };
 const NOTE_RADIUS_MIN = 10;
 const NOTE_PANEL_SIZE = { width: 240, height: 140 };
+const ZOOM_MIN = 0.4;
+const ZOOM_MAX = 3;
+const ZOOM_STEP = 0.2;
+const NUDGE_STEP = 1;
+const NUDGE_STEP_LARGE = 10;
 
 const normalizeTransform = (transform) => ({
   x: transform?.x ?? 0,
@@ -43,20 +48,31 @@ const isDefaultTransform = (transform) =>
 
 const clampValue = (value, min, max) => Math.min(Math.max(value, min), max);
 
-const getPointerFromEvent = (event, bounds) => {
-  const stage = event?.target?.getStage?.();
-  const stagePos = stage?.getPointerPosition?.();
-  if (stagePos) {
-    return stagePos;
+const isEditableTarget = (target) => {
+  if (!target || !target.closest) {
+    return false;
   }
+  return Boolean(
+    target.closest(
+      "input, textarea, select, [contenteditable=''], [contenteditable='true']"
+    )
+  );
+};
+
+const getPointerFromEvent = (
+  event,
+  bounds,
+  panOffset = { x: 0, y: 0 },
+  zoomLevel = 1
+) => {
   const clientX = event?.evt?.clientX ?? event?.clientX;
   const clientY = event?.evt?.clientY ?? event?.clientY;
   if (clientX == null || clientY == null || !bounds) {
     return null;
   }
   return {
-    x: clientX - bounds.left,
-    y: clientY - bounds.top,
+    x: (clientX - bounds.left - panOffset.x) / zoomLevel,
+    y: (clientY - bounds.top - panOffset.y) / zoomLevel,
   };
 };
 
@@ -223,6 +239,7 @@ export default function useImageToSiteState() {
   const iterationPreviewRef = useRef(null);
   const iterationSiteRef = useRef(null);
   const textBaseRef = useRef({});
+  const panStartRef = useRef(null);
   const [iterationTool, setIterationTool] = useState(DEFAULT_ITERATION_TOOL);
   const [showTransformControls, setShowTransformControls] = useState(true);
   const [showLayers, setShowLayers] = useState(true);
@@ -236,9 +253,18 @@ export default function useImageToSiteState() {
   const [selectedElementId, setSelectedElementId] = useState(null);
   const [selectedElementIds, setSelectedElementIds] = useState(() => []);
   const [elementTransforms, setElementTransforms] = useState(() => ({}));
+  const [zoomState, setZoomState] = useState(() => ({
+    zoom: 1,
+    pan: { x: 0, y: 0 },
+  }));
+  const [isSpacePanning, setIsSpacePanning] = useState(false);
+  const [isPanning, setIsPanning] = useState(false);
   const [textEdits, setTextEdits] = useState(() => ({}));
   const [textEditDraft, setTextEditDraft] = useState(null);
   const [layerState, setLayerState] = useState(() => ({}));
+  const [layerFolders, setLayerFolders] = useState(() => ({}));
+  const [layerFolderOrder, setLayerFolderOrder] = useState(() => []);
+  const [deletedLayerIds, setDeletedLayerIds] = useState(() => []);
   const [highlightedIds, setHighlightedIds] = useState(() => []);
   const [baseLayout, setBaseLayout] = useState(() => ({}));
   const [showPatch, setShowPatch] = useState(false);
@@ -496,8 +522,15 @@ export default function useImageToSiteState() {
       element.classList.toggle("is-highlighted", highlightedIds.includes(id));
       element.classList.toggle("is-layer-hidden", Boolean(layer?.hidden));
       element.classList.toggle("is-layer-locked", Boolean(layer?.locked));
+      element.classList.toggle("is-layer-deleted", isLayerDeleted(id));
     });
-  }, [highlightedIds, isIterationMode, layerState, selectedElementIds]);
+  }, [
+    deletedLayerIds,
+    highlightedIds,
+    isIterationMode,
+    layerState,
+    selectedElementIds,
+  ]);
 
   useEffect(() => {
     if (!isIterationMode || !iterationSiteRef.current) {
@@ -643,6 +676,65 @@ export default function useImageToSiteState() {
     setPencilPoints([]);
   }, [isIterationMode]);
 
+  useEffect(() => {
+    if (isIterationMode) {
+      return;
+    }
+    setZoomState({ zoom: 1, pan: { x: 0, y: 0 } });
+    setIsPanning(false);
+    setIsSpacePanning(false);
+    panStartRef.current = null;
+    setLayerFolders({});
+    setLayerFolderOrder([]);
+  }, [isIterationMode]);
+
+  useEffect(() => {
+    if (!Object.keys(baseLayout).length) {
+      return;
+    }
+    setLayerFolders((current) => {
+      let changed = false;
+      const next = {};
+      Object.values(current).forEach((folder) => {
+        const filtered = (folder.layerIds ?? []).filter(
+          (id) => baseLayout[id]
+        );
+        if (filtered.length !== (folder.layerIds ?? []).length) {
+          changed = true;
+        }
+        next[folder.id] = { ...folder, layerIds: filtered };
+      });
+      return changed ? next : current;
+    });
+  }, [baseLayout]);
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.code !== "Space") {
+        return;
+      }
+      if (isEditableTarget(event.target)) {
+        return;
+      }
+      event.preventDefault();
+      setIsSpacePanning(true);
+    };
+    const handleKeyUp = (event) => {
+      if (event.code !== "Space") {
+        return;
+      }
+      setIsSpacePanning(false);
+      setIsPanning(false);
+      panStartRef.current = null;
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, []);
+
   const activeTool =
     ITERATION_TOOL_MAP[iterationTool] ??
     ITERATION_TOOL_MAP[DEFAULT_ITERATION_TOOL];
@@ -650,6 +742,10 @@ export default function useImageToSiteState() {
   const overlayMode = activeTool?.overlay ?? null;
   const isOverlayTool = Boolean(overlayMode);
   const isTextTool = iterationTool === "text";
+  const isZoomTool = iterationTool === "zoom";
+  const zoomLevel = zoomState.zoom;
+  const panOffset = zoomState.pan;
+  const isPanMode = isSpacePanning;
   const canTransform = isIterationMode && Boolean(activeTool?.transform);
   const canBoxSelect = isIterationMode && selectionMode === "box";
 
@@ -673,18 +769,21 @@ export default function useImageToSiteState() {
       padding,
       stageSize.height - NOTE_PANEL_SIZE.height - padding
     );
+    const scaledRadius = pendingAnnotation.radius * zoomLevel;
+    const screenX = pendingAnnotation.x * zoomLevel + panOffset.x;
+    const screenY = pendingAnnotation.y * zoomLevel + panOffset.y;
     const left = clampValue(
-      pendingAnnotation.x + pendingAnnotation.radius + padding,
+      screenX + scaledRadius + padding,
       padding,
       maxLeft
     );
     const top = clampValue(
-      pendingAnnotation.y - pendingAnnotation.radius,
+      screenY - scaledRadius,
       padding,
       maxTop
     );
     return { left, top };
-  }, [pendingAnnotation, stageSize]);
+  }, [panOffset, pendingAnnotation, stageSize, zoomLevel]);
 
   const getLayerMeta = (id) => {
     if (layerState[id]) {
@@ -700,8 +799,14 @@ export default function useImageToSiteState() {
     };
   };
 
+  const deletedLayerSet = useMemo(
+    () => new Set(deletedLayerIds),
+    [deletedLayerIds]
+  );
+
   const isLayerLocked = (id) => getLayerMeta(id).locked;
   const isLayerHidden = (id) => getLayerMeta(id).hidden;
+  const isLayerDeleted = (id) => deletedLayerSet.has(id);
 
   const getTransformState = (id) => {
     if (!id) {
@@ -728,15 +833,22 @@ export default function useImageToSiteState() {
         if (!id) {
           return false;
         }
-        if (isLayerHidden(id) || isLayerLocked(id)) {
+        if (isLayerHidden(id) || isLayerLocked(id) || isLayerDeleted(id)) {
           return false;
         }
         return true;
       });
-  }, [isIterationMode, iterationSize, layerState, moveTargetIds]);
+  }, [
+    deletedLayerIds,
+    isIterationMode,
+    iterationSize,
+    layerState,
+    moveTargetIds,
+  ]);
 
   const layerEntries = useMemo(() => {
     return Object.values(baseLayout)
+      .filter((entry) => !isLayerDeleted(entry.id))
       .map((entry) => ({
         id: entry.id,
         order: entry.order ?? 0,
@@ -744,7 +856,43 @@ export default function useImageToSiteState() {
         layer: getLayerMeta(entry.id),
       }))
       .sort((a, b) => a.order - b.order);
-  }, [baseLayout, layerState]);
+  }, [baseLayout, deletedLayerIds, layerState]);
+
+  const { layerFolderEntries, ungroupedLayerEntries } = useMemo(() => {
+    const entryMap = {};
+    layerEntries.forEach((entry) => {
+      entryMap[entry.id] = entry;
+    });
+    const groupedIds = new Set();
+    const folders = layerFolderOrder
+      .map((id, index) => {
+        const folder = layerFolders[id];
+        if (!folder) {
+          return null;
+        }
+        const layers = (folder.layerIds ?? [])
+          .map((layerId) => entryMap[layerId])
+          .filter(Boolean);
+        layers.forEach((layer) => groupedIds.add(layer.id));
+        const allHidden =
+          layers.length > 0 && layers.every((layer) => layer.layer.hidden);
+        const allLocked =
+          layers.length > 0 && layers.every((layer) => layer.layer.locked);
+        return {
+          id: folder.id,
+          name: folder.name,
+          collapsed: Boolean(folder.collapsed),
+          layers,
+          hidden: allHidden,
+          locked: allLocked,
+          order: folder.order ?? index,
+        };
+      })
+      .filter(Boolean);
+
+    const ungrouped = layerEntries.filter((entry) => !groupedIds.has(entry.id));
+    return { layerFolderEntries: folders, ungroupedLayerEntries: ungrouped };
+  }, [layerEntries, layerFolderOrder, layerFolders]);
 
   const iterationPatch = useMemo(() => {
     if (!isIterationMode || !Object.keys(baseLayout).length) {
@@ -795,6 +943,23 @@ export default function useImageToSiteState() {
         hidden.push(layer.id);
       }
     });
+    const deleted = deletedLayerIds;
+
+    const folderSnapshot = layerFolderOrder
+      .map((id, index) => {
+        const folder = layerFolders[id];
+        if (!folder) {
+          return null;
+        }
+        return {
+          id: folder.id,
+          name: folder.name,
+          layerIds: folder.layerIds ?? [],
+          collapsed: Boolean(folder.collapsed),
+          order: folder.order ?? index,
+        };
+      })
+      .filter(Boolean);
 
     const annotationsSnapshot = annotations.map((annotation) => ({
       id: annotation.id,
@@ -889,6 +1054,8 @@ export default function useImageToSiteState() {
       layers: {
         locked,
         hidden,
+        deleted,
+        groups: folderSnapshot,
       },
       highlights: highlightedIds,
       selection: selectedElementIds,
@@ -899,10 +1066,13 @@ export default function useImageToSiteState() {
   }, [
     annotations,
     baseLayout,
+    deletedLayerIds,
     elementTransforms,
     highlightedIds,
     isIterationMode,
     iterationTool,
+    layerFolderOrder,
+    layerFolders,
     layerState,
     selectedElementIds,
     selectedPreviewIndex,
@@ -911,8 +1081,9 @@ export default function useImageToSiteState() {
   ]);
 
   const updateSelectedElements = (ids) => {
-    setSelectedElementIds(ids);
-    setSelectedElementId(ids[0] ?? null);
+    const nextIds = (ids ?? []).filter((id) => !isLayerDeleted(id));
+    setSelectedElementIds(nextIds);
+    setSelectedElementId(nextIds[0] ?? null);
   };
 
   const ingestFiles = (fileList) => {
@@ -1081,6 +1252,143 @@ export default function useImageToSiteState() {
     setAgentInput("");
   };
 
+  const getPreviewPoint = (event) => {
+    const bounds = iterationPreviewRef.current?.getBoundingClientRect();
+    const clientX = event?.clientX ?? event?.evt?.clientX;
+    const clientY = event?.clientY ?? event?.evt?.clientY;
+    if (!bounds || clientX == null || clientY == null) {
+      return null;
+    }
+    return {
+      x: clientX - bounds.left,
+      y: clientY - bounds.top,
+    };
+  };
+
+  const handleZoomPointer = (event) => {
+    if (!isIterationMode || !isZoomTool) {
+      return;
+    }
+    if (isSpacePanning) {
+      return;
+    }
+    if (event.button != null && event.button !== 0) {
+      return;
+    }
+    const point = getPreviewPoint(event);
+    if (!point) {
+      return;
+    }
+    const direction = event.altKey ? -1 : 1;
+    setZoomState((current) => {
+      const nextZoom = clampValue(
+        current.zoom + direction * ZOOM_STEP,
+        ZOOM_MIN,
+        ZOOM_MAX
+      );
+      if (nextZoom === current.zoom) {
+        return current;
+      }
+      const contentX = (point.x - current.pan.x) / current.zoom;
+      const contentY = (point.y - current.pan.y) / current.zoom;
+      return {
+        zoom: nextZoom,
+        pan: {
+          x: point.x - contentX * nextZoom,
+          y: point.y - contentY * nextZoom,
+        },
+      };
+    });
+  };
+
+  const handleZoomWheel = (event) => {
+    if (!isIterationMode) {
+      return;
+    }
+    if (!event.ctrlKey && !event.metaKey) {
+      return;
+    }
+    const point = getPreviewPoint(event);
+    if (!point) {
+      return;
+    }
+    event.preventDefault();
+    const direction = event.deltaY < 0 ? 1 : -1;
+    setZoomState((current) => {
+      const nextZoom = clampValue(
+        current.zoom + direction * ZOOM_STEP,
+        ZOOM_MIN,
+        ZOOM_MAX
+      );
+      if (nextZoom === current.zoom) {
+        return current;
+      }
+      const contentX = (point.x - current.pan.x) / current.zoom;
+      const contentY = (point.y - current.pan.y) / current.zoom;
+      return {
+        zoom: nextZoom,
+        pan: {
+          x: point.x - contentX * nextZoom,
+          y: point.y - contentY * nextZoom,
+        },
+      };
+    });
+  };
+
+  const handlePanPointerDown = (event) => {
+    if (!isIterationMode) {
+      return;
+    }
+    const allowPan = isSpacePanning || event.button === 1;
+    if (!allowPan) {
+      return;
+    }
+    if (isEditableTarget(event.target)) {
+      return;
+    }
+    const point = getPreviewPoint(event);
+    if (!point) {
+      return;
+    }
+    event.preventDefault();
+    event.currentTarget?.setPointerCapture?.(event.pointerId);
+    panStartRef.current = {
+      x: point.x,
+      y: point.y,
+      panX: zoomState.pan.x,
+      panY: zoomState.pan.y,
+    };
+    setIsPanning(true);
+  };
+
+  const handlePanPointerMove = (event) => {
+    if (!panStartRef.current) {
+      return;
+    }
+    const point = getPreviewPoint(event);
+    if (!point) {
+      return;
+    }
+    const deltaX = point.x - panStartRef.current.x;
+    const deltaY = point.y - panStartRef.current.y;
+    setZoomState((current) => ({
+      ...current,
+      pan: {
+        x: panStartRef.current.panX + deltaX,
+        y: panStartRef.current.panY + deltaY,
+      },
+    }));
+  };
+
+  const handlePanPointerEnd = (event) => {
+    if (!panStartRef.current) {
+      return;
+    }
+    panStartRef.current = null;
+    event?.currentTarget?.releasePointerCapture?.(event.pointerId);
+    setIsPanning(false);
+  };
+
   const updateTextEdits = (id, update) => {
     setTextEdits((current) => {
       const existing = current[id] ?? { text: null, styles: {} };
@@ -1136,7 +1444,7 @@ export default function useImageToSiteState() {
       return;
     }
     const bounds = iterationPreviewRef.current?.getBoundingClientRect();
-    const point = getPointerFromEvent(event, bounds);
+    const point = getPointerFromEvent(event, bounds, panOffset, zoomLevel);
     if (!point) {
       return;
     }
@@ -1164,7 +1472,7 @@ export default function useImageToSiteState() {
       return;
     }
     const bounds = iterationPreviewRef.current?.getBoundingClientRect();
-    const point = getPointerFromEvent(event, bounds);
+    const point = getPointerFromEvent(event, bounds, panOffset, zoomLevel);
     if (!point) {
       return;
     }
@@ -1263,7 +1571,7 @@ export default function useImageToSiteState() {
           return isPointInPolygon(center, polygon);
         })
         .map((entry) => entry.id)
-        .filter((id) => !isLayerHidden(id));
+        .filter((id) => !isLayerHidden(id) && !isLayerDeleted(id));
       updateSelectedElements(selected);
     }
   };
@@ -1298,6 +1606,9 @@ export default function useImageToSiteState() {
     if (!isIterationMode) {
       return;
     }
+    if (isSpacePanning || isPanning) {
+      return;
+    }
     if (!ITERATION_SELECTION_TOOLS.includes(selectionMode)) {
       return;
     }
@@ -1312,7 +1623,7 @@ export default function useImageToSiteState() {
       return;
     }
     const id = target.dataset?.gemId;
-    if (!id || isLayerHidden(id)) {
+    if (!id || isLayerHidden(id) || isLayerDeleted(id)) {
       return;
     }
     if (event.shiftKey) {
@@ -1355,12 +1666,178 @@ export default function useImageToSiteState() {
   };
 
   const handleSelectoEnd = (event) => {
+    if (isSpacePanning || isPanning) {
+      return;
+    }
     const selected = (event.selected ?? [])
       .map((element) => element.dataset?.gemId)
       .filter(Boolean)
-      .filter((id) => !isLayerHidden(id));
+      .filter((id) => !isLayerHidden(id) && !isLayerDeleted(id));
     updateSelectedElements(selected);
   };
+
+  const handleNudgeSelection = (deltaX, deltaY) => {
+    if (!isIterationMode || !selectedElementIds.length) {
+      return;
+    }
+    setElementTransforms((current) => {
+      let changed = false;
+      const next = { ...current };
+      selectedElementIds.forEach((id) => {
+        if (isLayerHidden(id) || isLayerLocked(id) || isLayerDeleted(id)) {
+          return;
+        }
+        const base = normalizeTransform(current[id]);
+        next[id] = {
+          ...base,
+          x: base.x + deltaX,
+          y: base.y + deltaY,
+        };
+        changed = true;
+      });
+      return changed ? next : current;
+    });
+  };
+
+  const handleDeleteSelection = () => {
+    if (!isIterationMode || !selectedElementIds.length) {
+      return;
+    }
+    const toDelete = selectedElementIds.filter((id) => !isLayerDeleted(id));
+    if (!toDelete.length) {
+      updateSelectedElements([]);
+      return;
+    }
+    setDeletedLayerIds((current) => {
+      const next = new Set(current);
+      toDelete.forEach((id) => next.add(id));
+      return Array.from(next);
+    });
+    setHighlightedIds((current) =>
+      current.filter((id) => !toDelete.includes(id))
+    );
+    setLayerFolders((current) => {
+      let changed = false;
+      const next = {};
+      Object.values(current).forEach((folder) => {
+        const filtered = (folder.layerIds ?? []).filter(
+          (layerId) => !toDelete.includes(layerId)
+        );
+        if (filtered.length !== (folder.layerIds ?? []).length) {
+          changed = true;
+        }
+        next[folder.id] = { ...folder, layerIds: filtered };
+      });
+      return changed ? next : current;
+    });
+    setLayerState((current) => {
+      let changed = false;
+      const next = { ...current };
+      toDelete.forEach((id) => {
+        if (next[id]) {
+          delete next[id];
+          changed = true;
+        }
+      });
+      return changed ? next : current;
+    });
+    setTextEdits((current) => {
+      let changed = false;
+      const next = { ...current };
+      toDelete.forEach((id) => {
+        if (next[id]) {
+          delete next[id];
+          changed = true;
+        }
+      });
+      return changed ? next : current;
+    });
+    setElementTransforms((current) => {
+      let changed = false;
+      const next = { ...current };
+      toDelete.forEach((id) => {
+        if (next[id]) {
+          delete next[id];
+          changed = true;
+        }
+      });
+      return changed ? next : current;
+    });
+    setTextEditDraft((current) => {
+      if (current && toDelete.includes(current.id)) {
+        return null;
+      }
+      return current;
+    });
+    toDelete.forEach((id) => {
+      if (textBaseRef.current[id]) {
+        delete textBaseRef.current[id];
+      }
+    });
+    updateSelectedElements([]);
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (!isIterationMode) {
+        return;
+      }
+      if (event.key !== "Backspace" && event.key !== "Delete") {
+        return;
+      }
+      if (isEditableTarget(event.target)) {
+        return;
+      }
+      if (!selectedElementIds.length) {
+        return;
+      }
+      event.preventDefault();
+      handleDeleteSelection();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [handleDeleteSelection, isIterationMode, selectedElementIds]);
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (!isIterationMode) {
+        return;
+      }
+      if (isEditableTarget(event.target)) {
+        return;
+      }
+      if (!selectedElementIds.length) {
+        return;
+      }
+      const step = event.shiftKey ? NUDGE_STEP_LARGE : NUDGE_STEP;
+      let deltaX = 0;
+      let deltaY = 0;
+      switch (event.key) {
+        case "ArrowLeft":
+          deltaX = -step;
+          break;
+        case "ArrowRight":
+          deltaX = step;
+          break;
+        case "ArrowUp":
+          deltaY = -step;
+          break;
+        case "ArrowDown":
+          deltaY = step;
+          break;
+        default:
+          return;
+      }
+      event.preventDefault();
+      handleNudgeSelection(deltaX, deltaY);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [handleNudgeSelection, isIterationMode, selectedElementIds]);
 
   const handleToggleLayerVisibility = (id) => {
     setLayerState((current) => {
@@ -1383,6 +1860,148 @@ export default function useImageToSiteState() {
     setLayerState((current) => {
       const layer = current[id] ?? { id, name: id, locked: false, hidden: false };
       return { ...current, [id]: { ...layer, locked: !layer.locked } };
+    });
+  };
+
+  const handleCreateLayerFolder = () => {
+    const folderId = `folder-${Date.now()}`;
+    const selected = selectedElementIds;
+    const selectedSet = new Set(selected);
+    setLayerFolders((current) => {
+      const folderName = `Folder ${Object.keys(current).length + 1}`;
+      const next = {};
+      Object.values(current).forEach((folder) => {
+        const filtered = (folder.layerIds ?? []).filter(
+          (layerId) => !selectedSet.has(layerId)
+        );
+        next[folder.id] = { ...folder, layerIds: filtered };
+      });
+      next[folderId] = {
+        id: folderId,
+        name: folderName,
+        layerIds: selected,
+        collapsed: false,
+      };
+      return next;
+    });
+    setLayerFolderOrder((current) => [folderId, ...current]);
+  };
+
+  const handleRenameLayerFolder = (folderId, name) => {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      return;
+    }
+    setLayerFolders((current) => {
+      const folder = current[folderId];
+      if (!folder || folder.name === trimmed) {
+        return current;
+      }
+      return { ...current, [folderId]: { ...folder, name: trimmed } };
+    });
+  };
+
+  const handleRemoveLayerFolder = (folderId) => {
+    setLayerFolders((current) => {
+      if (!current[folderId]) {
+        return current;
+      }
+      const next = { ...current };
+      delete next[folderId];
+      return next;
+    });
+    setLayerFolderOrder((current) =>
+      current.filter((entry) => entry !== folderId)
+    );
+  };
+
+  const handleToggleLayerFolderCollapsed = (folderId) => {
+    setLayerFolders((current) => {
+      const folder = current[folderId];
+      if (!folder) {
+        return current;
+      }
+      return {
+        ...current,
+        [folderId]: { ...folder, collapsed: !folder.collapsed },
+      };
+    });
+  };
+
+  const handleAddSelectionToFolder = (folderId) => {
+    if (!selectedElementIds.length) {
+      return;
+    }
+    const selectedSet = new Set(selectedElementIds);
+    setLayerFolders((current) => {
+      const next = {};
+      Object.values(current).forEach((folder) => {
+        const filtered = (folder.layerIds ?? []).filter(
+          (layerId) => !selectedSet.has(layerId)
+        );
+        next[folder.id] = { ...folder, layerIds: filtered };
+      });
+      const target = next[folderId];
+      if (!target) {
+        return current;
+      }
+      const combined = Array.from(
+        new Set([...(target.layerIds ?? []), ...selectedElementIds])
+      );
+      next[folderId] = { ...target, layerIds: combined };
+      return next;
+    });
+  };
+
+  const handleToggleLayerFolderVisibility = (folderId) => {
+    const folder = layerFolders[folderId];
+    if (!folder?.layerIds?.length) {
+      return;
+    }
+    const layerIds = folder.layerIds;
+    const shouldHide = layerIds.some((id) => !isLayerHidden(id));
+    setLayerState((current) => {
+      const next = { ...current };
+      layerIds.forEach((id) => {
+        const layer = current[id] ?? {
+          id,
+          name: id,
+          locked: false,
+          hidden: false,
+        };
+        next[id] = { ...layer, hidden: shouldHide };
+      });
+      return next;
+    });
+    if (shouldHide) {
+      setSelectedElementIds((current) =>
+        current.filter((id) => !layerIds.includes(id))
+      );
+      setHighlightedIds((current) =>
+        current.filter((id) => !layerIds.includes(id))
+      );
+    }
+  };
+
+  const handleToggleLayerFolderLock = (folderId) => {
+    const folder = layerFolders[folderId];
+    if (!folder?.layerIds?.length) {
+      return;
+    }
+    const layerIds = folder.layerIds;
+    const shouldLock = layerIds.some((id) => !isLayerLocked(id));
+    setLayerState((current) => {
+      const next = { ...current };
+      layerIds.forEach((id) => {
+        const layer = current[id] ?? {
+          id,
+          name: id,
+          locked: false,
+          hidden: false,
+        };
+        next[id] = { ...layer, locked: shouldLock };
+      });
+      return next;
     });
   };
 
@@ -1420,9 +2039,16 @@ export default function useImageToSiteState() {
       selectedElementId,
       selectedElementIds,
       elementTransforms,
+      zoomLevel: zoomState.zoom,
+      panOffset: zoomState.pan,
+      isSpacePanning,
+      isPanning,
       textEdits,
       textEditDraft,
       layerState,
+      layerFolders,
+      layerFolderOrder,
+      deletedLayerIds,
       highlightedIds,
       baseLayout,
       showPatch,
@@ -1450,12 +2076,19 @@ export default function useImageToSiteState() {
       overlayMode,
       isOverlayTool,
       isTextTool,
+      isZoomTool,
+      zoomLevel,
+      panOffset,
+      isPanMode,
+      isPanning,
       canTransform,
       canBoxSelect,
       stageSize,
       notePosition,
       moveTargets,
       layerEntries,
+      layerFolderEntries,
+      ungroupedLayerEntries,
       iterationPatch,
     },
     refs: {
@@ -1497,6 +2130,11 @@ export default function useImageToSiteState() {
       handleEditorChange,
       handleToggleFolder,
       handleAgentSend,
+      handleZoomPointer,
+      handleZoomWheel,
+      handlePanPointerDown,
+      handlePanPointerMove,
+      handlePanPointerEnd,
       handleTextContentChange,
       handleTextStyleChange,
       handleResetTextEdit,
@@ -1509,8 +2147,16 @@ export default function useImageToSiteState() {
       handleToggleHighlight,
       updateElementTransform,
       handleSelectoEnd,
+      handleDeleteSelection,
       handleToggleLayerVisibility,
       handleToggleLayerLock,
+      handleCreateLayerFolder,
+      handleRenameLayerFolder,
+      handleRemoveLayerFolder,
+      handleToggleLayerFolderCollapsed,
+      handleAddSelectionToFolder,
+      handleToggleLayerFolderVisibility,
+      handleToggleLayerFolderLock,
       getTransformState,
     },
   };
