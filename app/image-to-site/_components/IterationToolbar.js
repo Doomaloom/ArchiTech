@@ -1,0 +1,159 @@
+import { ITERATION_TOOL_CONFIG } from "../_lib/iteration-tools";
+
+const TOOL_ICONS = {
+  cursor: (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M5 4l7 16 2.5-6L20 12 5 4z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+    </svg>
+  ),
+  text: (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M6 6h12M12 6v12M8 18h8"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  ),
+  pencil: (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M4 20l4-1 9-9-3-3-9 9-1 4z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M13 5l3 3"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  ),
+  note: (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M5 6h14v9H8l-3 3V6z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+    </svg>
+  ),
+};
+
+export default function IterationToolbar({
+  iterationTool,
+  onToolChange,
+  selectedElementId,
+  highlightedIds,
+  onToggleHighlight,
+  showTransformControls,
+  onToggleTransformControls,
+  showLayers,
+  onToggleLayers,
+  onRegenerate,
+  onTogglePatch,
+}) {
+  const highlightActive =
+    selectedElementId && highlightedIds?.includes(selectedElementId);
+
+  return (
+    <div className="imageflow-iteration-toolbar">
+      <div className="imageflow-iteration-toolgroup">
+        {ITERATION_TOOL_CONFIG.map((tool) => (
+          <button
+            key={tool.id}
+            className={`imageflow-iteration-tool${
+              iterationTool === tool.id ? " is-active" : ""
+            }`}
+            type="button"
+            onClick={() => onToolChange(tool.id)}
+            aria-pressed={iterationTool === tool.id}
+            aria-label={tool.ariaLabel}
+          >
+            {TOOL_ICONS[tool.id] ?? null}
+          </button>
+        ))}
+      </div>
+      <div className="imageflow-iteration-toolgroup">
+        <button
+          className={`imageflow-iteration-tool${highlightActive ? " is-active" : ""}`}
+          type="button"
+          onClick={onToggleHighlight}
+          disabled={!selectedElementId}
+          aria-pressed={Boolean(highlightActive)}
+          aria-label="Toggle highlight"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M6 14l4 4 8-8-4-4-8 8zM4 20h7"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+        <button
+          className={`imageflow-iteration-tool${
+            showTransformControls ? " is-active" : ""
+          }`}
+          type="button"
+          onClick={onToggleTransformControls}
+          aria-pressed={showTransformControls}
+          aria-label="Toggle transform controls"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect
+              x="5"
+              y="5"
+              width="14"
+              height="14"
+              rx="2"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+            />
+          </svg>
+        </button>
+        <button
+          className={`imageflow-iteration-tool${showLayers ? " is-active" : ""}`}
+          type="button"
+          onClick={onToggleLayers}
+          aria-pressed={showLayers}
+          aria-label="Toggle layers panel"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M12 4l8 4-8 4-8-4 8-4zM4 12l8 4 8-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+        <button className="imageflow-iteration-action" type="button" onClick={onRegenerate}>
+          Regenerate
+        </button>
+        <button className="imageflow-iteration-action" type="button" onClick={onTogglePatch}>
+          Patch
+        </button>
+      </div>
+    </div>
+  );
+}
