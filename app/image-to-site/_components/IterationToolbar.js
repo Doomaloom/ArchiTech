@@ -12,6 +12,24 @@ const TOOL_ICONS = {
       />
     </svg>
   ),
+  pan: (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M12 4v16M4 12h16"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+      <path
+        d="M12 4l-2.5 2.5M12 4l2.5 2.5M12 20l-2.5-2.5M12 20l2.5-2.5M4 12l2.5-2.5M4 12l2.5 2.5M20 12l-2.5-2.5M20 12l-2.5 2.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  ),
   zoom: (
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <circle

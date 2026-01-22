@@ -28,8 +28,19 @@ const NOTE_PANEL_SIZE = { width: 240, height: 140 };
 const ZOOM_MIN = 0.4;
 const ZOOM_MAX = 3;
 const ZOOM_STEP = 0.2;
+const HISTORY_LIMIT = 60;
+const HISTORY_DEBOUNCE_MS = 320;
 const NUDGE_STEP = 1;
 const NUDGE_STEP_LARGE = 10;
+const GUIDE_COLORS = ["#f97316", "#0ea5e9", "#14b8a6", "#22c55e", "#f59e0b"];
+const VIEW_MODE_HASHES = new Set([
+  "start",
+  "nodes",
+  "preview",
+  "selected",
+  "iterate",
+  "code",
+]);
 
 const normalizeTransform = (transform) => ({
   x: transform?.x ?? 0,
@@ -240,9 +251,26 @@ export default function useImageToSiteState() {
   const iterationSiteRef = useRef(null);
   const textBaseRef = useRef({});
   const panStartRef = useRef(null);
+  const historyLockRef = useRef(false);
+  const historyLabelRef = useRef("Edit");
+  const historyTimerRef = useRef(null);
+  const guideColorIndexRef = useRef(0);
+  const hashSyncRef = useRef({
+    lastWritten: "",
+    isApplying: false,
+    initialized: false,
+  });
   const [iterationTool, setIterationTool] = useState(DEFAULT_ITERATION_TOOL);
   const [showTransformControls, setShowTransformControls] = useState(true);
   const [showLayers, setShowLayers] = useState(true);
+  const [showHistory, setShowHistory] = useState(false);
+  const [showTextPanel, setShowTextPanel] = useState(true);
+  const [showGrid, setShowGrid] = useState(true);
+  const [snapToGrid, setSnapToGrid] = useState(true);
+  const [showGuides, setShowGuides] = useState(true);
+  const [snapToGuides, setSnapToGuides] = useState(true);
+  const [gridSize, setGridSize] = useState(24);
+  const [guides, setGuides] = useState(() => []);
   const [isDrawing, setIsDrawing] = useState(false);
   const [draftCircle, setDraftCircle] = useState(null);
   const [pendingAnnotation, setPendingAnnotation] = useState(null);
@@ -282,6 +310,11 @@ export default function useImageToSiteState() {
     }))
   );
   const [edges, , onEdgesChange] = useEdgesState(DEMO_EDGES);
+  const [historyState, setHistoryState] = useState(() => ({
+    past: [],
+    present: null,
+    future: [],
+  }));
 
   const hasFile = Boolean(fileMeta);
   const dropTitle = hasFile
@@ -386,6 +419,49 @@ export default function useImageToSiteState() {
       });
     };
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const applyHash = () => {
+      const hash = window.location.hash.replace("#", "");
+      if (!VIEW_MODE_HASHES.has(hash) || hash === viewMode) {
+        return;
+      }
+      hashSyncRef.current.isApplying = true;
+      setViewMode(hash);
+    };
+    if (!hashSyncRef.current.initialized) {
+      hashSyncRef.current.initialized = true;
+      applyHash();
+    }
+    window.addEventListener("hashchange", applyHash);
+    return () => {
+      window.removeEventListener("hashchange", applyHash);
+    };
+  }, [viewMode]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    if (!VIEW_MODE_HASHES.has(viewMode)) {
+      return;
+    }
+    if (hashSyncRef.current.isApplying) {
+      hashSyncRef.current.isApplying = false;
+      return;
+    }
+    const nextHash = `#${viewMode}`;
+    if (hashSyncRef.current.lastWritten === nextHash) {
+      return;
+    }
+    if (window.location.hash !== nextHash) {
+      window.history.replaceState(null, "", nextHash);
+    }
+    hashSyncRef.current.lastWritten = nextHash;
+  }, [viewMode]);
 
   useEffect(() => {
     const buttons = Array.from(
@@ -674,6 +750,7 @@ export default function useImageToSiteState() {
     setNoteDraft("");
     setIsPencilDrawing(false);
     setPencilPoints([]);
+    setShowTextPanel(true);
   }, [isIterationMode]);
 
   useEffect(() => {
@@ -743,9 +820,10 @@ export default function useImageToSiteState() {
   const isOverlayTool = Boolean(overlayMode);
   const isTextTool = iterationTool === "text";
   const isZoomTool = iterationTool === "zoom";
+  const isPanTool = iterationTool === "pan";
   const zoomLevel = zoomState.zoom;
   const panOffset = zoomState.pan;
-  const isPanMode = isSpacePanning;
+  const isPanMode = isSpacePanning || isPanTool;
   const canTransform = isIterationMode && Boolean(activeTool?.transform);
   const canBoxSelect = isIterationMode && selectionMode === "box";
 
@@ -755,6 +833,22 @@ export default function useImageToSiteState() {
     }
     return siteBounds;
   }, [iterationSize, siteBounds]);
+
+  const verticalGuides = useMemo(
+    () =>
+      guides
+        .filter((guide) => guide.axis === "vertical")
+        .map((guide) => guide.position),
+    [guides]
+  );
+
+  const horizontalGuides = useMemo(
+    () =>
+      guides
+        .filter((guide) => guide.axis === "horizontal")
+        .map((guide) => guide.position),
+    [guides]
+  );
 
   const notePosition = useMemo(() => {
     if (!pendingAnnotation) {
@@ -1080,11 +1174,223 @@ export default function useImageToSiteState() {
     textEdits,
   ]);
 
+  const getHistorySignature = (snapshot) => JSON.stringify(snapshot);
+
+  const cloneHistorySnapshot = (snapshot) => {
+    if (typeof structuredClone === "function") {
+      return structuredClone(snapshot);
+    }
+    return JSON.parse(JSON.stringify(snapshot));
+  };
+
+  const buildHistorySnapshot = () => ({
+    elementTransforms,
+    textEdits,
+    annotations,
+    layerState,
+    layerFolders,
+    layerFolderOrder,
+    deletedLayerIds,
+    highlightedIds,
+  });
+
+  const applyHistorySnapshot = (snapshot) => {
+    setElementTransforms(snapshot?.elementTransforms ?? {});
+    setTextEdits(snapshot?.textEdits ?? {});
+    setAnnotations(snapshot?.annotations ?? []);
+    setLayerState(snapshot?.layerState ?? {});
+    setLayerFolders(snapshot?.layerFolders ?? {});
+    setLayerFolderOrder(snapshot?.layerFolderOrder ?? []);
+    setDeletedLayerIds(snapshot?.deletedLayerIds ?? []);
+    setHighlightedIds(snapshot?.highlightedIds ?? []);
+    updateSelectedElements([]);
+  };
+
+  const commitHistory = (label = "Edit") => {
+    if (!isIterationMode || historyLockRef.current) {
+      return;
+    }
+    const snapshot = buildHistorySnapshot();
+    const signature = getHistorySignature(snapshot);
+    setHistoryState((current) => {
+      if (current.present?.signature === signature) {
+        return current;
+      }
+      const entry = {
+        id: `history-${Date.now()}`,
+        label,
+        timestamp: new Date().toISOString(),
+        snapshot: cloneHistorySnapshot(snapshot),
+        signature,
+      };
+      const nextPast = current.present
+        ? [...current.past, current.present]
+        : current.past;
+      const trimmedPast = nextPast.slice(-HISTORY_LIMIT);
+      return {
+        past: trimmedPast,
+        present: entry,
+        future: [],
+      };
+    });
+  };
+
+  const scheduleHistoryCommit = (label) => {
+    if (!isIterationMode || historyLockRef.current) {
+      return;
+    }
+    if (label) {
+      historyLabelRef.current = label;
+    }
+    const nextLabel = historyLabelRef.current || "Edit";
+    if (historyTimerRef.current) {
+      clearTimeout(historyTimerRef.current);
+    }
+    historyTimerRef.current = setTimeout(() => {
+      commitHistory(nextLabel);
+      historyLabelRef.current = "Edit";
+    }, HISTORY_DEBOUNCE_MS);
+  };
+
+  useEffect(() => {
+    if (!isIterationMode || !Object.keys(baseLayout).length) {
+      return;
+    }
+    scheduleHistoryCommit();
+    return () => {
+      if (historyTimerRef.current) {
+        clearTimeout(historyTimerRef.current);
+      }
+    };
+  }, [
+    annotations,
+    baseLayout,
+    deletedLayerIds,
+    elementTransforms,
+    highlightedIds,
+    isIterationMode,
+    layerFolderOrder,
+    layerFolders,
+    layerState,
+    textEdits,
+  ]);
+
+  useEffect(() => {
+    if (!isIterationMode) {
+      if (historyTimerRef.current) {
+        clearTimeout(historyTimerRef.current);
+      }
+      historyLockRef.current = false;
+      historyLabelRef.current = "Edit";
+      setHistoryState({ past: [], present: null, future: [] });
+    }
+  }, [isIterationMode]);
+
+  const historyEntries = useMemo(() => {
+    const entries = [...historyState.past];
+    if (historyState.present) {
+      entries.push(historyState.present);
+    }
+    return entries;
+  }, [historyState]);
+
+  const activeHistoryId = historyState.present?.id ?? null;
+  const canUndo = historyState.past.length > 0;
+  const canRedo = historyState.future.length > 0;
+
   const updateSelectedElements = (ids) => {
     const nextIds = (ids ?? []).filter((id) => !isLayerDeleted(id));
     setSelectedElementIds(nextIds);
     setSelectedElementId(nextIds[0] ?? null);
   };
+
+  const handleUndoHistory = () => {
+    let snapshotToApply = null;
+    setHistoryState((current) => {
+      if (!current.present || !current.past.length) {
+        return current;
+      }
+      const previous = current.past[current.past.length - 1];
+      snapshotToApply = previous.snapshot;
+      const nextPast = current.past.slice(0, -1);
+      return {
+        past: nextPast,
+        present: previous,
+        future: [current.present, ...current.future],
+      };
+    });
+    if (snapshotToApply) {
+      historyLockRef.current = true;
+      applyHistorySnapshot(snapshotToApply);
+      queueMicrotask(() => {
+        historyLockRef.current = false;
+      });
+    }
+  };
+
+  const handleRedoHistory = () => {
+    let snapshotToApply = null;
+    setHistoryState((current) => {
+      if (!current.present || !current.future.length) {
+        return current;
+      }
+      const nextEntry = current.future[0];
+      snapshotToApply = nextEntry.snapshot;
+      const nextPast = [...current.past, current.present].slice(-HISTORY_LIMIT);
+      return {
+        past: nextPast,
+        present: nextEntry,
+        future: current.future.slice(1),
+      };
+    });
+    if (snapshotToApply) {
+      historyLockRef.current = true;
+      applyHistorySnapshot(snapshotToApply);
+      queueMicrotask(() => {
+        historyLockRef.current = false;
+      });
+    }
+  };
+
+  const handleClearHistory = () => {
+    if (historyTimerRef.current) {
+      clearTimeout(historyTimerRef.current);
+    }
+    setHistoryState({ past: [], present: null, future: [] });
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (!isIterationMode) {
+        return;
+      }
+      if (isEditableTarget(event.target)) {
+        return;
+      }
+      if (!event.ctrlKey && !event.metaKey) {
+        return;
+      }
+      const key = event.key.toLowerCase();
+      if (key === "z" && !event.shiftKey) {
+        event.preventDefault();
+        handleUndoHistory();
+        return;
+      }
+      if (key === "z" && event.shiftKey) {
+        event.preventDefault();
+        handleRedoHistory();
+        return;
+      }
+      if (key === "y") {
+        event.preventDefault();
+        handleRedoHistory();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [handleRedoHistory, handleUndoHistory, isIterationMode]);
 
   const ingestFiles = (fileList) => {
     const files = Array.from(fileList ?? []);
@@ -1265,6 +1571,42 @@ export default function useImageToSiteState() {
     };
   };
 
+  const getPreviewCenter = () => {
+    const bounds = iterationPreviewRef.current?.getBoundingClientRect();
+    if (!bounds) {
+      return null;
+    }
+    return {
+      x: bounds.width / 2,
+      y: bounds.height / 2,
+    };
+  };
+
+  const applyZoom = (point, direction) => {
+    if (!point) {
+      return;
+    }
+    setZoomState((current) => {
+      const nextZoom = clampValue(
+        current.zoom + direction * ZOOM_STEP,
+        ZOOM_MIN,
+        ZOOM_MAX
+      );
+      if (nextZoom === current.zoom) {
+        return current;
+      }
+      const contentX = (point.x - current.pan.x) / current.zoom;
+      const contentY = (point.y - current.pan.y) / current.zoom;
+      return {
+        zoom: nextZoom,
+        pan: {
+          x: point.x - contentX * nextZoom,
+          y: point.y - contentY * nextZoom,
+        },
+      };
+    });
+  };
+
   const handleZoomPointer = (event) => {
     if (!isIterationMode || !isZoomTool) {
       return;
@@ -1280,25 +1622,7 @@ export default function useImageToSiteState() {
       return;
     }
     const direction = event.altKey ? -1 : 1;
-    setZoomState((current) => {
-      const nextZoom = clampValue(
-        current.zoom + direction * ZOOM_STEP,
-        ZOOM_MIN,
-        ZOOM_MAX
-      );
-      if (nextZoom === current.zoom) {
-        return current;
-      }
-      const contentX = (point.x - current.pan.x) / current.zoom;
-      const contentY = (point.y - current.pan.y) / current.zoom;
-      return {
-        zoom: nextZoom,
-        pan: {
-          x: point.x - contentX * nextZoom,
-          y: point.y - contentY * nextZoom,
-        },
-      };
-    });
+    applyZoom(point, direction);
   };
 
   const handleZoomWheel = (event) => {
@@ -1314,32 +1638,14 @@ export default function useImageToSiteState() {
     }
     event.preventDefault();
     const direction = event.deltaY < 0 ? 1 : -1;
-    setZoomState((current) => {
-      const nextZoom = clampValue(
-        current.zoom + direction * ZOOM_STEP,
-        ZOOM_MIN,
-        ZOOM_MAX
-      );
-      if (nextZoom === current.zoom) {
-        return current;
-      }
-      const contentX = (point.x - current.pan.x) / current.zoom;
-      const contentY = (point.y - current.pan.y) / current.zoom;
-      return {
-        zoom: nextZoom,
-        pan: {
-          x: point.x - contentX * nextZoom,
-          y: point.y - contentY * nextZoom,
-        },
-      };
-    });
+    applyZoom(point, direction);
   };
 
   const handlePanPointerDown = (event) => {
     if (!isIterationMode) {
       return;
     }
-    const allowPan = isSpacePanning || event.button === 1;
+    const allowPan = isSpacePanning || isPanTool || event.button === 1;
     if (!allowPan) {
       return;
     }
@@ -1361,21 +1667,42 @@ export default function useImageToSiteState() {
     setIsPanning(true);
   };
 
+  useEffect(() => {
+    if (!isIterationMode) {
+      return;
+    }
+    const element = iterationPreviewRef.current;
+    if (!element) {
+      return;
+    }
+    const handleWheel = (event) => {
+      if (!event.ctrlKey && !event.metaKey) {
+        return;
+      }
+      event.preventDefault();
+    };
+    element.addEventListener("wheel", handleWheel, { passive: false });
+    return () => {
+      element.removeEventListener("wheel", handleWheel);
+    };
+  }, [isIterationMode]);
+
   const handlePanPointerMove = (event) => {
-    if (!panStartRef.current) {
+    const start = panStartRef.current;
+    if (!start) {
       return;
     }
     const point = getPreviewPoint(event);
     if (!point) {
       return;
     }
-    const deltaX = point.x - panStartRef.current.x;
-    const deltaY = point.y - panStartRef.current.y;
+    const deltaX = point.x - start.x;
+    const deltaY = point.y - start.y;
     setZoomState((current) => ({
       ...current,
       pan: {
-        x: panStartRef.current.panX + deltaX,
-        y: panStartRef.current.panY + deltaY,
+        x: start.panX + deltaX,
+        y: start.panY + deltaY,
       },
     }));
   };
@@ -1387,6 +1714,64 @@ export default function useImageToSiteState() {
     panStartRef.current = null;
     event?.currentTarget?.releasePointerCapture?.(event.pointerId);
     setIsPanning(false);
+  };
+
+  const getNextGuideColor = () => {
+    const index = guideColorIndexRef.current;
+    guideColorIndexRef.current = (index + 1) % GUIDE_COLORS.length;
+    return GUIDE_COLORS[index] ?? GUIDE_COLORS[0];
+  };
+
+  const handleCreateGuide = (axis, position) => {
+    const maxSize = axis === "vertical" ? stageSize.width : stageSize.height;
+    if (!maxSize) {
+      return null;
+    }
+    const rawPosition = position ?? maxSize / 2;
+    const nextPosition = clampValue(roundValue(rawPosition), 0, maxSize);
+    const id = `guide-${axis}-${Date.now()}`;
+    setGuides((current) => [
+      ...current,
+      {
+        id,
+        axis,
+        position: nextPosition,
+        color: getNextGuideColor(),
+      },
+    ]);
+    setShowGuides(true);
+    return id;
+  };
+
+  const handleAddGuide = (axis) => {
+    handleCreateGuide(axis);
+  };
+
+  const handleUpdateGuide = (id, position) => {
+    setGuides((current) =>
+      current.map((guide) =>
+        guide.id === id
+          ? {
+              ...guide,
+              position: clampValue(
+                roundValue(position),
+                0,
+                guide.axis === "vertical" ? stageSize.width : stageSize.height
+              ),
+              color: guide.color ?? GUIDE_COLORS[0],
+            }
+          : guide
+      )
+    );
+  };
+
+  const handleRemoveGuide = (id) => {
+    setGuides((current) => current.filter((guide) => guide.id !== id));
+  };
+
+  const handleClearGuides = () => {
+    setGuides([]);
+    guideColorIndexRef.current = 0;
   };
 
   const updateTextEdits = (id, update) => {
@@ -1408,6 +1793,7 @@ export default function useImageToSiteState() {
     if (!textEditDraft?.id) {
       return;
     }
+    scheduleHistoryCommit("Text edit");
     setTextEditDraft((current) =>
       current ? { ...current, text: value } : current
     );
@@ -1421,6 +1807,7 @@ export default function useImageToSiteState() {
     if (typeof value === "number" && Number.isNaN(value)) {
       return;
     }
+    scheduleHistoryCommit("Text edit");
     setTextEditDraft((current) =>
       current ? { ...current, [key]: value } : current
     );
@@ -1431,6 +1818,7 @@ export default function useImageToSiteState() {
     if (!textEditDraft?.id) {
       return;
     }
+    scheduleHistoryCommit("Text reset");
     setTextEdits((current) => {
       const next = { ...current };
       delete next[textEditDraft.id];
@@ -1529,6 +1917,7 @@ export default function useImageToSiteState() {
         setDraftCircle(null);
         return;
       }
+      scheduleHistoryCommit("Annotation");
       const nextAnnotation = {
         id: `note-${Date.now()}`,
         x: draftCircle.x,
@@ -1580,6 +1969,7 @@ export default function useImageToSiteState() {
     if (!pendingAnnotation) {
       return;
     }
+    scheduleHistoryCommit("Annotation");
     setAnnotations((current) =>
       current.map((annotation) =>
         annotation.id === pendingAnnotation.id
@@ -1595,6 +1985,7 @@ export default function useImageToSiteState() {
     if (!pendingAnnotation) {
       return;
     }
+    scheduleHistoryCommit("Annotation");
     setAnnotations((current) =>
       current.filter((annotation) => annotation.id !== pendingAnnotation.id)
     );
@@ -1644,6 +2035,7 @@ export default function useImageToSiteState() {
     if (!selectedElementId) {
       return;
     }
+    scheduleHistoryCommit("Highlight");
     setHighlightedIds((current) =>
       current.includes(selectedElementId)
         ? current.filter((id) => id !== selectedElementId)
@@ -1655,6 +2047,7 @@ export default function useImageToSiteState() {
     if (!id) {
       return;
     }
+    scheduleHistoryCommit("Transform");
     setElementTransforms((current) => {
       const base = normalizeTransform(current[id]);
       const merged = { ...base, ...nextTransform };
@@ -1680,6 +2073,7 @@ export default function useImageToSiteState() {
     if (!isIterationMode || !selectedElementIds.length) {
       return;
     }
+    scheduleHistoryCommit("Move");
     setElementTransforms((current) => {
       let changed = false;
       const next = { ...current };
@@ -1703,6 +2097,7 @@ export default function useImageToSiteState() {
     if (!isIterationMode || !selectedElementIds.length) {
       return;
     }
+    scheduleHistoryCommit("Delete");
     const toDelete = selectedElementIds.filter((id) => !isLayerDeleted(id));
     if (!toDelete.length) {
       updateSelectedElements([]);
@@ -1839,7 +2234,39 @@ export default function useImageToSiteState() {
     };
   }, [handleNudgeSelection, isIterationMode, selectedElementIds]);
 
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (!isIterationMode) {
+        return;
+      }
+      if (!event.ctrlKey && !event.metaKey) {
+        return;
+      }
+      if (isEditableTarget(event.target)) {
+        return;
+      }
+      const point = getPreviewCenter();
+      if (!point) {
+        return;
+      }
+      if (event.key === "+" || event.key === "=" || event.code === "NumpadAdd") {
+        event.preventDefault();
+        applyZoom(point, 1);
+        return;
+      }
+      if (event.key === "-" || event.code === "NumpadSubtract") {
+        event.preventDefault();
+        applyZoom(point, -1);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [applyZoom, getPreviewCenter, isIterationMode]);
+
   const handleToggleLayerVisibility = (id) => {
+    scheduleHistoryCommit("Layer");
     setLayerState((current) => {
       const layer = current[id] ?? { id, name: id, locked: false, hidden: false };
       const nextLayer = { ...layer, hidden: !layer.hidden };
@@ -1857,6 +2284,7 @@ export default function useImageToSiteState() {
   };
 
   const handleToggleLayerLock = (id) => {
+    scheduleHistoryCommit("Layer");
     setLayerState((current) => {
       const layer = current[id] ?? { id, name: id, locked: false, hidden: false };
       return { ...current, [id]: { ...layer, locked: !layer.locked } };
@@ -1864,6 +2292,7 @@ export default function useImageToSiteState() {
   };
 
   const handleCreateLayerFolder = () => {
+    scheduleHistoryCommit("Layer");
     const folderId = `folder-${Date.now()}`;
     const selected = selectedElementIds;
     const selectedSet = new Set(selected);
@@ -1892,6 +2321,7 @@ export default function useImageToSiteState() {
     if (!trimmed) {
       return;
     }
+    scheduleHistoryCommit("Layer");
     setLayerFolders((current) => {
       const folder = current[folderId];
       if (!folder || folder.name === trimmed) {
@@ -1902,6 +2332,7 @@ export default function useImageToSiteState() {
   };
 
   const handleRemoveLayerFolder = (folderId) => {
+    scheduleHistoryCommit("Layer");
     setLayerFolders((current) => {
       if (!current[folderId]) {
         return current;
@@ -1916,6 +2347,7 @@ export default function useImageToSiteState() {
   };
 
   const handleToggleLayerFolderCollapsed = (folderId) => {
+    scheduleHistoryCommit("Layer");
     setLayerFolders((current) => {
       const folder = current[folderId];
       if (!folder) {
@@ -1932,6 +2364,7 @@ export default function useImageToSiteState() {
     if (!selectedElementIds.length) {
       return;
     }
+    scheduleHistoryCommit("Layer");
     const selectedSet = new Set(selectedElementIds);
     setLayerFolders((current) => {
       const next = {};
@@ -1958,6 +2391,7 @@ export default function useImageToSiteState() {
     if (!folder?.layerIds?.length) {
       return;
     }
+    scheduleHistoryCommit("Layer");
     const layerIds = folder.layerIds;
     const shouldHide = layerIds.some((id) => !isLayerHidden(id));
     setLayerState((current) => {
@@ -1988,6 +2422,7 @@ export default function useImageToSiteState() {
     if (!folder?.layerIds?.length) {
       return;
     }
+    scheduleHistoryCommit("Layer");
     const layerIds = folder.layerIds;
     const shouldLock = layerIds.some((id) => !isLayerLocked(id));
     setLayerState((current) => {
@@ -2029,6 +2464,14 @@ export default function useImageToSiteState() {
       iterationTool,
       showTransformControls,
       showLayers,
+      showHistory,
+      showTextPanel,
+      showGrid,
+      snapToGrid,
+      showGuides,
+      snapToGuides,
+      gridSize,
+      guides,
       isDrawing,
       draftCircle,
       pendingAnnotation,
@@ -2090,6 +2533,12 @@ export default function useImageToSiteState() {
       layerFolderEntries,
       ungroupedLayerEntries,
       iterationPatch,
+      verticalGuides,
+      horizontalGuides,
+      historyEntries,
+      activeHistoryId,
+      canUndo,
+      canRedo,
     },
     refs: {
       iterationRef,
@@ -2110,6 +2559,13 @@ export default function useImageToSiteState() {
       setIterationTool,
       setShowTransformControls,
       setShowLayers,
+      setShowHistory,
+      setShowTextPanel,
+      setShowGrid,
+      setSnapToGrid,
+      setShowGuides,
+      setSnapToGuides,
+      setGridSize,
       setShowPatch,
       setNoteDraft,
       setSelectedElementId,
@@ -2135,6 +2591,11 @@ export default function useImageToSiteState() {
       handlePanPointerDown,
       handlePanPointerMove,
       handlePanPointerEnd,
+      handleCreateGuide,
+      handleAddGuide,
+      handleUpdateGuide,
+      handleRemoveGuide,
+      handleClearGuides,
       handleTextContentChange,
       handleTextStyleChange,
       handleResetTextEdit,
@@ -2148,6 +2609,9 @@ export default function useImageToSiteState() {
       updateElementTransform,
       handleSelectoEnd,
       handleDeleteSelection,
+      handleUndoHistory,
+      handleRedoHistory,
+      handleClearHistory,
       handleToggleLayerVisibility,
       handleToggleLayerLock,
       handleCreateLayerFolder,

@@ -60,6 +60,15 @@ body:has(.imageflow-shell) .page-canvas {
   padding-top: 0;
 }
 
+body:has(.imageflow-iteration):has(#imageflow-sidebar-toggle:checked) .sidebar-nav {
+  display: none;
+}
+
+body:has(.imageflow-iteration):has(#imageflow-sidebar-toggle:checked)
+  .sidebar-footer-actions {
+  display: none;
+}
+
 .app-shell {
   min-height: 100vh;
   position: relative;
@@ -70,7 +79,6 @@ body:has(.imageflow-shell) .page-canvas {
   top: 0;
   left: var(--sidebar-offset);
   height: 100vh;
-  width: var(--sidebar-width);
   background: transparent;
   padding: var(--sidebar-padding);
   display: flex;
@@ -86,6 +94,9 @@ body:has(.imageflow-shell) .page-canvas {
   width: 100%;
   background: transparent;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .sidebar-body {
@@ -94,6 +105,31 @@ body:has(.imageflow-shell) .page-canvas {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  min-height: 0;
+}
+
+.sidebar-nav,
+.sidebar-footer {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+body:has(.imageflow-iteration) .sidebar-rail {
+  --sidebar-scrollbar-offset: 10px;
+}
+
+body:has(.imageflow-iteration) .sidebar-nav,
+body:has(.imageflow-iteration) .sidebar-footer {
+  width: 100%;
+  box-sizing: content-box;
+  padding-right: var(--sidebar-scrollbar-offset, 10px);
+}
+
+body:has(.imageflow-iteration) .sidebar-footer {
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
 }
 
 .sidebar-header-text {
@@ -117,6 +153,146 @@ body:has(.imageflow-shell) .page-canvas {
   padding-bottom: 12px;
 }
 
+.sidebar-page-slot {
+  display: none;
+}
+
+body:has(.imageflow-iteration) .sidebar-page-slot {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-x: hidden;
+  padding: 2px 0 6px;
+}
+
+body:has(.imageflow-iteration):not(:has(#imageflow-sidebar-toggle:checked))
+  .imageflow-sidebar-content {
+  display: none;
+}
+
+.imageflow-sidebar-panel {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  min-height: 0;
+  overflow-x: hidden;
+  padding: 2px 0 6px;
+}
+
+.imageflow-sidebar-content {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 0;
+  flex: 1;
+  padding: 0;
+}
+
+.imageflow-sidebar-tools {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow: hidden;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.imageflow-sidebar-tools-scroll {
+  width: 100%;
+  box-sizing: content-box;
+  padding: 4px var(--sidebar-scrollbar-offset, 10px) 6px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(249, 115, 22, 0.55) transparent;
+}
+
+.imageflow-sidebar-tools-scroll::-webkit-scrollbar {
+  width: 1px;
+}
+
+.imageflow-sidebar-tools-scroll::-webkit-scrollbar-thumb {
+  background: rgba(249, 115, 22, 0.7);
+  border-radius: 999px;
+}
+
+.imageflow-sidebar-tools-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.imageflow-sidebar-tools-scroll .rail-buttons {
+  width: 100%;
+  align-items: center;
+}
+
+
+.imageflow-sidebar-group {
+  gap: 10px;
+}
+
+.imageflow-sidebar-divider {
+  width: 28px;
+  height: 1px;
+  background: rgba(15, 23, 42, 0.12);
+}
+
+.imageflow-sidebar-divider-spacer {
+  margin-top: auto;
+}
+
+.imageflow-sidebar-nodes {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  overflow-x: hidden;
+}
+
+.imageflow-sidebar-nodes-title {
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(15, 23, 42, 0.45);
+}
+
+.imageflow-sidebar-nodes-list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  overflow-x: hidden;
+  padding: 2px 0 6px;
+  box-sizing: border-box;
+}
+
+.imageflow-rail-node {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.imageflow-rail-node-label {
+  pointer-events: none;
+}
+
 .circle-button,
 .rail-button {
   width: 40px;
@@ -133,6 +309,11 @@ body:has(.imageflow-shell) .page-canvas {
   color: #4b5563;
 }
 
+.rail-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .rail-button.is-active {
   border-color: rgba(249, 115, 22, 0.5);
   color: #b45309;
@@ -143,6 +324,118 @@ body:has(.imageflow-shell) .page-canvas {
   width: 18px;
   height: 18px;
   display: block;
+}
+
+.imageflow-sidebar-toggle {
+  margin-top: 0;
+  width: 34px;
+  height: 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
+  position: relative;
+  align-items: center;
+  justify-content: center;
+  display: inline-flex;
+}
+
+.imageflow-sidebar-panel {
+  padding-bottom: 12px;
+}
+
+.imageflow-sidebar-divider-spacer {
+  margin-top: 0;
+}
+.imageflow-sidebar-toggle-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.imageflow-sidebar-toggle-track {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  padding: 1px;
+  cursor: pointer;
+  position: relative;
+}
+
+.imageflow-sidebar-toggle-track::before {
+  content: "";
+  position: absolute;
+  top: 1px;
+  bottom: 1px;
+  left: 1px;
+  width: 14px;
+  border-radius: 999px;
+  background: rgba(249, 115, 22, 0.2);
+  border: 1px solid rgba(249, 115, 22, 0.3);
+  transition: transform 180ms ease;
+}
+
+.imageflow-sidebar-toggle-input:checked
+  + .imageflow-sidebar-toggle-track::before {
+  transform: translateX(16px);
+}
+
+.imageflow-sidebar-toggle-input:focus-visible + .imageflow-sidebar-toggle-track {
+  outline: 2px solid rgba(249, 115, 22, 0.4);
+  outline-offset: 2px;
+}
+
+.imageflow-sidebar-toggle-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(249, 115, 22, 0.65);
+}
+
+.imageflow-sidebar-toggle-block {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.imageflow-sidebar-toggle-label {
+  display: flex;
+  gap: 8px;
+  font-size: 7px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(180, 83, 9, 0.9);
+}
+
+.imageflow-sidebar-toggle-label .is-tools,
+.imageflow-sidebar-toggle-label .is-nav {
+  display: none;
+}
+
+body:has(.imageflow-iteration):has(#imageflow-sidebar-toggle:checked)
+  .imageflow-sidebar-toggle-label
+  .is-tools {
+  display: inline-flex;
+}
+
+body:has(.imageflow-iteration):not(:has(#imageflow-sidebar-toggle:checked))
+  .imageflow-sidebar-toggle-label
+  .is-nav {
+  display: inline-flex;
+}
+
+body:has(.imageflow-iteration) .imageflow-sidebar-toggle-block {
+  display: flex;
+}
+
+body:has(.imageflow-iteration):has(#imageflow-sidebar-toggle:checked)
+  .imageflow-sidebar-toggle-block {
+  padding-right: 18px;
 }
 
 .topbar {
@@ -1805,7 +2098,7 @@ body:has(.imageflow-shell) .page-canvas {
   --imageflow-surface-strong: rgba(255, 255, 255, 0.94);
   --imageflow-shadow: none;
   --imageflow-soft-shadow: none;
-  padding: 14px;
+  padding: 3px 3px 3px 14px;
   height: 100%;
   display: flex;
   align-items: center;
@@ -1832,12 +2125,17 @@ body:has(.imageflow-shell) .page-canvas {
 
 
 .imageflow-panel {
+  --imageflow-panel-padding: clamp(14px, 3.2vw, 24px);
+  --imageflow-ruler-size: 12px;
+  --imageflow-ruler-gap: 8px;
+  --imageflow-menu-height: 28px;
+  --imageflow-menu-gap: 8px;
   width: 100%;
   height: 100%;
   border-radius: 30px;
   background: var(--imageflow-panel-fill);
   border: 1px solid var(--imageflow-panel-border);
-  padding: clamp(14px, 3.2vw, 24px);
+  padding: 14px var(--imageflow-panel-padding);
   display: flex;
   flex-direction: column;
   position: relative;
@@ -1845,6 +2143,203 @@ body:has(.imageflow-shell) .page-canvas {
   animation: imageflow-panel-in 600ms ease both;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
+}
+
+.imageflow-menu-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  margin-bottom: var(--imageflow-menu-gap);
+  min-height: var(--imageflow-menu-height);
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(15, 23, 42, 0.7);
+}
+
+.imageflow-menu {
+  position: relative;
+}
+
+.imageflow-menu-trigger {
+  list-style: none;
+  cursor: pointer;
+  border-radius: 999px;
+  padding: 4px 8px;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.imageflow-menu-trigger::-webkit-details-marker {
+  display: none;
+}
+
+.imageflow-menu[open] .imageflow-menu-trigger,
+.imageflow-menu-trigger:hover {
+  background: rgba(255, 255, 255, 0.5);
+  color: rgba(15, 23, 42, 0.85);
+}
+
+.imageflow-menu-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 160px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+  z-index: 10;
+}
+
+.imageflow-menu-item {
+  border: none;
+  background: transparent;
+  text-align: left;
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  color: #0f172a;
+  cursor: pointer;
+  transition: background 160ms ease;
+}
+
+.imageflow-menu-item:hover {
+  background: rgba(249, 115, 22, 0.15);
+}
+
+.imageflow-menu-divider {
+  height: 1px;
+  background: rgba(15, 23, 42, 0.12);
+  margin: 4px 4px;
+}
+
+.imageflow-rulers {
+  position: static;
+}
+
+.imageflow-ruler {
+  position: relative;
+  pointer-events: auto;
+  user-select: none;
+  touch-action: none;
+  background: rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 6;
+}
+
+.imageflow-ruler-horizontal {
+  height: var(--imageflow-ruler-size);
+  margin-bottom: var(--imageflow-ruler-gap);
+  position: relative;
+  overflow: visible;
+  cursor: row-resize;
+}
+
+.imageflow-ruler-vertical {
+  width: var(--imageflow-ruler-size);
+  position: absolute;
+  top: calc(
+    var(--imageflow-panel-padding) + var(--imageflow-menu-height) +
+      var(--imageflow-menu-gap) + var(--imageflow-ruler-size) +
+      var(--imageflow-ruler-gap)
+  );
+  bottom: var(--imageflow-panel-padding);
+  left: calc(
+    var(--imageflow-panel-padding) - var(--imageflow-ruler-size) - 4px
+  );
+  overflow: visible;
+  cursor: col-resize;
+}
+
+.imageflow-ruler-scale {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  font-size: 8px;
+  line-height: 1;
+  color: rgba(15, 23, 42, 0.6);
+  overflow: visible;
+}
+
+.imageflow-ruler-mark {
+  position: absolute;
+}
+
+.imageflow-ruler-mark::after {
+  content: "";
+  position: absolute;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.imageflow-ruler-mark.is-horizontal {
+  top: 0;
+  height: 100%;
+}
+
+.imageflow-ruler-mark.is-horizontal::after {
+  bottom: 1px;
+  left: 0;
+  width: 1px;
+  height: 5px;
+}
+
+.imageflow-ruler-mark.is-horizontal.is-mid::after {
+  height: 7px;
+}
+
+.imageflow-ruler-mark.is-horizontal.is-major::after {
+  height: 10px;
+}
+
+.imageflow-ruler-mark.is-vertical {
+  left: 0;
+  width: 100%;
+}
+
+.imageflow-ruler-mark.is-vertical::after {
+  right: 1px;
+  top: 0;
+  height: 1px;
+  width: 5px;
+}
+
+.imageflow-ruler-mark.is-vertical.is-mid::after {
+  width: 7px;
+}
+
+.imageflow-ruler-mark.is-vertical.is-major::after {
+  width: 10px;
+}
+
+.imageflow-ruler-label {
+  position: absolute;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.imageflow-ruler-label.is-horizontal {
+  top: 0;
+  left: 4px;
+  transform: translateX(0);
+}
+
+.imageflow-ruler-label.is-vertical {
+  top: 0;
+  left: calc(100% + 4px);
+  transform: translateY(-50%);
+  transform-origin: left top;
 }
 
 
@@ -2278,6 +2773,41 @@ body:has(.imageflow-shell) .page-canvas {
   grid-area: dock;
 }
 
+.imageflow-iteration-panel-tabs {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 3;
+}
+
+.imageflow-iteration-panel-tab,
+.imageflow-iteration-layers-tab {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  border-radius: 999px;
+  border: 1px solid rgba(15, 23, 42, 0.15);
+  background: rgba(255, 255, 255, 0.85);
+  color: #334155;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  padding: 10px 8px;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.imageflow-iteration-panel-tab:hover,
+.imageflow-iteration-layers-tab:hover {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(15, 23, 42, 0.25);
+  transform: rotate(180deg) translateX(-2px);
+}
+
 .imageflow-iteration-stage {
   position: relative;
   min-width: 0;
@@ -2296,6 +2826,8 @@ body:has(.imageflow-shell) .page-canvas {
   overflow: hidden;
   background: linear-gradient(135deg, rgba(249, 250, 251, 0.9), rgba(226, 232, 240, 0.7));
   z-index: 1;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .imageflow-iteration-preview.is-zoom-tool {
@@ -2322,6 +2854,56 @@ body:has(.imageflow-shell) .page-canvas {
   will-change: transform;
 }
 
+.imageflow-iteration-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(
+      rgba(148, 163, 184, 0.18) 1px,
+      transparent 1px
+    ),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.18) 1px, transparent 1px);
+  background-size: var(--grid-size, 24px) var(--grid-size, 24px);
+  opacity: 0.5;
+  z-index: 1;
+}
+
+.imageflow-iteration-guides {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.imageflow-guide-line {
+  position: absolute;
+  pointer-events: auto;
+  background: var(--guide-color, rgba(255, 255, 255, 0.85));
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2),
+    0 6px 18px rgba(15, 23, 42, 0.18);
+  mix-blend-mode: screen;
+}
+
+.imageflow-guide-line::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+}
+
+.imageflow-guide-line.is-vertical {
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  cursor: col-resize;
+}
+
+.imageflow-guide-line.is-horizontal {
+  left: 0;
+  right: 0;
+  height: 1px;
+  cursor: row-resize;
+}
+
 .imageflow-iteration-label {
   position: absolute;
   bottom: 18px;
@@ -2330,6 +2912,22 @@ body:has(.imageflow-shell) .page-canvas {
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: rgba(15, 23, 42, 0.5);
+  pointer-events: none;
+}
+
+.imageflow-iteration-zoom-indicator {
+  position: absolute;
+  bottom: 18px;
+  right: 18px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: rgba(255, 255, 255, 0.8);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(15, 23, 42, 0.7);
   pointer-events: none;
 }
 
@@ -2344,6 +2942,12 @@ body:has(.imageflow-shell) .page-canvas {
   margin: 0 auto;
   pointer-events: auto;
   user-select: none;
+  -webkit-user-select: none;
+}
+
+.imageflow-iteration-site * {
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .imageflow-iteration-site.is-annotating {
@@ -2747,7 +3351,8 @@ body:has(.imageflow-shell) .page-canvas {
   flex-direction: column;
   gap: 12px;
   padding: 12px;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .imageflow-iteration-dock-resizer {
@@ -2779,9 +3384,53 @@ body:has(.imageflow-shell) .page-canvas {
   opacity: 1;
 }
 
+.imageflow-dock-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex-shrink: 0;
+}
+
+.imageflow-dock-panel > :first-child {
+  flex: 1;
+  min-height: 0;
+}
+
+.imageflow-dock-panel-resizer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 8px;
+  cursor: ns-resize;
+  touch-action: none;
+  z-index: 2;
+}
+
+.imageflow-dock-panel-resizer::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  width: 30px;
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.2);
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.imageflow-dock-panel:hover .imageflow-dock-panel-resizer::after {
+  opacity: 1;
+}
+
 .imageflow-iteration-layers {
   position: relative;
   width: 100%;
+  height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   border-radius: 14px;
@@ -2795,9 +3444,9 @@ body:has(.imageflow-shell) .page-canvas {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding: 10px 12px;
-  font-size: 10px;
+  gap: 6px;
+  padding: 8px 10px;
+  font-size: 9px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: #64748b;
@@ -2805,9 +3454,15 @@ body:has(.imageflow-shell) .page-canvas {
 }
 
 .imageflow-iteration-layers-title {
-  font-size: 10px;
+  font-size: 9px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
+}
+
+.imageflow-iteration-layers-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .imageflow-layer-create {
@@ -2815,11 +3470,11 @@ body:has(.imageflow-shell) .page-canvas {
   border: 1px solid rgba(15, 23, 42, 0.12);
   background: rgba(255, 255, 255, 0.7);
   color: #0f172a;
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 600;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  padding: 6px 10px;
+  padding: 4px 8px;
   cursor: pointer;
   transition: background 160ms ease, border-color 160ms ease;
 }
@@ -2828,20 +3483,47 @@ body:has(.imageflow-shell) .page-canvas {
   background: rgba(255, 255, 255, 0.95);
 }
 
+.imageflow-layer-close {
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: rgba(255, 255, 255, 0.7);
+  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.imageflow-layer-close svg {
+  width: 12px;
+  height: 12px;
+  display: block;
+}
+
+.imageflow-layer-close:hover {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(15, 23, 42, 0.2);
+}
+
 .imageflow-layer-folder {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .imageflow-layer-folder-row {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
+  gap: 4px;
+  padding: 4px 6px;
   border-radius: 10px;
   border: 1px solid rgba(15, 23, 42, 0.12);
   background: rgba(248, 250, 252, 0.95);
+  min-width: 0;
+  overflow: hidden;
 }
 
 .imageflow-layer-folder-row.is-hidden {
@@ -2857,9 +3539,9 @@ body:has(.imageflow-shell) .page-canvas {
 }
 
 .imageflow-layer-folder-toggle {
-  width: 24px;
-  height: 24px;
-  border-radius: 8px;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
   border: 1px solid rgba(15, 23, 42, 0.12);
   background: rgba(255, 255, 255, 0.7);
   color: #475569;
@@ -2871,8 +3553,8 @@ body:has(.imageflow-shell) .page-canvas {
 }
 
 .imageflow-layer-folder-toggle svg {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   display: block;
   transition: transform 160ms ease;
 }
@@ -2892,21 +3574,23 @@ body:has(.imageflow-shell) .page-canvas {
   padding: 0;
   text-align: left;
   color: #0f172a;
-  font-size: 12px;
+  font-size: 11px;
   cursor: pointer;
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .imageflow-layer-folder-input {
   flex: 1;
   border-radius: 8px;
   border: 1px solid rgba(15, 23, 42, 0.12);
-  padding: 4px 8px;
-  font-size: 12px;
+  padding: 4px 6px;
+  font-size: 11px;
 }
 
 .imageflow-layer-folder-count {
-  font-size: 10px;
+  font-size: 9px;
   color: #64748b;
   padding: 0 4px;
 }
@@ -2914,8 +3598,8 @@ body:has(.imageflow-shell) .page-canvas {
 .imageflow-layer-folder-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding-left: 18px;
+  gap: 4px;
+  padding-left: 14px;
 }
 
 .imageflow-layer-row.is-nested {
@@ -2926,11 +3610,11 @@ body:has(.imageflow-shell) .page-canvas {
 .imageflow-layer-section {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .imageflow-layer-section-title {
-  font-size: 10px;
+  font-size: 9px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: #94a3b8;
@@ -2943,16 +3627,132 @@ body:has(.imageflow-shell) .page-canvas {
 }
 
 .imageflow-iteration-layers-list {
-  padding: 8px 8px 10px;
+  padding: 6px 6px 8px;
   display: flex;
   flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex: 1;
+  min-height: 0;
+}
+
+.imageflow-iteration-history {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: 14px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.1);
+  overflow: hidden;
+}
+
+.imageflow-iteration-history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 6px;
-  overflow: auto;
+  padding: 8px 10px;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #64748b;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.imageflow-iteration-history-title {
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.imageflow-iteration-history-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.imageflow-history-action,
+.imageflow-history-close {
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: rgba(255, 255, 255, 0.7);
+  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.imageflow-history-action svg,
+.imageflow-history-close svg {
+  width: 12px;
+  height: 12px;
+  display: block;
+}
+
+.imageflow-history-action:hover,
+.imageflow-history-close:hover {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(15, 23, 42, 0.2);
+}
+
+.imageflow-history-action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.imageflow-iteration-history-list {
+  padding: 6px 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex: 1;
+  min-height: 0;
+}
+
+.imageflow-history-entry {
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.6);
+  padding: 4px 6px;
+  font-size: 11px;
+  color: #0f172a;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.imageflow-history-entry.is-active {
+  border-color: rgba(249, 115, 22, 0.4);
+  background: rgba(249, 115, 22, 0.15);
+}
+
+.imageflow-history-label {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.imageflow-history-empty {
+  padding: 10px;
+  font-size: 12px;
+  color: #64748b;
 }
 
 .imageflow-iteration-text {
   position: relative;
   width: 100%;
+  height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   border-radius: 14px;
@@ -2963,6 +3763,10 @@ body:has(.imageflow-shell) .page-canvas {
 }
 
 .imageflow-iteration-text-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   padding: 10px 12px;
   font-size: 10px;
   letter-spacing: 0.2em;
@@ -2977,6 +3781,8 @@ body:has(.imageflow-shell) .page-canvas {
   flex-direction: column;
   gap: 12px;
   overflow: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .imageflow-iteration-text-grid {
@@ -3050,12 +3856,14 @@ body:has(.imageflow-shell) .page-canvas {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding: 6px 8px;
+  gap: 6px;
+  padding: 4px 6px;
   border-radius: 10px;
   border: 1px solid transparent;
   background: rgba(255, 255, 255, 0.6);
   transition: border-color 160ms ease, background 160ms ease;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .imageflow-layer-row.is-active {
@@ -3081,9 +3889,11 @@ body:has(.imageflow-shell) .page-canvas {
   padding: 0;
   text-align: left;
   color: #0f172a;
-  font-size: 12px;
+  font-size: 11px;
   cursor: pointer;
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .imageflow-layer-label {
@@ -3095,13 +3905,14 @@ body:has(.imageflow-shell) .page-canvas {
 
 .imageflow-layer-actions {
   display: flex;
-  gap: 6px;
+  gap: 4px;
+  flex-shrink: 0;
 }
 
 .imageflow-layer-action {
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
   border: 1px solid rgba(15, 23, 42, 0.12);
   background: rgba(255, 255, 255, 0.7);
   color: #475569;
@@ -3113,8 +3924,8 @@ body:has(.imageflow-shell) .page-canvas {
 }
 
 .imageflow-layer-action svg {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   display: block;
 }
 
@@ -3155,25 +3966,44 @@ body:has(.imageflow-shell) .page-canvas {
 .imageflow-iteration-patch {
   position: relative;
   width: 100%;
-  max-height: none;
-  overflow: auto;
-  padding: 12px;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
   border-radius: 14px;
   border: 1px solid rgba(15, 23, 42, 0.12);
   background: rgba(255, 255, 255, 0.92);
   box-shadow: 0 10px 18px rgba(15, 23, 42, 0.1);
 }
 
-.imageflow-iteration-patch-title {
-  font-size: 10px;
+.imageflow-iteration-patch-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 8px 10px;
+  font-size: 9px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: #64748b;
-  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.imageflow-iteration-patch-title {
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #64748b;
 }
 
 .imageflow-iteration-patch-body {
   margin: 0;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 10px;
   font-size: 10px;
   line-height: 1.4;
   color: #0f172a;
@@ -3562,10 +4392,10 @@ body:has(.imageflow-shell) .page-canvas {
   border-radius: 20px;
   border: 1px solid var(--imageflow-card-border);
   background: var(--imageflow-card-fill);
-  padding: clamp(14px, 2.4vw, 20px);
+  padding: clamp(12px, 2vw, 16px);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   min-height: 0;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
@@ -3574,7 +4404,7 @@ body:has(.imageflow-shell) .page-canvas {
 .imageflow-info-header {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .imageflow-info-kicker {
@@ -3603,14 +4433,14 @@ body:has(.imageflow-shell) .page-canvas {
 .imageflow-info-fields {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .imageflow-panel-switch {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px;
+  padding: 3px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.5);
   background: rgba(255, 255, 255, 0.45);
@@ -3621,7 +4451,7 @@ body:has(.imageflow-shell) .page-canvas {
   border-radius: 999px;
   border: 1px solid transparent;
   background: transparent;
-  padding: 6px 12px;
+  padding: 5px 10px;
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.16em;
@@ -3638,14 +4468,14 @@ body:has(.imageflow-shell) .page-canvas {
 .imageflow-agent {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   min-height: 0;
 }
 
 .imageflow-agent-header {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .imageflow-agent-messages {
@@ -3677,7 +4507,7 @@ body:has(.imageflow-shell) .page-canvas {
 .imageflow-agent-input {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .imageflow-agent-textarea {
@@ -4243,7 +5073,7 @@ body:has(.imageflow-shell) .page-canvas {
   }
 
   .imageflow-shell {
-    padding: 24px 20px 48px;
+    padding: 0;
     align-items: stretch;
   }
 
@@ -4314,6 +5144,19 @@ body:has(.imageflow-shell) .page-canvas {
     right: 12px;
     max-width: min(280px, 90%);
     max-height: 60%;
+  }
+
+  .imageflow-iteration-panel-tabs {
+    top: auto;
+    bottom: 12px;
+    right: 12px;
+    transform: none;
+    flex-direction: row;
+  }
+
+  .imageflow-iteration-panel-tab {
+    writing-mode: horizontal-tb;
+    transform: none;
   }
 
   .imageflow-iteration-dock-resizer {

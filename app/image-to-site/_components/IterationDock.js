@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 const DOCK_MIN_WIDTH = 240;
 const DOCK_MAX_WIDTH = 520;
 const DOCK_PADDING = 12;
+const DETACH_THRESHOLD = 6;
 
 const clampValue = (value, min, max) => Math.min(Math.max(value, min), max);
 
@@ -13,7 +14,7 @@ export default function IterationDock({
   position,
   onResize,
   onMove,
-  onToggleDetached,
+  onDetachedChange,
   containerRef,
   title = "Panels",
 }) {
@@ -60,36 +61,67 @@ export default function IterationDock({
     window.addEventListener("pointerup", handleResizeEnd);
   };
 
-  const handleDragStart = (event) => {
-    if (!detached || !onMove) {
+  const handleHeaderPointerDown = (event) => {
+    if (!onMove || !containerRef?.current) {
       return;
     }
-    if (event.target?.closest?.(".imageflow-iteration-dock-toggle")) {
+    if (event.button !== 0) {
       return;
     }
     const dockRect = dockRef.current?.getBoundingClientRect();
-    const containerRect = containerRef?.current?.getBoundingClientRect();
+    const containerRect = containerRef.current?.getBoundingClientRect();
     if (!dockRect || !containerRect) {
       return;
     }
     event.preventDefault();
     event.stopPropagation();
     dragStateRef.current = {
+      startX: event.clientX,
+      startY: event.clientY,
       offsetX: event.clientX - dockRect.left,
       offsetY: event.clientY - dockRect.top,
       containerRect,
+      mode: detached ? "dragging" : "pending",
     };
     const handleDragMove = (moveEvent) => {
       const state = dragStateRef.current;
       if (!state || !onMove) {
         return;
       }
+      if (state.mode === "pending") {
+        const deltaX = Math.abs(moveEvent.clientX - state.startX);
+        const deltaY = Math.abs(moveEvent.clientY - state.startY);
+        if (deltaX + deltaY < DETACH_THRESHOLD) {
+          return;
+        }
+        state.mode = "dragging";
+        if (!detached && onDetachedChange) {
+          onDetachedChange(true);
+          const nextTop = clampValue(
+            dockRect.top - containerRect.top,
+            DOCK_PADDING,
+            Math.max(
+              DOCK_PADDING,
+              containerRect.height - dockRect.height - DOCK_PADDING
+            )
+          );
+          const maxRight = Math.max(
+            DOCK_PADDING,
+            containerRect.width - width - DOCK_PADDING
+          );
+          const nextRight = clampValue(
+            containerRect.right - dockRect.right,
+            DOCK_PADDING,
+            maxRight
+          );
+          onMove({ top: nextTop, right: nextRight });
+        }
+        state.containerRect =
+          containerRef.current?.getBoundingClientRect() ?? state.containerRect;
+      }
       const bounds = state.containerRect;
       const dockHeight = dockRef.current?.offsetHeight ?? 0;
-      const maxLeft = Math.max(
-        DOCK_PADDING,
-        bounds.width - width - DOCK_PADDING
-      );
+      const maxLeft = Math.max(DOCK_PADDING, bounds.width - width - DOCK_PADDING);
       const maxTop = Math.max(
         DOCK_PADDING,
         bounds.height - dockHeight - DOCK_PADDING
@@ -154,6 +186,7 @@ export default function IterationDock({
     : {
         width: `${width}px`,
       };
+  const canDragDock = Boolean(onMove);
 
   return (
     <aside
@@ -163,19 +196,16 @@ export default function IterationDock({
     >
       <div
         className={`imageflow-iteration-dock-header${
-          detached ? " is-draggable" : ""
+          canDragDock ? " is-draggable" : ""
         }`}
-        onPointerDown={handleDragStart}
+        onPointerDown={handleHeaderPointerDown}
+        onDoubleClick={() => {
+          if (onDetachedChange) {
+            onDetachedChange(!detached);
+          }
+        }}
       >
         <span>{title}</span>
-        <button
-          className="imageflow-iteration-dock-toggle"
-          type="button"
-          onClick={onToggleDetached}
-          aria-pressed={detached}
-        >
-          {detached ? "Dock" : "Detach"}
-        </button>
       </div>
       <div className="imageflow-iteration-dock-body">{children}</div>
       <div

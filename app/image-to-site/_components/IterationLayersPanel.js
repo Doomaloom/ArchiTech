@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 export default function IterationLayersPanel({
   layerFolders,
@@ -8,6 +8,7 @@ export default function IterationLayersPanel({
   onToggleLayerVisibility,
   onToggleLayerLock,
   onCreateFolder,
+  onClose,
   onRenameFolder,
   onRemoveFolder,
   onToggleFolderCollapse,
@@ -17,6 +18,49 @@ export default function IterationLayersPanel({
 }) {
   const [editingFolderId, setEditingFolderId] = useState(null);
   const [folderNameDraft, setFolderNameDraft] = useState("");
+  const lastSelectedIdRef = useRef(null);
+
+  const visibleLayerIds = useMemo(() => {
+    const ids = [];
+    layerFolders.forEach((folder) => {
+      if (folder.collapsed) {
+        return;
+      }
+      folder.layers.forEach((entry) => ids.push(entry.id));
+    });
+    ungroupedLayerEntries.forEach((entry) => ids.push(entry.id));
+    return ids;
+  }, [layerFolders, ungroupedLayerEntries]);
+
+  const handleLayerSelect = (event, id) => {
+    if (!onSelectLayer) {
+      return;
+    }
+    const isShift = event?.shiftKey;
+    const isToggle = event?.metaKey || event?.ctrlKey;
+    if (isShift && lastSelectedIdRef.current && visibleLayerIds.length) {
+      const startIndex = visibleLayerIds.indexOf(lastSelectedIdRef.current);
+      const endIndex = visibleLayerIds.indexOf(id);
+      if (startIndex !== -1 && endIndex !== -1) {
+        const [start, end] =
+          startIndex < endIndex ? [startIndex, endIndex] : [endIndex, startIndex];
+        onSelectLayer(visibleLayerIds.slice(start, end + 1));
+        lastSelectedIdRef.current = id;
+        return;
+      }
+    }
+    if (isToggle) {
+      const exists = selectedElementIds.includes(id);
+      const next = exists
+        ? selectedElementIds.filter((entry) => entry !== id)
+        : [...selectedElementIds, id];
+      onSelectLayer(next);
+      lastSelectedIdRef.current = id;
+      return;
+    }
+    onSelectLayer([id]);
+    lastSelectedIdRef.current = id;
+  };
 
   const startEditingFolder = (folder) => {
     setEditingFolderId(folder.id);
@@ -49,7 +93,7 @@ export default function IterationLayersPanel({
         <button
           className="imageflow-layer-name"
           type="button"
-          onClick={() => onSelectLayer(entry.id)}
+          onClick={(event) => handleLayerSelect(event, entry.id)}
         >
           <span className="imageflow-layer-label">{layer.name}</span>
         </button>
@@ -117,13 +161,33 @@ export default function IterationLayersPanel({
     <aside className="imageflow-iteration-layers">
       <div className="imageflow-iteration-layers-header">
         <span className="imageflow-iteration-layers-title">Layers</span>
-        <button
-          className="imageflow-layer-create"
-          type="button"
-          onClick={onCreateFolder}
-        >
-          New Folder
-        </button>
+        <div className="imageflow-iteration-layers-actions">
+          <button
+            className="imageflow-layer-create"
+            type="button"
+            onClick={onCreateFolder}
+          >
+            New Folder
+          </button>
+          {onClose ? (
+            <button
+              className="imageflow-layer-close"
+              type="button"
+              onClick={onClose}
+              aria-label="Close layers panel"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M7 7l10 10M17 7L7 17"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </button>
+          ) : null}
+        </div>
       </div>
       <div className="imageflow-iteration-layers-list">
         {hasFolders

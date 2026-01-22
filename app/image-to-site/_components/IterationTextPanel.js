@@ -10,6 +10,7 @@ export default function IterationTextPanel({
   onChangeText,
   onChangeStyle,
   onReset,
+  onClose,
 }) {
   const hasFontOption = draft
     ? TEXT_TOOL_FONTS.some((font) => font.value === draft.fontFamily)
@@ -20,7 +21,27 @@ export default function IterationTextPanel({
 
   return (
     <aside className="imageflow-iteration-text">
-      <div className="imageflow-iteration-text-header">Text Tool</div>
+      <div className="imageflow-iteration-text-header">
+        <span>Text Tool</span>
+        {onClose ? (
+          <button
+            className="imageflow-layer-close"
+            type="button"
+            onClick={onClose}
+            aria-label="Close text panel"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M7 7l10 10M17 7L7 17"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+        ) : null}
+      </div>
       {!draft ? (
         <div className="imageflow-iteration-text-empty">
           Select a text layer to edit typography.

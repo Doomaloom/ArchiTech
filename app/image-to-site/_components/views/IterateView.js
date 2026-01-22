@@ -2,22 +2,30 @@ import { useRef, useState } from "react";
 import { Circle, Layer, Line, Stage, Text } from "react-konva";
 import Moveable from "react-moveable";
 import Selecto from "react-selecto";
-import { DEFAULT_ITERATION_TOOL } from "../../_lib/iteration-tools";
 import { useImageToSite } from "../../_context/image-to-site-context";
 import IterationDock from "../IterationDock";
+import IterationDockPanel from "../IterationDockPanel";
+import IterationGuidesLayer from "../IterationGuidesLayer";
+import IterationHistoryPanel from "../IterationHistoryPanel";
 import IterationLayersPanel from "../IterationLayersPanel";
 import IterationPatchPanel from "../IterationPatchPanel";
 import IterationSampleSite from "../IterationSampleSite";
 import IterationTextPanel from "../IterationTextPanel";
-import IterationToolbar from "../IterationToolbar";
+import IterationSidebarRail from "../IterationSidebarRail";
 
 export default function IterateView() {
   const { state, derived, actions, refs } = useImageToSite();
   const layoutRef = useRef(null);
   const [dockState, setDockState] = useState({
-    width: 320,
+    width: 240,
     detached: false,
     position: { top: 24, right: 24 },
+  });
+  const [panelHeights, setPanelHeights] = useState({
+    history: 120,
+    layers: 320,
+    text: 340,
+    patch: 220,
   });
 
   const handleDockResize = (width) => {
@@ -34,20 +42,33 @@ export default function IterateView() {
     }));
   };
 
-  const handleDockToggle = () => {
+  const handleDockDetachedChange = (detached) => {
     setDockState((current) => ({
       ...current,
-      detached: !current.detached,
+      detached,
     }));
   };
 
-  const showDock = state.showLayers || derived.isTextTool || state.showPatch;
+  const handlePanelResize = (key) => (height) => {
+    setPanelHeights((current) => ({
+      ...current,
+      [key]: height,
+    }));
+  };
+
+  const showTextPanel = Boolean(state.textEditDraft) && state.showTextPanel;
+  const showLayersPanel = state.showLayers && !showTextPanel;
+  const showHistoryPanel = state.showHistory;
+  const showDock =
+    showLayersPanel || showTextPanel || showHistoryPanel || state.showPatch;
+  const useSidebarRail = true;
   const canvasStyle = {
     transform: `translate3d(${derived.panOffset.x}px, ${derived.panOffset.y}px, 0) scale(${derived.zoomLevel})`,
   };
 
   return (
     <div className="imageflow-iteration" ref={refs.iterationRef}>
+      <IterationSidebarRail />
       <div
         className="imageflow-iteration-layout"
         ref={layoutRef}
@@ -55,29 +76,9 @@ export default function IterateView() {
           "--dock-width": dockState.detached || !showDock
             ? "0px"
             : `${dockState.width}px`,
+          "--tool-rail-width": useSidebarRail ? "0px" : "68px",
         }}
       >
-        <IterationToolbar
-          iterationTool={state.iterationTool}
-          onToolChange={actions.setIterationTool}
-          selectedElementId={state.selectedElementId}
-          highlightedIds={state.highlightedIds}
-          onToggleHighlight={actions.handleToggleHighlight}
-          canDelete={state.selectedElementIds.length > 0}
-          onDeleteSelection={actions.handleDeleteSelection}
-          showTransformControls={state.showTransformControls}
-          onToggleTransformControls={() =>
-            actions.setShowTransformControls((current) => !current)
-          }
-          showLayers={state.showLayers}
-          onToggleLayers={() => actions.setShowLayers((current) => !current)}
-          onRegenerate={() => {
-            actions.setViewMode("preview");
-            actions.setIterationTool(DEFAULT_ITERATION_TOOL);
-          }}
-          showPatch={state.showPatch}
-          onTogglePatch={() => actions.setShowPatch((current) => !current)}
-        />
         <div className="imageflow-iteration-stage">
           <div
             className={`imageflow-iteration-preview${
@@ -97,6 +98,7 @@ export default function IterateView() {
             onWheel={actions.handleZoomWheel}
           >
             <div className="imageflow-iteration-canvas" style={canvasStyle}>
+              <IterationGuidesLayer />
               <div
                 className={`imageflow-iteration-site${
                   derived.isOverlayTool ? " is-annotating" : ""
@@ -181,6 +183,9 @@ export default function IterateView() {
                 </Stage>
               </div>
             </div>
+            <span className="imageflow-iteration-zoom-indicator">
+              {Math.round(derived.zoomLevel * 100)}%
+            </span>
             <span className="imageflow-iteration-label">
               Preview {state.selectedPreviewIndex + 1}
             </span>
@@ -231,6 +236,7 @@ export default function IterateView() {
               container={refs.iterationPreviewRef.current}
               rootContainer={refs.iterationPreviewRef.current}
               viewContainer={refs.iterationPreviewRef.current}
+              snapContainer={refs.iterationPreviewRef.current}
               zoom={derived.zoomLevel}
               useAccuratePosition={true}
               draggable
@@ -238,6 +244,17 @@ export default function IterateView() {
               rotatable
               keepRatio={false}
               origin={false}
+              snappable={state.snapToGrid || state.snapToGuides}
+              snapGridWidth={state.snapToGrid ? state.gridSize : 0}
+              snapGridHeight={state.snapToGrid ? state.gridSize : 0}
+              snapGridAll={state.snapToGrid}
+              snapThreshold={6}
+              horizontalGuidelines={
+                state.snapToGuides ? derived.horizontalGuides : []
+              }
+              verticalGuidelines={
+                state.snapToGuides ? derived.verticalGuides : []
+              }
               renderDirections={state.showTransformControls ? true : []}
               rotationPosition={state.showTransformControls ? "top" : "none"}
               hideDefaultLines={!state.showTransformControls}
@@ -424,6 +441,37 @@ export default function IterateView() {
             </div>
           ) : null}
         </div>
+        {!state.showLayers || !state.showHistory || (!showTextPanel && state.textEditDraft) ? (
+          <div className="imageflow-iteration-panel-tabs">
+            {!state.showHistory ? (
+              <button
+                className="imageflow-iteration-panel-tab"
+                type="button"
+                onClick={() => actions.setShowHistory(true)}
+              >
+                History
+              </button>
+            ) : null}
+            {!state.showLayers ? (
+              <button
+                className="imageflow-iteration-panel-tab"
+                type="button"
+                onClick={() => actions.setShowLayers(true)}
+              >
+                Layers
+              </button>
+            ) : null}
+            {!showTextPanel && state.textEditDraft ? (
+              <button
+                className="imageflow-iteration-panel-tab"
+                type="button"
+                onClick={() => actions.setShowTextPanel(true)}
+              >
+                Text
+              </button>
+            ) : null}
+          </div>
+        ) : null}
         {showDock ? (
           <IterationDock
             detached={dockState.detached}
@@ -431,39 +479,83 @@ export default function IterateView() {
             position={dockState.position}
             onResize={handleDockResize}
             onMove={handleDockMove}
-            onToggleDetached={handleDockToggle}
+            onDetachedChange={handleDockDetachedChange}
             containerRef={layoutRef}
           >
-            {derived.isTextTool ? (
-              <IterationTextPanel
-                draft={state.textEditDraft}
-                onChangeText={actions.handleTextContentChange}
-                onChangeStyle={actions.handleTextStyleChange}
-                onReset={actions.handleResetTextEdit}
-              />
+            {showHistoryPanel ? (
+              <IterationDockPanel
+                height={panelHeights.history}
+                minHeight={90}
+                maxHeight={220}
+                onResize={handlePanelResize("history")}
+              >
+                <IterationHistoryPanel
+                  entries={derived.historyEntries}
+                  activeEntryId={derived.activeHistoryId}
+                  canUndo={derived.canUndo}
+                  canRedo={derived.canRedo}
+                  onUndo={actions.handleUndoHistory}
+                  onRedo={actions.handleRedoHistory}
+                  onClose={() => actions.setShowHistory(false)}
+                />
+              </IterationDockPanel>
             ) : null}
-            {state.showLayers ? (
-              <IterationLayersPanel
-                layerFolders={derived.layerFolderEntries}
-                ungroupedLayerEntries={derived.ungroupedLayerEntries}
-                selectedElementIds={state.selectedElementIds}
-                onSelectLayer={(id) => {
-                  actions.setSelectedElementIds([id]);
-                  actions.setSelectedElementId(id);
-                }}
-                onToggleLayerVisibility={actions.handleToggleLayerVisibility}
-                onToggleLayerLock={actions.handleToggleLayerLock}
-                onCreateFolder={actions.handleCreateLayerFolder}
-                onRenameFolder={actions.handleRenameLayerFolder}
-                onRemoveFolder={actions.handleRemoveLayerFolder}
-                onToggleFolderCollapse={actions.handleToggleLayerFolderCollapsed}
-                onAddSelectionToFolder={actions.handleAddSelectionToFolder}
-                onToggleFolderVisibility={actions.handleToggleLayerFolderVisibility}
-                onToggleFolderLock={actions.handleToggleLayerFolderLock}
-              />
+            {showTextPanel ? (
+              <IterationDockPanel
+                height={panelHeights.text}
+                minHeight={220}
+                maxHeight={520}
+                onResize={handlePanelResize("text")}
+              >
+                <IterationTextPanel
+                  draft={state.textEditDraft}
+                  onChangeText={actions.handleTextContentChange}
+                  onChangeStyle={actions.handleTextStyleChange}
+                  onReset={actions.handleResetTextEdit}
+                  onClose={() => actions.setShowTextPanel(false)}
+                />
+              </IterationDockPanel>
+            ) : null}
+            {showLayersPanel ? (
+              <IterationDockPanel
+                height={panelHeights.layers}
+                minHeight={240}
+                maxHeight={620}
+                onResize={handlePanelResize("layers")}
+              >
+                <IterationLayersPanel
+                  layerFolders={derived.layerFolderEntries}
+                  ungroupedLayerEntries={derived.ungroupedLayerEntries}
+                  selectedElementIds={state.selectedElementIds}
+                  onSelectLayer={(ids) => {
+                    actions.setSelectedElementIds(ids);
+                    actions.setSelectedElementId(ids[0] ?? null);
+                  }}
+                  onToggleLayerVisibility={actions.handleToggleLayerVisibility}
+                  onToggleLayerLock={actions.handleToggleLayerLock}
+                  onCreateFolder={actions.handleCreateLayerFolder}
+                  onClose={() => actions.setShowLayers(false)}
+                  onRenameFolder={actions.handleRenameLayerFolder}
+                  onRemoveFolder={actions.handleRemoveLayerFolder}
+                  onToggleFolderCollapse={actions.handleToggleLayerFolderCollapsed}
+                  onAddSelectionToFolder={actions.handleAddSelectionToFolder}
+                  onToggleFolderVisibility={actions.handleToggleLayerFolderVisibility}
+                  onToggleFolderLock={actions.handleToggleLayerFolderLock}
+                />
+              </IterationDockPanel>
             ) : null}
             {state.showPatch ? (
-              <IterationPatchPanel patch={derived.iterationPatch} />
+              <IterationDockPanel
+                height={panelHeights.patch}
+                minHeight={160}
+                maxHeight={400}
+                onResize={handlePanelResize("patch")}
+              >
+                <IterationPatchPanel
+                  patch={derived.iterationPatch}
+                  onClose={() => actions.setShowPatch(false)}
+                />
+              </IterationDockPanel>
             ) : null}
           </IterationDock>
         ) : null}
