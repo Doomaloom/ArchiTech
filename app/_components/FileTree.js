@@ -1,4 +1,4 @@
-import { getLanguageBadge } from "../_lib/language";
+import { getLanguageBadge } from "./../_lib/language";
 
 export default function FileTree({
   nodes,

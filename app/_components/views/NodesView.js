@@ -4,7 +4,7 @@ import ReactFlow, {
   ReactFlowProvider,
 } from "reactflow";
 import "reactflow/dist/style.css";
-import { useImageToSite } from "../../_context/image-to-site-context";
+import { useImageToSite } from "./../../_context/image-to-site-context";
 
 export default function NodesView() {
   const { state, actions } = useImageToSite();

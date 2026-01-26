@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useImageToSite } from "../_context/image-to-site-context";
+import { useImageToSite } from "./../_context/image-to-site-context";
 
 const clampValue = (value, min, max) => Math.min(Math.max(value, min), max);
 

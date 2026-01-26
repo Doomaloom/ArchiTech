@@ -3,7 +3,7 @@ import {
   TEXT_TOOL_FONTS,
   TEXT_TRANSFORM_OPTIONS,
   TEXT_WEIGHT_OPTIONS,
-} from "../_lib/text-tools";
+} from "./../_lib/text-tools";
 
 export default function IterationTextPanel({
   draft,

@@ -1,4 +1,4 @@
-import { useImageToSite } from "../_context/image-to-site-context";
+import { useImageToSite } from "./../_context/image-to-site-context";
 import FileTree from "./FileTree";
 
 export default function InfoPanel() {

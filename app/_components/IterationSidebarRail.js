@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
-import { DEFAULT_ITERATION_TOOL, ITERATION_TOOL_CONFIG } from "../_lib/iteration-tools";
-import { useImageToSite } from "../_context/image-to-site-context";
+import { DEFAULT_ITERATION_TOOL, ITERATION_TOOL_CONFIG } from "./../_lib/iteration-tools";
+import { useImageToSite } from "./../_context/image-to-site-context";
 
 const TOOL_ICONS = {
   cursor: (

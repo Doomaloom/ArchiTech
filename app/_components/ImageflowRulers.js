@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
-import { useImageToSite } from "../_context/image-to-site-context";
+import { useImageToSite } from "./../_context/image-to-site-context";
 
 const MINOR_STEP = 10;
 const MID_STEP = 50;

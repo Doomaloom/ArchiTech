@@ -3,7 +3,7 @@ import GalleryPanel from "./GalleryPanel";
 import InfoPanel from "./InfoPanel";
 import ImageflowMenuBar from "./ImageflowMenuBar";
 import ImageflowRulers from "./ImageflowRulers";
-import { useImageToSite } from "../_context/image-to-site-context";
+import { useImageToSite } from "./../_context/image-to-site-context";
 
 export default function ImageToSiteView() {
   const { state, derived } = useImageToSite();

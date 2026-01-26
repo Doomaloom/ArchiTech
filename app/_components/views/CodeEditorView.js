@@ -1,6 +1,6 @@
 import dynamic from "next/dynamic";
-import { EDITOR_OPTIONS, handleEditorWillMount } from "../../_lib/editor";
-import { useImageToSite } from "../../_context/image-to-site-context";
+import { EDITOR_OPTIONS, handleEditorWillMount } from "./../../_lib/editor";
+import { useImageToSite } from "./../../_context/image-to-site-context";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
   ssr: false,

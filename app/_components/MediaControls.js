@@ -1,4 +1,4 @@
-import { useImageToSite } from "../_context/image-to-site-context";
+import { useImageToSite } from "./../_context/image-to-site-context";
 
 export default function MediaControls() {
   const { actions } = useImageToSite();
