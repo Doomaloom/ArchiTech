@@ -11,6 +11,7 @@ import IterationLayersPanel from "../IterationLayersPanel";
 import IterationPatchPanel from "../IterationPatchPanel";
 import IterationSampleSite from "../IterationSampleSite";
 import IterationTextPanel from "../IterationTextPanel";
+import IterationTransformControls from "../IterationTransformControls";
 import IterationSidebarRail from "../IterationSidebarRail";
 
 export default function IterateView() {
@@ -62,6 +63,10 @@ export default function IterateView() {
   const showDock =
     showLayersPanel || showTextPanel || showHistoryPanel || state.showPatch;
   const useSidebarRail = true;
+  const showUnlinkControl =
+    derived.canTransform &&
+    state.showTransformControls &&
+    derived.hasNestedSelection;
   const canvasStyle = {
     transform: `translate3d(${derived.panOffset.x}px, ${derived.panOffset.y}px, 0) scale(${derived.zoomLevel})`,
   };
@@ -183,6 +188,17 @@ export default function IterateView() {
                 </Stage>
               </div>
             </div>
+            <IterationTransformControls
+              previewRef={refs.iterationPreviewRef}
+              siteRef={refs.iterationSiteRef}
+              selectionIds={state.selectedElementIds}
+              isVisible={showUnlinkControl}
+              onUnlink={actions.handleUnlinkSelection}
+              elementTransforms={state.elementTransforms}
+              zoomLevel={derived.zoomLevel}
+              panOffset={derived.panOffset}
+              stageSize={derived.stageSize}
+            />
             <span className="imageflow-iteration-zoom-indicator">
               {Math.round(derived.zoomLevel * 100)}%
             </span>

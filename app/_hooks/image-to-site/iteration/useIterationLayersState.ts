@@ -1,5 +1,48 @@
 import { useEffect, useMemo, useState } from "react";
 
+const hasLayerIdsChanged = (prevIds, nextIds) => {
+  if (prevIds.length !== nextIds.length) {
+    return true;
+  }
+  return prevIds.some((id, index) => id !== nextIds[index]);
+};
+
+const resolveFolderParentId = (folder) => {
+  const layerIds = folder?.layerIds ?? [];
+  if (folder?.parentId && layerIds.includes(folder.parentId)) {
+    return folder.parentId;
+  }
+  return layerIds[0] ?? null;
+};
+
+const formatFolderName = (value) => {
+  if (!value) {
+    return "";
+  }
+  return value
+    .replace(/[-_]+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
+const sanitizeFolder = (folder, validIds, fallbackParentId) => {
+  const layerIds = (folder.layerIds ?? []).filter(
+    (layerId) => !validIds || validIds.has(layerId)
+  );
+  let parentId = folder.parentId ?? fallbackParentId ?? null;
+  if (parentId && !layerIds.includes(parentId)) {
+    parentId = layerIds[0] ?? null;
+  }
+  if (!parentId && layerIds.length) {
+    parentId = layerIds[0];
+  }
+  return {
+    ...folder,
+    layerIds,
+    parentId,
+  };
+};
+
 export default function useIterationLayersState({
   isIterationMode,
   baseLayout,
@@ -11,6 +54,7 @@ export default function useIterationLayersState({
   const [layerFolderOrder, setLayerFolderOrder] = useState(() => []);
   const [deletedLayerIds, setDeletedLayerIds] = useState(() => []);
   const [highlightedIds, setHighlightedIds] = useState(() => []);
+  const hasFolders = Object.keys(layerFolders).length > 0;
 
   useEffect(() => {
     if (!Object.keys(baseLayout).length) {
@@ -38,19 +82,91 @@ export default function useIterationLayersState({
     if (!Object.keys(baseLayout).length) {
       return;
     }
+    const validIds = new Set(Object.keys(baseLayout));
     setLayerFolders((current) => {
       let changed = false;
       const next = {};
       Object.values(current).forEach((folder) => {
-        const filtered = (folder.layerIds ?? []).filter((id) => baseLayout[id]);
-        if (filtered.length !== (folder.layerIds ?? []).length) {
+        const sanitized = sanitizeFolder(folder, validIds);
+        if (
+          hasLayerIdsChanged(folder.layerIds ?? [], sanitized.layerIds) ||
+          (folder.parentId ?? null) !== (sanitized.parentId ?? null)
+        ) {
           changed = true;
         }
-        next[folder.id] = { ...folder, layerIds: filtered };
+        next[folder.id] = sanitized;
       });
       return changed ? next : current;
     });
   }, [baseLayout]);
+
+  useEffect(() => {
+    if (!Object.keys(baseLayout).length) {
+      return;
+    }
+    if (hasFolders || layerFolderOrder.length) {
+      return;
+    }
+    const groups = new Map();
+    Object.values(baseLayout).forEach((entry) => {
+      if (!entry.folderId) {
+        return;
+      }
+      const existing = groups.get(entry.folderId);
+      const order = entry.order ?? 0;
+      if (existing) {
+        existing.layerIds.push(entry.id);
+        existing.order = Math.min(existing.order, order);
+        if (entry.folderParent) {
+          existing.parentId = entry.id;
+        }
+        if (entry.folderName) {
+          existing.name = entry.folderName;
+        }
+        return;
+      }
+      groups.set(entry.folderId, {
+        id: `seed-${entry.folderId}`,
+        name: entry.folderName ?? formatFolderName(entry.folderId),
+        layerIds: [entry.id],
+        parentId: entry.folderParent ? entry.id : null,
+        order,
+      });
+    });
+
+    if (!groups.size) {
+      return;
+    }
+    const validIds = new Set(Object.keys(baseLayout));
+    const seedFolders = {};
+    const seedOrder = [];
+    Array.from(groups.values())
+      .sort((a, b) => a.order - b.order)
+      .forEach((group, index) => {
+        const fallbackName = group.name || `Folder ${index + 1}`;
+        const sanitized = sanitizeFolder(
+          {
+            id: group.id,
+            name: fallbackName,
+            layerIds: group.layerIds,
+            collapsed: false,
+            parentId: group.parentId,
+            order: group.order ?? index,
+          },
+          validIds,
+          group.parentId
+        );
+        seedFolders[group.id] = sanitized;
+        seedOrder.push(group.id);
+      });
+
+    setLayerFolders((current) =>
+      Object.keys(current).length ? current : seedFolders
+    );
+    setLayerFolderOrder((current) =>
+      current.length ? current : seedOrder
+    );
+  }, [baseLayout, hasFolders, layerFolderOrder.length]);
 
   useEffect(() => {
     if (isIterationMode) {
@@ -122,6 +238,8 @@ export default function useIterationLayersState({
     scheduleHistoryCommit("Layer");
     const folderId = `folder-${Date.now()}`;
     const selected = selectionApiRef.current?.getSelectedIds?.() ?? [];
+    const primaryId =
+      selectionApiRef.current?.getPrimaryId?.() ?? selected[0] ?? null;
     const selectedSet = new Set(selected);
     setLayerFolders((current) => {
       const folderName = `Folder ${Object.keys(current).length + 1}`;
@@ -130,14 +248,19 @@ export default function useIterationLayersState({
         const filtered = (folder.layerIds ?? []).filter(
           (layerId) => !selectedSet.has(layerId)
         );
-        next[folder.id] = { ...folder, layerIds: filtered };
+        next[folder.id] = sanitizeFolder({ ...folder, layerIds: filtered });
       });
-      next[folderId] = {
-        id: folderId,
-        name: folderName,
-        layerIds: selected,
-        collapsed: false,
-      };
+      next[folderId] = sanitizeFolder(
+        {
+          id: folderId,
+          name: folderName,
+          layerIds: selected,
+          collapsed: false,
+          parentId: primaryId,
+        },
+        null,
+        primaryId
+      );
       return next;
     });
     setLayerFolderOrder((current) => [folderId, ...current]);
@@ -194,13 +317,15 @@ export default function useIterationLayersState({
     }
     scheduleHistoryCommit("Layer");
     const selectedSet = new Set(selected);
+    const primaryId =
+      selectionApiRef.current?.getPrimaryId?.() ?? selected[0] ?? null;
     setLayerFolders((current) => {
       const next = {};
       Object.values(current).forEach((folder) => {
         const filtered = (folder.layerIds ?? []).filter(
           (layerId) => !selectedSet.has(layerId)
         );
-        next[folder.id] = { ...folder, layerIds: filtered };
+        next[folder.id] = sanitizeFolder({ ...folder, layerIds: filtered });
       });
       const target = next[folderId];
       if (!target) {
@@ -209,8 +334,40 @@ export default function useIterationLayersState({
       const combined = Array.from(
         new Set([...(target.layerIds ?? []), ...selected])
       );
-      next[folderId] = { ...target, layerIds: combined };
+      const fallbackParent =
+        target.parentId ?? (combined.includes(primaryId) ? primaryId : null);
+      next[folderId] = sanitizeFolder(
+        { ...target, layerIds: combined, parentId: fallbackParent },
+        null,
+        fallbackParent
+      );
       return next;
+    });
+  };
+
+  const unlinkLayersFromFolders = (ids) => {
+    if (!ids?.length) {
+      return;
+    }
+    scheduleHistoryCommit("Layer");
+    const removalSet = new Set(ids);
+    setLayerFolders((current) => {
+      let changed = false;
+      const next = {};
+      Object.values(current).forEach((folder) => {
+        const filtered = (folder.layerIds ?? []).filter(
+          (layerId) => !removalSet.has(layerId)
+        );
+        const sanitized = sanitizeFolder({ ...folder, layerIds: filtered });
+        if (
+          hasLayerIdsChanged(folder.layerIds ?? [], sanitized.layerIds) ||
+          (folder.parentId ?? null) !== (sanitized.parentId ?? null)
+        ) {
+          changed = true;
+        }
+        next[folder.id] = sanitized;
+      });
+      return changed ? next : current;
     });
   };
 
@@ -288,10 +445,14 @@ export default function useIterationLayersState({
         const filtered = (folder.layerIds ?? []).filter(
           (layerId) => !ids.includes(layerId)
         );
-        if (filtered.length !== (folder.layerIds ?? []).length) {
+        const sanitized = sanitizeFolder({ ...folder, layerIds: filtered });
+        if (
+          hasLayerIdsChanged(folder.layerIds ?? [], sanitized.layerIds) ||
+          (folder.parentId ?? null) !== (sanitized.parentId ?? null)
+        ) {
           changed = true;
         }
-        next[folder.id] = { ...folder, layerIds: filtered };
+        next[folder.id] = sanitized;
       });
       return changed ? next : current;
     });
@@ -307,6 +468,41 @@ export default function useIterationLayersState({
       return changed ? next : current;
     });
   };
+
+  const layerFolderMap = useMemo(() => {
+    const map = {};
+    Object.values(layerFolders).forEach((folder) => {
+      (folder.layerIds ?? []).forEach((layerId) => {
+        map[layerId] = folder.id;
+      });
+    });
+    return map;
+  }, [layerFolders]);
+
+  const layerParentMap = useMemo(() => {
+    const map = {};
+    Object.values(layerFolders).forEach((folder) => {
+      const parentId = resolveFolderParentId(folder);
+      if (!parentId) {
+        return;
+      }
+      (folder.layerIds ?? []).forEach((layerId) => {
+        if (layerId !== parentId) {
+          map[layerId] = parentId;
+        }
+      });
+    });
+    return map;
+  }, [layerFolders]);
+
+  const nestedLayerIds = useMemo(
+    () => Object.keys(layerParentMap),
+    [layerParentMap]
+  );
+
+  const getLayerFolderId = (id) => layerFolderMap[id] ?? null;
+  const getLayerParentId = (id) => layerParentMap[id] ?? null;
+  const isLayerNested = (id) => Boolean(layerParentMap[id]);
 
   const layerEntries = useMemo(() => {
     return Object.values(baseLayout)
@@ -368,12 +564,17 @@ export default function useIterationLayersState({
       layerEntries,
       layerFolderEntries,
       ungroupedLayerEntries,
+      layerParentMap,
+      nestedLayerIds,
     },
     helpers: {
       getLayerMeta,
       isLayerLocked,
       isLayerHidden,
       isLayerDeleted,
+      getLayerFolderId,
+      getLayerParentId,
+      isLayerNested,
     },
     actions: {
       toggleHighlight,
@@ -384,6 +585,7 @@ export default function useIterationLayersState({
       handleRemoveLayerFolder,
       handleToggleLayerFolderCollapsed,
       handleAddSelectionToFolder,
+      unlinkLayersFromFolders,
       handleToggleLayerFolderVisibility,
       handleToggleLayerFolderLock,
       deleteLayers,

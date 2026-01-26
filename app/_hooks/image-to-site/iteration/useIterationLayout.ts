@@ -54,6 +54,11 @@ export default function useIterationLayout({
       const rect = element.getBoundingClientRect();
       const parentElement = element.parentElement?.closest("[data-gem-id]");
       const parentId = parentElement?.dataset?.gemId ?? "root";
+      const folderId = element.dataset?.gemFolder ?? null;
+      const folderName = element.dataset?.gemFolderName ?? null;
+      const folderParentFlag = element.dataset?.gemFolderParent;
+      const folderParent =
+        folderParentFlag != null && folderParentFlag !== "false";
       if (!orderByParent[parentId]) {
         orderByParent[parentId] = [];
       }
@@ -63,6 +68,9 @@ export default function useIterationLayout({
         parentId,
         tag: element.tagName.toLowerCase(),
         text: (element.textContent || "").trim().slice(0, 140),
+        folderId,
+        folderName,
+        folderParent,
         base: {
           x: rect.left - containerRect.left,
           y: rect.top - containerRect.top,

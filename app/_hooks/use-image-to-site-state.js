@@ -115,6 +115,8 @@ export default function useImageToSiteState() {
       stageSize: iteration.derived.stageSize,
       notePosition: iteration.derived.notePosition,
       moveTargets: iteration.derived.moveTargets,
+      nestedSelectionIds: iteration.derived.nestedSelectionIds,
+      hasNestedSelection: iteration.derived.hasNestedSelection,
       layerEntries: iteration.derived.layerEntries,
       layerFolderEntries: iteration.derived.layerFolderEntries,
       ungroupedLayerEntries: iteration.derived.ungroupedLayerEntries,
@@ -202,6 +204,7 @@ export default function useImageToSiteState() {
       handleToggleLayerFolderCollapsed:
         iteration.actions.handleToggleLayerFolderCollapsed,
       handleAddSelectionToFolder: iteration.actions.handleAddSelectionToFolder,
+      handleUnlinkSelection: iteration.actions.handleUnlinkSelection,
       handleToggleLayerFolderVisibility:
         iteration.actions.handleToggleLayerFolderVisibility,
       handleToggleLayerFolderLock: iteration.actions.handleToggleLayerFolderLock,

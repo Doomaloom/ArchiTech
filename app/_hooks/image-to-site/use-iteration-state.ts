@@ -68,6 +68,27 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
     selectionApiRef,
   });
 
+  const nestedLayout = useMemo(() => {
+    const base = layout.state.baseLayout;
+    if (!Object.keys(base).length) {
+      return base;
+    }
+    const parentMap = layers.derived.layerParentMap;
+    if (!Object.keys(parentMap ?? {}).length) {
+      return base;
+    }
+    const next = {};
+    Object.values(base).forEach((entry) => {
+      const overrideParent = parentMap[entry.id];
+      if (overrideParent && overrideParent !== entry.parentId) {
+        next[entry.id] = { ...entry, parentId: overrideParent };
+        return;
+      }
+      next[entry.id] = entry;
+    });
+    return next;
+  }, [layout.state.baseLayout, layers.derived.layerParentMap]);
+
   const transforms = useIterationTransforms({
     isIterationMode,
     iterationSiteRef,
@@ -88,6 +109,7 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
   selectionApiRef.current = {
     removeSelectionIds: selection.actions.removeSelectionIds,
     getSelectedIds: selection.actions.getSelectedIds,
+    getPrimaryId: selection.actions.getPrimaryId,
   };
 
   useIterationSelectionHotkeys({
@@ -191,9 +213,27 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
   const moveTargetIds = useMemo(() => {
     return getTopLevelSelection(
       selection.state.selectedElementIds,
-      layout.state.baseLayout
+      nestedLayout
     );
-  }, [layout.state.baseLayout, selection.state.selectedElementIds]);
+  }, [nestedLayout, selection.state.selectedElementIds]);
+
+  const nestedSelectionIds = useMemo(() => {
+    if (!selection.state.selectedElementIds.length) {
+      return [];
+    }
+    if (!layers.derived.nestedLayerIds.length) {
+      return [];
+    }
+    const nestedSet = new Set(layers.derived.nestedLayerIds);
+    return selection.state.selectedElementIds.filter((id) => nestedSet.has(id));
+  }, [layers.derived.nestedLayerIds, selection.state.selectedElementIds]);
+
+  const handleUnlinkSelection = () => {
+    if (!nestedSelectionIds.length) {
+      return;
+    }
+    layers.actions.unlinkLayersFromFolders(nestedSelectionIds);
+  };
 
   const moveTargets = useMemo(() => {
     if (!isIterationMode || !iterationSiteRef.current) {
@@ -229,7 +269,7 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
     () =>
       buildIterationPatch({
         isIterationMode,
-        baseLayout: layout.state.baseLayout,
+        baseLayout: nestedLayout,
         elementTransforms: transforms.state.elementTransforms,
         layerState: layers.state.layerState,
         layerFolders: layers.state.layerFolders,
@@ -246,7 +286,7 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
     [
       annotations.state.annotations,
       isIterationMode,
-      layout.state.baseLayout,
+      nestedLayout,
       layers.state.deletedLayerIds,
       layers.state.highlightedIds,
       layers.state.layerFolderOrder,
@@ -317,6 +357,7 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
       stageSize,
       notePosition,
       moveTargets,
+      nestedSelectionIds,
       layerEntries: layers.derived.layerEntries,
       layerFolderEntries: layers.derived.layerFolderEntries,
       ungroupedLayerEntries: layers.derived.ungroupedLayerEntries,
@@ -327,6 +368,7 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
       activeHistoryId: history.derived.activeHistoryId,
       canUndo: history.derived.canUndo,
       canRedo: history.derived.canRedo,
+      hasNestedSelection: nestedSelectionIds.length > 0,
     },
     refs: {
       iterationRef,
@@ -382,6 +424,7 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
       handleToggleLayerFolderCollapsed:
         layers.actions.handleToggleLayerFolderCollapsed,
       handleAddSelectionToFolder: layers.actions.handleAddSelectionToFolder,
+      handleUnlinkSelection,
       handleToggleLayerFolderVisibility:
         layers.actions.handleToggleLayerFolderVisibility,
       handleToggleLayerFolderLock: layers.actions.handleToggleLayerFolderLock,

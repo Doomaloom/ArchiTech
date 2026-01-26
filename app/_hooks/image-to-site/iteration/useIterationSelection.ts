@@ -34,6 +34,7 @@ export default function useIterationSelection({
   };
 
   const getSelectedIds = () => selectedElementIds;
+  const getPrimaryId = () => selectedElementId;
 
   useEffect(() => {
     if (!selectedElementIds.length) {
@@ -158,6 +159,7 @@ export default function useIterationSelection({
       updateSelectedElements,
       removeSelectionIds,
       getSelectedIds,
+      getPrimaryId,
       handleSelectElement,
       handleSelectoEnd,
       handleToggleHighlight,

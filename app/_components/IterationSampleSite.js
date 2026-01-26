@@ -49,11 +49,33 @@ const IterationSampleSite = () => (
           Keep structure intact while you nudge elements.
         </p>
       </article>
-      <article className="iteration-feature" data-gem-id="feature-2">
-        <h3 data-gem-id="feature-2-title">Versioned notes</h3>
-        <p data-gem-id="feature-2-copy">
+      <article
+        className="iteration-feature iteration-feature-nesting"
+        data-gem-id="feature-2"
+        data-gem-folder="notes-stack"
+        data-gem-folder-name="Notes Container"
+        data-gem-folder-parent="true"
+      >
+        <span
+          className="iteration-feature-tag"
+          data-gem-id="feature-2-tag"
+          data-gem-folder="notes-stack"
+        >
+          Nested group
+        </span>
+        <h3 data-gem-id="feature-2-title" data-gem-folder="notes-stack">
+          Versioned notes
+        </h3>
+        <p data-gem-id="feature-2-copy" data-gem-folder="notes-stack">
           Circle issues and capture intent.
         </p>
+        <span
+          className="iteration-feature-hint"
+          data-gem-id="feature-2-hint"
+          data-gem-folder="notes-stack"
+        >
+          Select me -&gt; UNLINK
+        </span>
       </article>
       <article className="iteration-feature" data-gem-id="feature-3">
         <h3 data-gem-id="feature-3-title">AI patches</h3>
