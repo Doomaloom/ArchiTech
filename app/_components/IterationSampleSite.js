@@ -1,4 +1,4 @@
-const IterationSampleSite = () => (
+const IterationSampleSite = ({ showLinkHint = true }) => (
   <main className="iteration-site">
     <header className="iteration-header">
       <div className="iteration-logo" data-gem-id="logo">
@@ -69,13 +69,15 @@ const IterationSampleSite = () => (
         <p data-gem-id="feature-2-copy" data-gem-folder="notes-stack">
           Circle issues and capture intent.
         </p>
-        <span
-          className="iteration-feature-hint"
-          data-gem-id="feature-2-hint"
-          data-gem-folder="notes-stack"
-        >
-          Select me -&gt; UNLINK
-        </span>
+        {showLinkHint ? (
+          <span
+            className="iteration-feature-hint"
+            data-gem-id="feature-2-hint"
+            data-gem-folder="notes-stack"
+          >
+            Select me -&gt; UNLINK
+          </span>
+        ) : null}
       </article>
       <article className="iteration-feature" data-gem-id="feature-3">
         <h3 data-gem-id="feature-3-title">AI patches</h3>

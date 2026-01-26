@@ -20,6 +20,23 @@ export default function useIterationNestedSizing({
 }) {
   const [elementSizes, setElementSizes] = useState(() => ({}));
 
+  const clearElementSizes = (ids) => {
+    if (!ids?.length) {
+      return;
+    }
+    setElementSizes((current) => {
+      let changed = false;
+      const next = { ...current };
+      ids.forEach((id) => {
+        if (next[id]) {
+          delete next[id];
+          changed = true;
+        }
+      });
+      return changed ? next : current;
+    });
+  };
+
   useEffect(() => {
     if (!isIterationMode) {
       setElementSizes((current) => (Object.keys(current).length ? {} : current));
@@ -86,5 +103,5 @@ export default function useIterationNestedSizing({
     zoomLevel,
   ]);
 
-  return { state: { elementSizes } };
+  return { state: { elementSizes }, actions: { clearElementSizes } };
 }

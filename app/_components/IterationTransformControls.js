@@ -96,6 +96,18 @@ export default function IterationTransformControls({
   const controlsRef = useRef(null);
   const boundsRef = useRef(null);
   const rafRef = useRef(null);
+  const handleUnlinkPointerDown = (event) => {
+    event.stopPropagation();
+    event.preventDefault();
+    onUnlink?.();
+  };
+
+  const handleUnlinkClick = (event) => {
+    if (event.detail > 0) {
+      return;
+    }
+    onUnlink?.();
+  };
 
   useLayoutEffect(() => {
     if (!isVisible) {
@@ -150,11 +162,36 @@ export default function IterationTransformControls({
       <button
         className="imageflow-transform-unlink"
         type="button"
-        onClick={onUnlink}
-        onPointerDown={(event) => event.stopPropagation()}
+        onClick={handleUnlinkClick}
+        onPointerDown={handleUnlinkPointerDown}
         aria-label="Unlink from folder"
       >
-        UNLINK
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M9 15l-2 2a3 3 0 01-4.2-4.2l2-2"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M15 9l2-2a3 3 0 114.2 4.2l-2 2"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M8 8l8 8"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
       </button>
     </div>
   );

@@ -67,6 +67,11 @@ export default function IterateView() {
     derived.canTransform &&
     state.showTransformControls &&
     derived.hasNestedSelection;
+  const hasLayout = Object.keys(state.baseLayout ?? {}).length > 0;
+  const isHintLinked = Object.values(state.layerFolders ?? {}).some((folder) =>
+    (folder.layerIds ?? []).includes("feature-2-hint")
+  );
+  const showLinkHint = !hasLayout || isHintLinked;
   const canvasStyle = {
     transform: `translate3d(${derived.panOffset.x}px, ${derived.panOffset.y}px, 0) scale(${derived.zoomLevel})`,
   };
@@ -112,7 +117,7 @@ export default function IterateView() {
                 onMouseDown={actions.handleSelectElement}
                 onTouchStart={actions.handleSelectElement}
               >
-                <IterationSampleSite />
+                <IterationSampleSite showLinkHint={showLinkHint} />
               </div>
               <div
                 className="imageflow-iteration-overlay"

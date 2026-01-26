@@ -7,6 +7,7 @@ import { useIterationHistory } from "./iteration/history";
 import { buildIterationPatch } from "./iteration/patch";
 import useIterationAnnotations from "./iteration/useIterationAnnotations";
 import useIterationGuides from "./iteration/useIterationGuides";
+import useIterationDetachedLayers from "./iteration/useIterationDetachedLayers";
 import useIterationLayerEffects from "./iteration/useIterationLayerEffects";
 import useIterationLayersState from "./iteration/useIterationLayersState";
 import useIterationLayout from "./iteration/useIterationLayout";
@@ -72,17 +73,41 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
     selectionApiRef,
   });
 
+  const transforms = useIterationTransforms({
+    isIterationMode,
+    iterationSiteRef,
+    scheduleHistoryCommit,
+  });
+
+  const detachment = useIterationDetachedLayers({
+    isIterationMode,
+    iterationSiteRef,
+    baseLayout: layout.state.baseLayout,
+    layerParentMap: layers.derived.layerParentMap,
+    hasFolderState:
+      layers.state.layerFolderOrder.length > 0 ||
+      Object.keys(layers.state.layerFolders).length > 0,
+    elementTransforms: transforms.state.elementTransforms,
+    setElementTransforms: transforms.actions.setElementTransforms,
+    zoomLevel: viewport.derived.zoomLevel,
+  });
+
   const nestedLayout = useMemo(() => {
     const base = layout.state.baseLayout;
     if (!Object.keys(base).length) {
       return base;
     }
     const parentMap = layers.derived.layerParentMap;
-    if (!Object.keys(parentMap ?? {}).length) {
+    const detachedSet = new Set(detachment.derived.detachedLayerIds ?? []);
+    if (!Object.keys(parentMap ?? {}).length && !detachedSet.size) {
       return base;
     }
     const next = {};
     Object.values(base).forEach((entry) => {
+      if (detachedSet.has(entry.id) && entry.parentId !== "root") {
+        next[entry.id] = { ...entry, parentId: "root" };
+        return;
+      }
       const overrideParent = parentMap[entry.id];
       if (overrideParent && overrideParent !== entry.parentId) {
         next[entry.id] = { ...entry, parentId: overrideParent };
@@ -91,13 +116,11 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
       next[entry.id] = entry;
     });
     return next;
-  }, [layout.state.baseLayout, layers.derived.layerParentMap]);
-
-  const transforms = useIterationTransforms({
-    isIterationMode,
-    iterationSiteRef,
-    scheduleHistoryCommit,
-  });
+  }, [
+    detachment.derived.detachedLayerIds,
+    layout.state.baseLayout,
+    layers.derived.layerParentMap,
+  ]);
 
   const selection = useIterationSelection({
     isIterationMode,
@@ -137,18 +160,27 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
   const domSizeOverrides = useMemo(() => {
     const nestedSizes = nestedChildSizes.state.nestedChildSizes;
     const parentSizes = nestedSizing.state.elementSizes;
-    if (!Object.keys(nestedSizes).length) {
-      return parentSizes;
-    }
-    if (!Object.keys(parentSizes).length) {
-      return nestedSizes;
+    const detachedSizes = detachment.state.detachedSizes;
+    if (
+      !Object.keys(nestedSizes).length &&
+      !Object.keys(parentSizes).length &&
+      !Object.keys(detachedSizes).length
+    ) {
+      return {};
     }
     const merged = { ...nestedSizes };
     Object.entries(parentSizes).forEach(([id, size]) => {
       merged[id] = { ...merged[id], ...size };
     });
+    Object.entries(detachedSizes).forEach(([id, size]) => {
+      merged[id] = { ...merged[id], ...size };
+    });
     return merged;
-  }, [nestedChildSizes.state.nestedChildSizes, nestedSizing.state.elementSizes]);
+  }, [
+    detachment.state.detachedSizes,
+    nestedChildSizes.state.nestedChildSizes,
+    nestedSizing.state.elementSizes,
+  ]);
 
   useIterationSizeEffects({
     isIterationMode,
@@ -277,7 +309,15 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
     if (!nestedSelectionIds.length) {
       return;
     }
+    const parentIds = Array.from(
+      new Set(
+        nestedSelectionIds
+          .map((id) => layers.helpers.getLayerParentId(id))
+          .filter(Boolean)
+      )
+    );
     layers.actions.unlinkLayersFromFolders(nestedSelectionIds);
+    nestedSizing.actions.clearElementSizes(parentIds);
   };
 
   const moveTargets = useMemo(() => {
@@ -316,7 +356,7 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
         isIterationMode,
         baseLayout: nestedLayout,
         elementTransforms: transforms.state.elementTransforms,
-        elementSizes: nestedSizing.state.elementSizes,
+        elementSizes: domSizeOverrides,
         layerState: layers.state.layerState,
         layerFolders: layers.state.layerFolders,
         layerFolderOrder: layers.state.layerFolderOrder,
@@ -333,7 +373,7 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
       annotations.state.annotations,
       isIterationMode,
       nestedLayout,
-      nestedSizing.state.elementSizes,
+      domSizeOverrides,
       layers.state.deletedLayerIds,
       layers.state.highlightedIds,
       layers.state.layerFolderOrder,
