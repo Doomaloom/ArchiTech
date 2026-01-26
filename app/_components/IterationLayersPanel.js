@@ -258,7 +258,8 @@ export default function IterationLayersPanel({
                         type="button"
                         onClick={() => onAddSelectionToFolder(folder.id)}
                         disabled={!selectedElementIds.length}
-                        aria-label="Add selection to folder"
+                        aria-label="Link selection to folder"
+                        title="Link selection to folder"
                       >
                         <svg viewBox="0 0 24 24" aria-hidden="true">
                           <path

@@ -2992,6 +2992,10 @@ body:has(.imageflow-iteration):has(#imageflow-sidebar-toggle:checked)
   border-radius: 8px;
 }
 
+.imageflow-iteration-site [data-gem-id].is-nesting-parent {
+  transform-origin: 0 0;
+}
+
 .imageflow-iteration-site [data-gem-id].is-layer-hidden {
   visibility: hidden;
   pointer-events: none;

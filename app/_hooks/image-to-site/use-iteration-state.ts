@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { getNotePosition, getTopLevelSelection } from "./iteration/geometry";
 import { useIterationHistory } from "./iteration/history";
@@ -10,9 +10,12 @@ import useIterationGuides from "./iteration/useIterationGuides";
 import useIterationLayerEffects from "./iteration/useIterationLayerEffects";
 import useIterationLayersState from "./iteration/useIterationLayersState";
 import useIterationLayout from "./iteration/useIterationLayout";
+import useIterationNestedChildSizes from "./iteration/useIterationNestedChildSizes";
+import useIterationNestedSizing from "./iteration/useIterationNestedSizing";
 import useIterationPanels from "./iteration/useIterationPanels";
 import useIterationSelection from "./iteration/useIterationSelection";
 import useIterationSelectionHotkeys from "./iteration/useIterationSelectionHotkeys";
+import useIterationSizeEffects from "./iteration/useIterationSizeEffects";
 import useIterationTextEdits from "./iteration/useIterationTextEdits";
 import useIterationTools from "./iteration/useIterationTools";
 import useIterationTransforms from "./iteration/useIterationTransforms";
@@ -23,6 +26,7 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
   const iterationRef = useRef(null);
   const iterationPreviewRef = useRef(null);
   const iterationSiteRef = useRef(null);
+  const [isTransforming, setIsTransforming] = useState(false);
 
   const historyRef = useRef(() => {});
   const scheduleHistoryCommit = (label) => historyRef.current(label);
@@ -112,6 +116,46 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
     getPrimaryId: selection.actions.getPrimaryId,
   };
 
+  const nestedChildSizes = useIterationNestedChildSizes({
+    isIterationMode,
+    baseLayout: layout.state.baseLayout,
+    nestedLayerIds: layers.derived.nestedLayerIds,
+  });
+
+  const nestedSizing = useIterationNestedSizing({
+    isIterationMode,
+    iterationSiteRef,
+    baseLayout: layout.state.baseLayout,
+    elementTransforms: transforms.state.elementTransforms,
+    layerParentMap: layers.derived.layerParentMap,
+    setElementTransforms: transforms.actions.setElementTransforms,
+    zoomLevel: viewport.derived.zoomLevel,
+    isTransforming,
+    selectedElementIds: selection.state.selectedElementIds,
+  });
+
+  const domSizeOverrides = useMemo(() => {
+    const nestedSizes = nestedChildSizes.state.nestedChildSizes;
+    const parentSizes = nestedSizing.state.elementSizes;
+    if (!Object.keys(nestedSizes).length) {
+      return parentSizes;
+    }
+    if (!Object.keys(parentSizes).length) {
+      return nestedSizes;
+    }
+    const merged = { ...nestedSizes };
+    Object.entries(parentSizes).forEach(([id, size]) => {
+      merged[id] = { ...merged[id], ...size };
+    });
+    return merged;
+  }, [nestedChildSizes.state.nestedChildSizes, nestedSizing.state.elementSizes]);
+
+  useIterationSizeEffects({
+    isIterationMode,
+    iterationSiteRef,
+    elementSizes: domSizeOverrides,
+  });
+
   useIterationSelectionHotkeys({
     isIterationMode,
     selectedElementIds: selection.state.selectedElementIds,
@@ -160,6 +204,7 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
     layerState: layers.state.layerState,
     deletedLayerIds: layers.state.deletedLayerIds,
     isLayerDeleted: layers.helpers.isLayerDeleted,
+    parentLayerIds: layers.derived.parentLayerIds,
   });
 
   const historySnapshot = {
@@ -271,6 +316,7 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
         isIterationMode,
         baseLayout: nestedLayout,
         elementTransforms: transforms.state.elementTransforms,
+        elementSizes: nestedSizing.state.elementSizes,
         layerState: layers.state.layerState,
         layerFolders: layers.state.layerFolders,
         layerFolderOrder: layers.state.layerFolderOrder,
@@ -287,6 +333,7 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
       annotations.state.annotations,
       isIterationMode,
       nestedLayout,
+      nestedSizing.state.elementSizes,
       layers.state.deletedLayerIds,
       layers.state.highlightedIds,
       layers.state.layerFolderOrder,
@@ -411,6 +458,8 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
       handleSelectElement: selection.actions.handleSelectElement,
       handleToggleHighlight: selection.actions.handleToggleHighlight,
       updateElementTransform: transforms.actions.updateElementTransform,
+      handleTransformStart: () => setIsTransforming(true),
+      handleTransformEnd: () => setIsTransforming(false),
       handleSelectoEnd: selection.actions.handleSelectoEnd,
       handleDeleteSelection: selection.actions.handleDeleteSelection,
       handleUndoHistory: history.actions.handleUndoHistory,

@@ -280,12 +280,14 @@ export default function IterateView() {
                   : "imageflow-moveable is-hidden"
               }
               onDragStart={({ set, target }) => {
+                actions.handleTransformStart?.();
                 const id = target?.dataset?.gemId;
                 const current = id ? actions.getTransformState?.(id) : null;
                 if (current) {
                   set([current.x, current.y]);
                 }
               }}
+              onDragEnd={() => actions.handleTransformEnd?.()}
               onDrag={({ target, beforeTranslate }) => {
                 const id = target?.dataset?.gemId;
                 if (target && id) {
@@ -297,6 +299,7 @@ export default function IterateView() {
                 }
               }}
               onScaleStart={({ set, dragStart, target }) => {
+                actions.handleTransformStart?.();
                 const id = target?.dataset?.gemId;
                 const current = id ? actions.getTransformState?.(id) : null;
                 if (current) {
@@ -306,6 +309,7 @@ export default function IterateView() {
                   }
                 }
               }}
+              onScaleEnd={() => actions.handleTransformEnd?.()}
               onScale={({ target, scale, drag }) => {
                 const id = target?.dataset?.gemId;
                 if (!target || !id) {
@@ -322,6 +326,7 @@ export default function IterateView() {
                 actions.updateElementTransform(id, next, target);
               }}
               onRotateStart={({ set, dragStart, target }) => {
+                actions.handleTransformStart?.();
                 const id = target?.dataset?.gemId;
                 const current = id ? actions.getTransformState?.(id) : null;
                 if (current) {
@@ -331,6 +336,7 @@ export default function IterateView() {
                   }
                 }
               }}
+              onRotateEnd={() => actions.handleTransformEnd?.()}
               onRotate={({ target, rotation, drag }) => {
                 const id = target?.dataset?.gemId;
                 if (!target || !id) {
@@ -344,6 +350,7 @@ export default function IterateView() {
                 actions.updateElementTransform(id, next, target);
               }}
               onDragGroupStart={(event) => {
+                actions.handleTransformStart?.();
                 event.events.forEach((childEvent) => {
                   const id = childEvent.target?.dataset?.gemId;
                   const current = id ? actions.getTransformState?.(id) : null;
@@ -352,6 +359,7 @@ export default function IterateView() {
                   }
                 });
               }}
+              onDragGroupEnd={() => actions.handleTransformEnd?.()}
               onDragGroup={(event) => {
                 event.events.forEach((childEvent) => {
                   const id = childEvent.target?.dataset?.gemId;
@@ -369,6 +377,7 @@ export default function IterateView() {
                 });
               }}
               onScaleGroupStart={(event) => {
+                actions.handleTransformStart?.();
                 event.events.forEach((childEvent) => {
                   const id = childEvent.target?.dataset?.gemId;
                   const current = id ? actions.getTransformState?.(id) : null;
@@ -380,6 +389,7 @@ export default function IterateView() {
                   }
                 });
               }}
+              onScaleGroupEnd={() => actions.handleTransformEnd?.()}
               onScaleGroup={(event) => {
                 event.events.forEach((childEvent) => {
                   const id = childEvent.target?.dataset?.gemId;
@@ -398,6 +408,7 @@ export default function IterateView() {
                 });
               }}
               onRotateGroupStart={(event) => {
+                actions.handleTransformStart?.();
                 event.events.forEach((childEvent) => {
                   const id = childEvent.target?.dataset?.gemId;
                   const current = id ? actions.getTransformState?.(id) : null;
@@ -409,6 +420,7 @@ export default function IterateView() {
                   }
                 });
               }}
+              onRotateGroupEnd={() => actions.handleTransformEnd?.()}
               onRotateGroup={(event) => {
                 event.events.forEach((childEvent) => {
                   const id = childEvent.target?.dataset?.gemId;

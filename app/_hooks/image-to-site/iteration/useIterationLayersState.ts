@@ -334,8 +334,9 @@ export default function useIterationLayersState({
       const combined = Array.from(
         new Set([...(target.layerIds ?? []), ...selected])
       );
-      const fallbackParent =
-        target.parentId ?? (combined.includes(primaryId) ? primaryId : null);
+      const fallbackParent = combined.includes(primaryId)
+        ? primaryId
+        : target.parentId ?? null;
       next[folderId] = sanitizeFolder(
         { ...target, layerIds: combined, parentId: fallbackParent },
         null,
@@ -500,6 +501,11 @@ export default function useIterationLayersState({
     [layerParentMap]
   );
 
+  const parentLayerIds = useMemo(() => {
+    const parents = new Set(Object.values(layerParentMap));
+    return Array.from(parents).filter(Boolean);
+  }, [layerParentMap]);
+
   const getLayerFolderId = (id) => layerFolderMap[id] ?? null;
   const getLayerParentId = (id) => layerParentMap[id] ?? null;
   const isLayerNested = (id) => Boolean(layerParentMap[id]);
@@ -566,6 +572,7 @@ export default function useIterationLayersState({
       ungroupedLayerEntries,
       layerParentMap,
       nestedLayerIds,
+      parentLayerIds,
     },
     helpers: {
       getLayerMeta,

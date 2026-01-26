@@ -8,6 +8,7 @@ export const buildIterationPatch = ({
   isIterationMode,
   baseLayout,
   elementTransforms,
+  elementSizes,
   layerState,
   layerFolders,
   layerFolderOrder,
@@ -26,11 +27,14 @@ export const buildIterationPatch = ({
 
   const elements = Object.values(baseLayout).map((entry) => {
     const transform = normalizeTransform(elementTransforms[entry.id]);
+    const sizeOverride = elementSizes?.[entry.id];
+    const baseWidth = sizeOverride?.width ?? entry.base.width;
+    const baseHeight = sizeOverride?.height ?? entry.base.height;
     const next = {
       x: roundValue(entry.base.x + transform.x),
       y: roundValue(entry.base.y + transform.y),
-      width: roundValue(entry.base.width * transform.scaleX),
-      height: roundValue(entry.base.height * transform.scaleY),
+      width: roundValue(baseWidth * transform.scaleX),
+      height: roundValue(baseHeight * transform.scaleY),
       rotate: roundValue(transform.rotate),
     };
     return {

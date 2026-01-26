@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState } from "react";
+import { useLayoutEffect, useRef } from "react";
 
 const getSelectionBounds = (previewEl, siteEl, ids) => {
   if (!previewEl || !siteEl || !ids.length) {
@@ -41,6 +41,47 @@ const getSelectionBounds = (previewEl, siteEl, ids) => {
   };
 };
 
+const areBoundsEqual = (current, next) => {
+  if (current === next) {
+    return true;
+  }
+  if (!current && !next) {
+    return true;
+  }
+  if (!current || !next) {
+    return false;
+  }
+  return (
+    Math.abs(current.left - next.left) < 0.5 &&
+    Math.abs(current.top - next.top) < 0.5 &&
+    Math.abs(current.right - next.right) < 0.5 &&
+    Math.abs(current.bottom - next.bottom) < 0.5
+  );
+};
+
+const applyControlsVisibility = (element, isVisible) => {
+  if (!element) {
+    return;
+  }
+  element.style.opacity = isVisible ? "1" : "0";
+  element.style.pointerEvents = isVisible ? "auto" : "none";
+};
+
+const applyControlsPosition = (element, bounds) => {
+  if (!element) {
+    return;
+  }
+  if (!bounds) {
+    applyControlsVisibility(element, false);
+    return;
+  }
+  const left = Math.max(8, bounds.left);
+  const top = Math.max(8, bounds.top);
+  element.style.left = `${left}px`;
+  element.style.top = `${top}px`;
+  applyControlsVisibility(element, true);
+};
+
 export default function IterationTransformControls({
   previewRef,
   siteRef,
@@ -52,21 +93,39 @@ export default function IterationTransformControls({
   panOffset,
   stageSize,
 }) {
-  const [bounds, setBounds] = useState(null);
+  const controlsRef = useRef(null);
+  const boundsRef = useRef(null);
+  const rafRef = useRef(null);
 
   useLayoutEffect(() => {
     if (!isVisible) {
-      setBounds(null);
+      boundsRef.current = null;
+      applyControlsVisibility(controlsRef.current, false);
       return;
     }
-    void elementTransforms;
-    void zoomLevel;
-    void panOffset;
-    void stageSize;
     const previewEl = previewRef.current;
     const siteEl = siteRef.current;
-    const nextBounds = getSelectionBounds(previewEl, siteEl, selectionIds);
-    setBounds(nextBounds);
+    if (!previewEl || !siteEl || !selectionIds.length) {
+      boundsRef.current = null;
+      applyControlsVisibility(controlsRef.current, false);
+      return;
+    }
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+    }
+    rafRef.current = requestAnimationFrame(() => {
+      const nextBounds = getSelectionBounds(previewEl, siteEl, selectionIds);
+      if (areBoundsEqual(boundsRef.current, nextBounds)) {
+        return;
+      }
+      boundsRef.current = nextBounds;
+      applyControlsPosition(controlsRef.current, nextBounds);
+    });
+    return () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+      }
+    };
   }, [
     elementTransforms,
     isVisible,
@@ -78,16 +137,15 @@ export default function IterationTransformControls({
     zoomLevel,
   ]);
 
-  if (!isVisible || !bounds) {
+  if (!isVisible) {
     return null;
   }
-  const left = Math.max(8, bounds.left);
-  const top = Math.max(8, bounds.top);
 
   return (
     <div
       className="imageflow-transform-controls"
-      style={{ left, top }}
+      ref={controlsRef}
+      style={{ opacity: 0, pointerEvents: "none" }}
     >
       <button
         className="imageflow-transform-unlink"

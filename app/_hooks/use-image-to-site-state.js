@@ -191,6 +191,8 @@ export default function useImageToSiteState() {
       handleSelectElement: iteration.actions.handleSelectElement,
       handleToggleHighlight: iteration.actions.handleToggleHighlight,
       updateElementTransform: iteration.actions.updateElementTransform,
+      handleTransformStart: iteration.actions.handleTransformStart,
+      handleTransformEnd: iteration.actions.handleTransformEnd,
       handleSelectoEnd: iteration.actions.handleSelectoEnd,
       handleDeleteSelection: iteration.actions.handleDeleteSelection,
       handleUndoHistory: iteration.actions.handleUndoHistory,
