@@ -1,0 +1,7 @@
+- Follow SOLID Conventions.
+- Keep hooks small and focused.
+- A single hook should have one clear responsibility.
+- Hooks should not exceed ~100 lines unless strongly justified.
+- Split large hooks into smaller composable hooks.
+- Avoid “god hooks” that manage multiple unrelated concerns.
+- Prefer composition over condition-heavy hooks.
