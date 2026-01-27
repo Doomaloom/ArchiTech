@@ -234,12 +234,18 @@ export default function useIterationLayersState({
     });
   };
 
-  const handleCreateLayerFolder = () => {
+  const handleCreateLayerFolder = (options = {}) => {
     scheduleHistoryCommit("Layer");
     const folderId = `folder-${Date.now()}`;
     const selected = selectionApiRef.current?.getSelectedIds?.() ?? [];
+    const preferredParentId = options.parentId ?? null;
     const primaryId =
-      selectionApiRef.current?.getPrimaryId?.() ?? selected[0] ?? null;
+      (preferredParentId && selected.includes(preferredParentId)
+        ? preferredParentId
+        : null) ??
+      selectionApiRef.current?.getPrimaryId?.() ??
+      selected[0] ??
+      null;
     const selectedSet = new Set(selected);
     setLayerFolders((current) => {
       const folderName = `Folder ${Object.keys(current).length + 1}`;
@@ -310,15 +316,21 @@ export default function useIterationLayersState({
     });
   };
 
-  const handleAddSelectionToFolder = (folderId) => {
+  const handleAddSelectionToFolder = (folderId, options = {}) => {
     const selected = selectionApiRef.current?.getSelectedIds?.() ?? [];
     if (!selected.length) {
       return;
     }
     scheduleHistoryCommit("Layer");
     const selectedSet = new Set(selected);
+    const preferredParentId = options.parentId ?? null;
     const primaryId =
-      selectionApiRef.current?.getPrimaryId?.() ?? selected[0] ?? null;
+      (preferredParentId && selected.includes(preferredParentId)
+        ? preferredParentId
+        : null) ??
+      selectionApiRef.current?.getPrimaryId?.() ??
+      selected[0] ??
+      null;
     setLayerFolders((current) => {
       const next = {};
       Object.values(current).forEach((folder) => {

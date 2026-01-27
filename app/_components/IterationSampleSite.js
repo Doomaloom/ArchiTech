@@ -24,20 +24,50 @@ const IterationSampleSite = ({ showLinkHint = true }) => (
         <p className="iteration-subtitle" data-gem-id="hero-subtitle">
           Upload a layout and refine it with precise AI iterations.
         </p>
-        <div className="iteration-hero-actions">
-          <button className="iteration-primary" data-gem-id="hero-primary" type="button">
+        <div
+          className="iteration-hero-actions"
+          data-gem-id="hero-actions"
+          data-gem-folder="hero-actions"
+          data-gem-folder-name="Hero Actions"
+          data-gem-folder-parent="true"
+        >
+          <button
+            className="iteration-primary"
+            data-gem-id="hero-primary"
+            data-gem-folder="hero-actions"
+            type="button"
+          >
             Generate site
           </button>
-          <button className="iteration-secondary" data-gem-id="hero-secondary" type="button">
+          <button
+            className="iteration-secondary"
+            data-gem-id="hero-secondary"
+            data-gem-folder="hero-actions"
+            type="button"
+          >
             View plans
           </button>
         </div>
       </div>
-      <div className="iteration-hero-card" data-gem-id="hero-card">
-        <div className="iteration-card-title" data-gem-id="hero-card-title">
+      <div
+        className="iteration-hero-card"
+        data-gem-id="hero-card"
+        data-gem-folder="hero-card"
+        data-gem-folder-name="Hero Card"
+        data-gem-folder-parent="true"
+      >
+        <div
+          className="iteration-card-title"
+          data-gem-id="hero-card-title"
+          data-gem-folder="hero-card"
+        >
           Variant A
         </div>
-        <div className="iteration-card-body" data-gem-id="hero-card-body">
+        <div
+          className="iteration-card-body"
+          data-gem-id="hero-card-body"
+          data-gem-folder="hero-card"
+        >
           Preview ready for iteration.
         </div>
       </div>

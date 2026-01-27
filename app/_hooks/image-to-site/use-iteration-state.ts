@@ -5,6 +5,8 @@ import { useMemo, useRef, useState } from "react";
 import { getNotePosition, getTopLevelSelection } from "./iteration/geometry";
 import { useIterationHistory } from "./iteration/history";
 import { buildIterationPatch } from "./iteration/patch";
+import { buildContainerLayout, resolveContainedParentId } from "./iteration/containerUtils";
+import useIterationContainers from "./iteration/useIterationContainers";
 import useIterationAnnotations from "./iteration/useIterationAnnotations";
 import useIterationGuides from "./iteration/useIterationGuides";
 import useIterationDetachedLayers from "./iteration/useIterationDetachedLayers";
@@ -92,35 +94,27 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
     zoomLevel: viewport.derived.zoomLevel,
   });
 
-  const nestedLayout = useMemo(() => {
-    const base = layout.state.baseLayout;
-    if (!Object.keys(base).length) {
-      return base;
-    }
-    const parentMap = layers.derived.layerParentMap;
-    const detachedSet = new Set(detachment.derived.detachedLayerIds ?? []);
-    if (!Object.keys(parentMap ?? {}).length && !detachedSet.size) {
-      return base;
-    }
-    const next = {};
-    Object.values(base).forEach((entry) => {
-      if (detachedSet.has(entry.id) && entry.parentId !== "root") {
-        next[entry.id] = { ...entry, parentId: "root" };
-        return;
-      }
-      const overrideParent = parentMap[entry.id];
-      if (overrideParent && overrideParent !== entry.parentId) {
-        next[entry.id] = { ...entry, parentId: overrideParent };
-        return;
-      }
-      next[entry.id] = entry;
-    });
-    return next;
-  }, [
-    detachment.derived.detachedLayerIds,
-    layout.state.baseLayout,
-    layers.derived.layerParentMap,
-  ]);
+  const containers = useIterationContainers({
+    isIterationMode,
+    iterationSiteRef,
+    layerParentMap: layers.derived.layerParentMap,
+    detachedLayerIds: detachment.derived.detachedLayerIds,
+    baseLayout: layout.state.baseLayout,
+  });
+
+  const containerLayout = useMemo(
+    () =>
+      buildContainerLayout({
+        baseLayout: layout.state.baseLayout,
+        containerMap: containers.derived.containerGraph.map,
+        detachedIds: detachment.derived.detachedLayerIds,
+      }),
+    [
+      containers.derived.containerGraph.map,
+      detachment.derived.detachedLayerIds,
+      layout.state.baseLayout,
+    ]
+  );
 
   const selection = useIterationSelection({
     isIterationMode,
@@ -142,7 +136,7 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
   const nestedChildSizes = useIterationNestedChildSizes({
     isIterationMode,
     baseLayout: layout.state.baseLayout,
-    nestedLayerIds: layers.derived.nestedLayerIds,
+    containerChildIds: containers.derived.containerGraph.childIds,
   });
 
   const nestedSizing = useIterationNestedSizing({
@@ -150,7 +144,7 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
     iterationSiteRef,
     baseLayout: layout.state.baseLayout,
     elementTransforms: transforms.state.elementTransforms,
-    layerParentMap: layers.derived.layerParentMap,
+    containerParentMap: containers.derived.containerGraph.map,
     setElementTransforms: transforms.actions.setElementTransforms,
     zoomLevel: viewport.derived.zoomLevel,
     isTransforming,
@@ -236,7 +230,7 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
     layerState: layers.state.layerState,
     deletedLayerIds: layers.state.deletedLayerIds,
     isLayerDeleted: layers.helpers.isLayerDeleted,
-    parentLayerIds: layers.derived.parentLayerIds,
+    parentLayerIds: containers.derived.containerGraph.parentIds,
   });
 
   const historySnapshot = {
@@ -290,20 +284,29 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
   const moveTargetIds = useMemo(() => {
     return getTopLevelSelection(
       selection.state.selectedElementIds,
-      nestedLayout
+      containerLayout
     );
-  }, [nestedLayout, selection.state.selectedElementIds]);
+  }, [containerLayout, selection.state.selectedElementIds]);
 
   const nestedSelectionIds = useMemo(() => {
     if (!selection.state.selectedElementIds.length) {
       return [];
     }
-    if (!layers.derived.nestedLayerIds.length) {
+    if (!containers.derived.containerGraph.childIds.length) {
       return [];
     }
-    const nestedSet = new Set(layers.derived.nestedLayerIds);
+    const nestedSet = new Set(containers.derived.containerGraph.childIds);
     return selection.state.selectedElementIds.filter((id) => nestedSet.has(id));
-  }, [layers.derived.nestedLayerIds, selection.state.selectedElementIds]);
+  }, [
+    containers.derived.containerGraph.childIds,
+    selection.state.selectedElementIds,
+  ]);
+
+  const getSelectionContainerParent = () =>
+    resolveContainedParentId(
+      iterationSiteRef.current,
+      selection.state.selectedElementIds
+    );
 
   const handleUnlinkSelection = () => {
     if (!nestedSelectionIds.length) {
@@ -312,7 +315,7 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
     const parentIds = Array.from(
       new Set(
         nestedSelectionIds
-          .map((id) => layers.helpers.getLayerParentId(id))
+          .map((id) => containers.derived.containerGraph.map[id])
           .filter(Boolean)
       )
     );
@@ -354,7 +357,7 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
     () =>
       buildIterationPatch({
         isIterationMode,
-        baseLayout: nestedLayout,
+        baseLayout: containerLayout,
         elementTransforms: transforms.state.elementTransforms,
         elementSizes: domSizeOverrides,
         layerState: layers.state.layerState,
@@ -372,7 +375,7 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
     [
       annotations.state.annotations,
       isIterationMode,
-      nestedLayout,
+      containerLayout,
       domSizeOverrides,
       layers.state.deletedLayerIds,
       layers.state.highlightedIds,
@@ -507,12 +510,18 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
       handleClearHistory: history.actions.handleClearHistory,
       handleToggleLayerVisibility: layers.actions.handleToggleLayerVisibility,
       handleToggleLayerLock: layers.actions.handleToggleLayerLock,
-      handleCreateLayerFolder: layers.actions.handleCreateLayerFolder,
+      handleCreateLayerFolder: () =>
+        layers.actions.handleCreateLayerFolder({
+          parentId: getSelectionContainerParent(),
+        }),
       handleRenameLayerFolder: layers.actions.handleRenameLayerFolder,
       handleRemoveLayerFolder: layers.actions.handleRemoveLayerFolder,
       handleToggleLayerFolderCollapsed:
         layers.actions.handleToggleLayerFolderCollapsed,
-      handleAddSelectionToFolder: layers.actions.handleAddSelectionToFolder,
+      handleAddSelectionToFolder: (folderId) =>
+        layers.actions.handleAddSelectionToFolder(folderId, {
+          parentId: getSelectionContainerParent(),
+        }),
       handleUnlinkSelection,
       handleToggleLayerFolderVisibility:
         layers.actions.handleToggleLayerFolderVisibility,

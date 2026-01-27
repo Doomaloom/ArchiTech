@@ -6,7 +6,20 @@ import { CODE_FILE_GROUPS, INITIAL_CODE_CONTENTS } from "../_lib/code-data";
 import buildFileTree from "../_lib/file-tree";
 import { getLanguageFromFilename } from "../_lib/language";
 
+/** @typedef {import("../_lib/code-types").EditableCodeFile} EditableCodeFile */
+/** @typedef {import("../_lib/code-types").CodeFileGroup} CodeFileGroup */
+
+const createEditableFile = (file) => {
+  const id = `uploads/${file.name}`;
+  return {
+    id,
+    label: file.name,
+    language: getLanguageFromFilename(file.name),
+  };
+};
+
 export default function useCodeWorkspace() {
+  /** @type {[EditableCodeFile[], Function]} */
   const [customFiles, setCustomFiles] = useState([]);
   const [activeCodeFileId, setActiveCodeFileId] = useState(
     CODE_FILE_GROUPS[0].items[0].id
@@ -19,6 +32,7 @@ export default function useCodeWorkspace() {
   const [collapsedFolders, setCollapsedFolders] = useState(() => ({}));
   const [codeContents, setCodeContents] = useState(INITIAL_CODE_CONTENTS);
 
+  /** @type {CodeFileGroup[]} */
   const codeFileGroups = useMemo(() => {
     if (!customFiles.length) {
       return CODE_FILE_GROUPS;
@@ -82,13 +96,13 @@ export default function useCodeWorkspace() {
 
   const addCustomFiles = (files) => {
     files.forEach((file) => {
-      const id = `uploads/${file.name}`;
-      const language = getLanguageFromFilename(file.name);
+      const nextFile = createEditableFile(file);
+      const id = nextFile.id;
       setCustomFiles((current) => {
         if (current.some((entry) => entry.id === id)) {
           return current;
         }
-        return [...current, { id, label: file.name, language }];
+        return [...current, nextFile];
       });
       setCodeContents((current) => {
         if (current[id]) {

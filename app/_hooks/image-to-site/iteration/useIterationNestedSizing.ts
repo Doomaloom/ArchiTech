@@ -12,7 +12,7 @@ export default function useIterationNestedSizing({
   iterationSiteRef,
   baseLayout,
   elementTransforms,
-  layerParentMap,
+  containerParentMap,
   setElementTransforms,
   zoomLevel,
   isTransforming,
@@ -45,7 +45,7 @@ export default function useIterationNestedSizing({
     if (!Object.keys(baseLayout).length || !iterationSiteRef.current) {
       return;
     }
-    const childrenByParent = buildChildrenByParent(layerParentMap);
+    const childrenByParent = buildChildrenByParent(containerParentMap);
     const parentEntries = Object.entries(childrenByParent);
     if (!parentEntries.length) {
       setElementSizes((current) => (Object.keys(current).length ? {} : current));
@@ -97,7 +97,7 @@ export default function useIterationNestedSizing({
     isIterationMode,
     isTransforming,
     iterationSiteRef,
-    layerParentMap,
+    containerParentMap,
     selectedElementIds,
     setElementTransforms,
     zoomLevel,

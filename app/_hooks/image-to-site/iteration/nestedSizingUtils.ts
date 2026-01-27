@@ -43,10 +43,13 @@ export const computeNestedSizingUpdates = ({
     let maxRight = -Infinity;
     let minTop = Infinity;
     let maxBottom = -Infinity;
+    const nestedChildIds = [];
 
     childIds.forEach((childId) => {
       const childElement = site.querySelector(`[data-gem-id="${childId}"]`);
       if (!childElement) return;
+      if (!parentElement.contains(childElement)) return;
+      nestedChildIds.push(childId);
       const childRect = childElement.getBoundingClientRect();
       minLeft = Math.min(minLeft, childRect.left);
       maxRight = Math.max(maxRight, childRect.right);
@@ -82,7 +85,7 @@ export const computeNestedSizingUpdates = ({
       if (transformDeltaExceeded(parentTransform, nextTransform)) {
         transformUpdates[parentId] = nextTransform;
       }
-      childIds.forEach((childId) => {
+      nestedChildIds.forEach((childId) => {
         const currentTransform = normalizeTransform(
           childTransformUpdates[childId] ?? elementTransforms[childId]
         );

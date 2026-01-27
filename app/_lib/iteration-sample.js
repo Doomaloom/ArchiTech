@@ -20,18 +20,18 @@ export const ITERATION_SAMPLE = {
       <p class="iteration-subtitle" data-gem-id="hero-subtitle">
         Upload a layout and refine it with precise AI iterations.
       </p>
-      <div class="iteration-hero-actions">
-        <button class="iteration-primary" data-gem-id="hero-primary" type="button">
+      <div class="iteration-hero-actions" data-gem-id="hero-actions" data-gem-folder="hero-actions" data-gem-folder-name="Hero Actions" data-gem-folder-parent="true">
+        <button class="iteration-primary" data-gem-id="hero-primary" data-gem-folder="hero-actions" type="button">
           Generate site
         </button>
-        <button class="iteration-secondary" data-gem-id="hero-secondary" type="button">
+        <button class="iteration-secondary" data-gem-id="hero-secondary" data-gem-folder="hero-actions" type="button">
           View plans
         </button>
       </div>
     </div>
-    <div class="iteration-hero-card" data-gem-id="hero-card">
-      <div class="iteration-card-title" data-gem-id="hero-card-title">Variant A</div>
-      <div class="iteration-card-body" data-gem-id="hero-card-body">
+    <div class="iteration-hero-card" data-gem-id="hero-card" data-gem-folder="hero-card" data-gem-folder-name="Hero Card" data-gem-folder-parent="true">
+      <div class="iteration-card-title" data-gem-id="hero-card-title" data-gem-folder="hero-card">Variant A</div>
+      <div class="iteration-card-body" data-gem-id="hero-card-body" data-gem-folder="hero-card">
         Preview ready for iteration.
       </div>
     </div>
@@ -43,11 +43,13 @@ export const ITERATION_SAMPLE = {
         Keep structure intact while you nudge elements.
       </p>
     </article>
-    <article class="iteration-feature" data-gem-id="feature-2">
-      <h3 data-gem-id="feature-2-title">Versioned notes</h3>
-      <p data-gem-id="feature-2-copy">
+    <article class="iteration-feature iteration-feature-nesting" data-gem-id="feature-2" data-gem-folder="notes-stack" data-gem-folder-name="Notes Container" data-gem-folder-parent="true">
+      <span class="iteration-feature-tag" data-gem-id="feature-2-tag" data-gem-folder="notes-stack">Nested group</span>
+      <h3 data-gem-id="feature-2-title" data-gem-folder="notes-stack">Versioned notes</h3>
+      <p data-gem-id="feature-2-copy" data-gem-folder="notes-stack">
         Circle issues and capture intent.
       </p>
+      <span class="iteration-feature-hint" data-gem-id="feature-2-hint" data-gem-folder="notes-stack">Select me -> UNLINK</span>
     </article>
     <article class="iteration-feature" data-gem-id="feature-3">
       <h3 data-gem-id="feature-3-title">AI patches</h3>
