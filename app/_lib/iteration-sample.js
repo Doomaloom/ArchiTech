@@ -167,6 +167,7 @@ export const ITERATION_SAMPLE = {
   flex-direction: column;
   gap: 8px;
   box-shadow: 0 18px 30px rgba(15, 23, 42, 0.1);
+  align-self: flex-start;
 }
 
 .iteration-card-title {
