@@ -2848,7 +2848,7 @@ body:has(.imageflow-iteration):has(#imageflow-sidebar-toggle:checked)
   position: absolute;
   inset: 0;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   transform-origin: 0 0;
   will-change: transform;
@@ -3219,6 +3219,7 @@ body:has(.imageflow-iteration):has(#imageflow-sidebar-toggle:checked)
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
+  align-items: start;
 }
 
 .iteration-feature {
