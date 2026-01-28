@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 
 import { buildTransformString } from "../../../_lib/geometry";
 import { normalizeTransform } from "./constants";
@@ -8,7 +8,7 @@ export default function useTransformDomSync({
   iterationSiteRef,
   elementTransforms,
 }) {
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isIterationMode || !iterationSiteRef.current) {
       return;
     }
