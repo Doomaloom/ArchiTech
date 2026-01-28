@@ -129,6 +129,8 @@ export default function useImageToSiteState() {
       activeHistoryId: iteration.derived.activeHistoryId,
       canUndo: iteration.derived.canUndo,
       canRedo: iteration.derived.canRedo,
+      alignmentScopeLabel: iteration.derived.alignmentScopeLabel,
+      canAlign: iteration.derived.canAlign,
     },
     refs: iteration.refs,
     actions: {
@@ -205,6 +207,7 @@ export default function useImageToSiteState() {
       handleUndoHistory: iteration.actions.handleUndoHistory,
       handleRedoHistory: iteration.actions.handleRedoHistory,
       handleClearHistory: iteration.actions.handleClearHistory,
+      handleAlignElements: iteration.actions.handleAlignElements,
       handleToggleLayerVisibility: iteration.actions.handleToggleLayerVisibility,
       handleToggleLayerLock: iteration.actions.handleToggleLayerLock,
       handleCreateLayerFolder: iteration.actions.handleCreateLayerFolder,

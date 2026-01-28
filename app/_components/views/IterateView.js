@@ -218,6 +218,9 @@ export default function IterateView() {
                 actions.applyTextStyles(id, { fontSize: value }, "Transform")
               }
               getControlState={actions.getTransformControlState}
+              onAlign={actions.handleAlignElements}
+              alignmentScopeLabel={derived.alignmentScopeLabel}
+              canAlign={derived.canAlign}
             />
             <span className="imageflow-iteration-zoom-indicator">
               {Math.round(derived.zoomLevel * 100)}%

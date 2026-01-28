@@ -16,6 +16,7 @@ import useIterationLayout from "./iteration/useIterationLayout";
 import useIterationNestedChildSizes from "./iteration/useIterationNestedChildSizes";
 import useIterationNestedSizing from "./iteration/useIterationNestedSizing";
 import useIterationPanels from "./iteration/useIterationPanels";
+import useIterationAlignment from "./iteration/useIterationAlignment";
 import useIterationSelection from "./iteration/useIterationSelection";
 import useIterationSelectionHotkeys from "./iteration/useIterationSelectionHotkeys";
 import useIterationSizeEffects from "./iteration/useIterationSizeEffects";
@@ -30,6 +31,7 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
   const iterationPreviewRef = useRef(null);
   const iterationSiteRef = useRef(null);
   const [isTransforming, setIsTransforming] = useState(false);
+  const skipSizingRef = useRef(false);
 
   const historyRef = useRef(() => {});
   const scheduleHistoryCommit = (label) => historyRef.current(label);
@@ -130,6 +132,26 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
     textEditsApiRef,
   });
 
+  const markSizingSkip = () => {
+    skipSizingRef.current = true;
+  };
+
+    const alignment = useIterationAlignment({
+      isIterationMode,
+      iterationSiteRef,
+      selectedElementIds: selection.state.selectedElementIds,
+      elementTransforms: transforms.state.elementTransforms,
+      setElementTransforms: transforms.actions.setElementTransforms,
+      updateElementTransform: transforms.actions.updateElementTransform,
+      scheduleHistoryCommit,
+    markSizingSkip,
+    containerMap: containers.derived.containerGraph.map,
+    zoomLevel: viewport.derived.zoomLevel,
+    layout: layout.state.baseLayout,
+    layerHelpers: layers.helpers,
+    selectedElementId: selection.state.selectedElementId,
+  });
+
   selectionApiRef.current = {
     removeSelectionIds: selection.actions.removeSelectionIds,
     getSelectedIds: selection.actions.getSelectedIds,
@@ -152,6 +174,7 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
     zoomLevel: viewport.derived.zoomLevel,
     isTransforming,
     selectedElementIds: selection.state.selectedElementIds,
+    skipSizingRef,
   });
 
   const domSizeOverrides = useMemo(() => {
@@ -468,6 +491,8 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
       activeHistoryId: history.derived.activeHistoryId,
       canUndo: history.derived.canUndo,
       canRedo: history.derived.canRedo,
+      alignmentScopeLabel: alignment.derived.alignmentScopeLabel,
+      canAlign: alignment.derived.canAlign,
       hasNestedSelection: nestedSelectionIds.length > 0,
       primaryMoveTargetId,
     },
@@ -524,6 +549,7 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
       handleUndoHistory: history.actions.handleUndoHistory,
       handleRedoHistory: history.actions.handleRedoHistory,
       handleClearHistory: history.actions.handleClearHistory,
+      handleAlignElements: alignment.actions.handleAlign,
       handleToggleLayerVisibility: layers.actions.handleToggleLayerVisibility,
       handleToggleLayerLock: layers.actions.handleToggleLayerLock,
       handleCreateLayerFolder: () =>

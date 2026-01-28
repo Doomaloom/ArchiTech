@@ -17,6 +17,7 @@ export default function useIterationNestedSizing({
   zoomLevel,
   isTransforming,
   selectedElementIds,
+  skipSizingRef,
 }) {
   const [elementSizes, setElementSizes] = useState(() => ({}));
 
@@ -40,6 +41,10 @@ export default function useIterationNestedSizing({
   useEffect(() => {
     if (!isIterationMode) {
       setElementSizes((current) => (Object.keys(current).length ? {} : current));
+      return;
+    }
+    if (skipSizingRef?.current) {
+      skipSizingRef.current = false;
       return;
     }
     if (!Object.keys(baseLayout).length || !iterationSiteRef.current) {

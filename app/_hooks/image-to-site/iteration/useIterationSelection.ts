@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { ITERATION_SELECTION_TOOLS } from "../../../_lib/iteration-tools";
 import { normalizeTransform } from "./constants";
+import { ActiveSelection } from "./selection-state";
 
 export default function useIterationSelection({
   isIterationMode,
@@ -13,40 +14,38 @@ export default function useIterationSelection({
   transforms,
   textEditsApiRef,
 }) {
-  const [selectedElementId, setSelectedElementId] = useState(null);
-  const [selectedElementIds, setSelectedElementIds] = useState(() => []);
+  const [selectionState, setSelectionState] = useState(() =>
+    ActiveSelection.empty()
+  );
 
-  const updateSelectedElements = (ids) => {
-    const nextIds = (ids ?? []).filter((id) => !layers.helpers.isLayerDeleted(id));
-    setSelectedElementIds(nextIds);
-    setSelectedElementId(nextIds[0] ?? null);
+  const updateSelectedElements = (ids, primaryId) => {
+    const nextIds = (ids ?? []).filter(
+      (id) => !layers.helpers.isLayerDeleted(id)
+    );
+    setSelectionState((current) => current.update(nextIds, primaryId));
   };
 
   const removeSelectionIds = (idsToRemove) => {
     if (!idsToRemove?.length) {
       return;
     }
-    setSelectedElementIds((current) => {
-      const next = current.filter((id) => !idsToRemove.includes(id));
-      setSelectedElementId(next[0] ?? null);
-      return next;
-    });
+    setSelectionState((current) =>
+      current.update(
+        current.selectedIds.filter((id) => !idsToRemove.includes(id))
+      )
+    );
   };
 
-  const getSelectedIds = () => selectedElementIds;
-  const getPrimaryId = () => selectedElementId;
+  const setSelectedElementIds = (ids) => {
+    updateSelectedElements(ids, ids?.[0] ?? null);
+  };
 
-  useEffect(() => {
-    if (!selectedElementIds.length) {
-      if (selectedElementId) {
-        setSelectedElementId(null);
-      }
-      return;
-    }
-    if (!selectedElementIds.includes(selectedElementId)) {
-      setSelectedElementId(selectedElementIds[0]);
-    }
-  }, [selectedElementId, selectedElementIds]);
+  const setSelectedElementId = (id) => {
+    setSelectionState((current) => current.withPrimary(id));
+  };
+
+  const getSelectedIds = () => selectionState.selectedIds;
+  const getPrimaryId = () => selectionState.primaryId;
 
   const handleSelectElement = (event) => {
     if (!isIterationMode) {
@@ -73,17 +72,10 @@ export default function useIterationSelection({
       return;
     }
     if (event.shiftKey) {
-      setSelectedElementIds((current) => {
-        const exists = current.includes(id);
-        const next = exists
-          ? current.filter((entry) => entry !== id)
-          : [...current, id];
-        setSelectedElementId(next[0] ?? null);
-        return next;
-      });
+      setSelectionState((current) => current.toggle(id));
       return;
     }
-    updateSelectedElements([id]);
+    updateSelectedElements([id], id);
   };
 
   const handleSelectoEnd = (event) => {
@@ -93,27 +85,31 @@ export default function useIterationSelection({
     const selected = (event.selected ?? [])
       .map((element) => element.dataset?.gemId)
       .filter(Boolean)
-      .filter((id) => !layers.helpers.isLayerHidden(id) && !layers.helpers.isLayerDeleted(id));
-    updateSelectedElements(selected);
+      .filter(
+        (id) => !layers.helpers.isLayerHidden(id) && !layers.helpers.isLayerDeleted(id)
+      );
+    const primaryId = selected.length ? selected[selected.length - 1] : null;
+    updateSelectedElements(selected, primaryId);
   };
 
   const handleToggleHighlight = () => {
-    if (!selectedElementId) {
+    const primaryId = selectionState.primaryId;
+    if (!primaryId) {
       return;
     }
     scheduleHistoryCommit("Highlight");
-    layers.actions.toggleHighlight(selectedElementId);
+    layers.actions.toggleHighlight(primaryId);
   };
 
   const handleNudgeSelection = (deltaX, deltaY) => {
-    if (!isIterationMode || !selectedElementIds.length) {
+    if (!isIterationMode || !selectionState.selectedIds.length) {
       return;
     }
     scheduleHistoryCommit("Move");
     transforms.actions.setElementTransforms((current) => {
       let changed = false;
       const next = { ...current };
-      selectedElementIds.forEach((id) => {
+      selectionState.selectedIds.forEach((id) => {
         if (
           layers.helpers.isLayerHidden(id) ||
           layers.helpers.isLayerLocked(id) ||
@@ -134,11 +130,11 @@ export default function useIterationSelection({
   };
 
   const handleDeleteSelection = () => {
-    if (!isIterationMode || !selectedElementIds.length) {
+    if (!isIterationMode || !selectionState.selectedIds.length) {
       return;
     }
     scheduleHistoryCommit("Delete");
-    const toDelete = selectedElementIds.filter(
+    const toDelete = selectionState.selectedIds.filter(
       (id) => !layers.helpers.isLayerDeleted(id)
     );
     if (!toDelete.length) {
@@ -152,7 +148,10 @@ export default function useIterationSelection({
   };
 
   return {
-    state: { selectedElementId, selectedElementIds },
+    state: {
+      selectedElementId: selectionState.primaryId,
+      selectedElementIds: selectionState.selectedIds,
+    },
     actions: {
       setSelectedElementId,
       setSelectedElementIds,

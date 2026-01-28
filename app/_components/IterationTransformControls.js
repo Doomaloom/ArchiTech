@@ -1,5 +1,7 @@
 import { useLayoutEffect, useRef } from "react";
 
+import IterationAlignmentControls from "./IterationAlignmentControls";
+
 const getSelectionBounds = (previewEl, siteEl, ids) => {
   if (!previewEl || !siteEl || !ids.length) {
     return null;
@@ -142,6 +144,9 @@ export default function IterationTransformControls({
   onUpdateScale,
   onUpdateFontSize,
   getControlState,
+  onAlign,
+  alignmentScopeLabel,
+  canAlign,
 }) {
   const controlsRef = useRef(null);
   const boundsRef = useRef(null);
@@ -365,6 +370,14 @@ export default function IterationTransformControls({
             </>
           )}
         </div>
+      ) : null}
+      {onAlign ? (
+        <IterationAlignmentControls
+          onAlign={onAlign}
+          scopeLabel={alignmentScopeLabel}
+          disabled={!canAlign}
+          showDivider={Boolean(controlState)}
+        />
       ) : null}
       {showUnlink ? (
         <button
