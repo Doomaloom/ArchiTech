@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Circle, Layer, Line, Stage, Text } from "react-konva";
 import Moveable from "react-moveable";
 import Selecto from "react-selecto";
@@ -13,9 +13,212 @@ import IterationSampleSite from "../IterationSampleSite";
 import IterationTextPanel from "../IterationTextPanel";
 import IterationSidebarRail from "../IterationSidebarRail";
 
+const ITERATION_SCOPE = ".imageflow-iteration-site .iteration-preview-root";
+
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const parseInlineStyle = (styleText) => {
+  if (!styleText) {
+    return undefined;
+  }
+  const style = {};
+  styleText.split(";").forEach((entry) => {
+    const trimmed = entry.trim();
+    if (!trimmed) {
+      return;
+    }
+    const colonIndex = trimmed.indexOf(":");
+    if (colonIndex === -1) {
+      return;
+    }
+    const prop = trimmed.slice(0, colonIndex).trim();
+    const value = trimmed.slice(colonIndex + 1).trim();
+    if (!prop || !value) {
+      return;
+    }
+    const key = prop.startsWith("--")
+      ? prop
+      : prop.replace(/-([a-z])/g, (_, char) => char.toUpperCase());
+    style[key] = value;
+  });
+  return Object.keys(style).length ? style : undefined;
+};
+
+// Scope preview styles so they don't leak outside the iteration canvas.
+const scopeCss = (cssText, scopeSelector) => {
+  if (!cssText || !scopeSelector) {
+    return cssText || "";
+  }
+  const scopeMatcher = new RegExp(
+    `(^|[\\s>+~])${escapeRegExp(scopeSelector)}([\\s>+~.#[:]|$)`
+  );
+  const scopeSelectors = (selectorText) => {
+    const leading = selectorText.match(/^\s*/)?.[0] ?? "";
+    const trimmed = selectorText.trim();
+    if (!trimmed) {
+      return selectorText;
+    }
+    const parts = trimmed.split(",");
+    const scoped = parts
+      .map((part) => {
+        const selector = part.trim();
+        if (!selector) {
+          return "";
+        }
+        let replaced = selector.replace(
+          /(^|[\s>+~])(:root|html|body)(?=$|[\s>+~.#[:])/gi,
+          `$1${scopeSelector}`
+        );
+        if (scopeMatcher.test(replaced)) {
+          return replaced;
+        }
+        return `${scopeSelector} ${replaced}`;
+      })
+      .filter(Boolean)
+      .join(", ");
+    return `${leading}${scoped}`;
+  };
+
+  let output = "";
+  let buffer = "";
+  let depth = 0;
+  let inComment = false;
+  let stringChar = null;
+  let keyframesDepth = null;
+
+  for (let i = 0; i < cssText.length; i += 1) {
+    const char = cssText[i];
+    const next = cssText[i + 1];
+
+    if (inComment) {
+      buffer += char;
+      if (char === "*" && next === "/") {
+        buffer += next;
+        i += 1;
+        inComment = false;
+      }
+      continue;
+    }
+
+    if (stringChar) {
+      buffer += char;
+      if (char === "\\" && next) {
+        buffer += next;
+        i += 1;
+        continue;
+      }
+      if (char === stringChar) {
+        stringChar = null;
+      }
+      continue;
+    }
+
+    if (char === "/" && next === "*") {
+      buffer += char + next;
+      i += 1;
+      inComment = true;
+      continue;
+    }
+
+    if (char === "\"" || char === "'") {
+      buffer += char;
+      stringChar = char;
+      continue;
+    }
+
+    if (char === "{") {
+      const trimmed = buffer.trim();
+      const lower = trimmed.toLowerCase();
+      const isAtRule = trimmed.startsWith("@");
+      const isKeyframes =
+        isAtRule &&
+        (lower.startsWith("@keyframes") ||
+          lower.startsWith("@-webkit-keyframes") ||
+          lower.startsWith("@-moz-keyframes"));
+      const shouldScope =
+        !isAtRule && !(keyframesDepth !== null && depth >= keyframesDepth);
+      output += shouldScope ? `${scopeSelectors(buffer)}{` : `${buffer}{`;
+      buffer = "";
+      depth += 1;
+      if (isKeyframes) {
+        keyframesDepth = depth;
+      }
+      continue;
+    }
+
+    if (char === "}") {
+      output += `${buffer}}`;
+      buffer = "";
+      if (keyframesDepth !== null && depth === keyframesDepth) {
+        keyframesDepth = null;
+      }
+      depth = Math.max(depth - 1, 0);
+      continue;
+    }
+
+    buffer += char;
+  }
+
+  output += buffer;
+  return output;
+};
+
+const buildIterationPreview = (html) => {
+  if (!html || typeof window === "undefined") {
+    return null;
+  }
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, "text/html");
+  doc.querySelectorAll("script").forEach((script) => script.remove());
+
+  const styleTags = Array.from(doc.querySelectorAll("style"));
+  const styleText = styleTags.map((style) => style.textContent || "").join("\n");
+  styleTags.forEach((style) => style.remove());
+
+  const body = doc.body;
+  if (!body) {
+    return null;
+  }
+
+  const usedIds = new Set();
+  body.querySelectorAll("[data-gem-id]").forEach((element) => {
+    const id = element.getAttribute("data-gem-id");
+    if (id) {
+      usedIds.add(id);
+    }
+  });
+
+  let counter = 1;
+  body.querySelectorAll("*").forEach((element) => {
+    if (element.getAttribute("data-gem-id")) {
+      return;
+    }
+    let id = `auto-${counter}`;
+    while (usedIds.has(id)) {
+      counter += 1;
+      id = `auto-${counter}`;
+    }
+    element.setAttribute("data-gem-id", id);
+    usedIds.add(id);
+    counter += 1;
+  });
+
+  return {
+    bodyHtml: body.innerHTML,
+    bodyClass: body.getAttribute("class") ?? "",
+    bodyStyle: parseInlineStyle(body.getAttribute("style") ?? ""),
+    styles: styleText ? scopeCss(styleText, ITERATION_SCOPE) : "",
+  };
+};
+
 export default function IterateView() {
   const { state, derived, actions, refs } = useImageToSite();
   const layoutRef = useRef(null);
+  const previewHtml = state.previewItems[state.selectedPreviewIndex]?.html;
+  const iterationPreview = useMemo(
+    () => buildIterationPreview(previewHtml),
+    [previewHtml]
+  );
   const [dockState, setDockState] = useState({
     width: 240,
     detached: false,
@@ -107,7 +310,30 @@ export default function IterateView() {
                 onMouseDown={actions.handleSelectElement}
                 onTouchStart={actions.handleSelectElement}
               >
-                <IterationSampleSite />
+                {iterationPreview ? (
+                  <>
+                    {iterationPreview.styles ? (
+                      <style
+                        dangerouslySetInnerHTML={{
+                          __html: iterationPreview.styles,
+                        }}
+                      />
+                    ) : null}
+                    <div
+                      className={`iteration-preview-root${
+                        iterationPreview.bodyClass
+                          ? ` ${iterationPreview.bodyClass}`
+                          : ""
+                      }`}
+                      style={iterationPreview.bodyStyle}
+                      dangerouslySetInnerHTML={{
+                        __html: iterationPreview.bodyHtml,
+                      }}
+                    />
+                  </>
+                ) : (
+                  <IterationSampleSite />
+                )}
               </div>
               <div
                 className="imageflow-iteration-overlay"

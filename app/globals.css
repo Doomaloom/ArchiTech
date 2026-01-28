@@ -3179,6 +3179,12 @@ body:has(.imageflow-iteration):has(#imageflow-sidebar-toggle:checked)
   cursor: crosshair;
 }
 
+.imageflow-iteration-site .iteration-preview-root {
+  width: 100%;
+  min-height: 100%;
+  display: block;
+}
+
 .imageflow-iteration-site [data-gem-id] {
   position: relative;
   transition: box-shadow 160ms ease, outline 160ms ease;

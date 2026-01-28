@@ -1752,8 +1752,44 @@ export default function useImageToSiteState() {
     setViewMode("selected");
   };
 
+  const resetIterationState = () => {
+    if (historyTimerRef.current) {
+      clearTimeout(historyTimerRef.current);
+    }
+    historyLockRef.current = false;
+    historyLabelRef.current = "Edit";
+    textBaseRef.current = {};
+    panStartRef.current = null;
+    setBaseLayout({});
+    setLayerState({});
+    setLayerFolders({});
+    setLayerFolderOrder([]);
+    setDeletedLayerIds([]);
+    setHighlightedIds([]);
+    setSelectedElementId(null);
+    setSelectedElementIds([]);
+    setElementTransforms({});
+    setTextEdits({});
+    setTextEditDraft(null);
+    setGuides([]);
+    setDraftCircle(null);
+    setIsDrawing(false);
+    setPendingAnnotation(null);
+    setNoteDraft("");
+    setAnnotations([]);
+    setIsPencilDrawing(false);
+    setPencilPoints([]);
+    setZoomState({ zoom: 1, pan: { x: 0, y: 0 } });
+    setIsPanning(false);
+    setIsSpacePanning(false);
+    setSiteBounds({ width: 0, height: 0 });
+    setShowPatch(false);
+    setHistoryState({ past: [], present: null, future: [] });
+  };
+
   const handleIteratePreview = (index) => {
     setSelectedPreviewIndex(index);
+    resetIterationState();
     setViewMode("iterate");
   };
 

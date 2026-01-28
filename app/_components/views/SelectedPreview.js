@@ -51,11 +51,11 @@ export default function SelectedPreview() {
         }${preview?.html ? " has-html" : ""}`}
         role="button"
         tabIndex={0}
-        onClick={() => actions.setViewMode("iterate")}
+        onClick={() => actions.handleIteratePreview(state.selectedPreviewIndex)}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
-            actions.setViewMode("iterate");
+            actions.handleIteratePreview(state.selectedPreviewIndex);
           }
         }}
       >
@@ -113,7 +113,7 @@ export default function SelectedPreview() {
           type="button"
           onClick={(event) => {
             event.stopPropagation();
-            actions.setViewMode("iterate");
+            actions.handleIteratePreview(state.selectedPreviewIndex);
           }}
         >
           Iterate
