@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { useImageToSite } from "./../../_context/image-to-site-context";
 
 export default function PreviewGrid() {
   const { state, actions, derived } = useImageToSite();
+  const [openHtmlIndex, setOpenHtmlIndex] = useState(null);
 
   return (
     <div
@@ -47,7 +49,7 @@ export default function PreviewGrid() {
             state.previewItems[index]?.imageUrl || state.previewItems[index]?.html
               ? " has-image"
               : ""
-          }${
+          }${state.previewItems[index]?.html ? " has-html" : ""}${
             state.isGeneratingPreviews ? " is-loading" : ""
           }`}
           role="button"
@@ -60,6 +62,20 @@ export default function PreviewGrid() {
             }
           }}
         >
+          {state.previewItems[index]?.html ? (
+            <button
+              type="button"
+              className="imageflow-preview-code-button"
+              onClick={(event) => {
+                event.stopPropagation();
+                setOpenHtmlIndex((current) =>
+                  current === index ? null : index
+                );
+              }}
+            >
+              {openHtmlIndex === index ? "Hide HTML" : "View HTML"}
+            </button>
+          ) : null}
           {state.previewItems[index]?.imageUrl ? (
             <>
               <img
@@ -81,6 +97,18 @@ export default function PreviewGrid() {
               />
               <div className="imageflow-preview-shade" aria-hidden="true" />
             </>
+          ) : null}
+          {openHtmlIndex === index && state.previewItems[index]?.html ? (
+            <div
+              className="imageflow-preview-html-panel"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <textarea
+                className="imageflow-preview-html-textarea"
+                readOnly
+                value={state.previewItems[index].html}
+              />
+            </div>
           ) : null}
           <div className="imageflow-preview-meta">
             <span className="imageflow-preview-label">Preview {index + 1}</span>

@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { useImageToSite } from "./../../_context/image-to-site-context";
 
 export default function SelectedPreview() {
   const { state, actions, derived } = useImageToSite();
+  const [showHtml, setShowHtml] = useState(false);
   const preview = state.previewItems[state.selectedPreviewIndex];
   const hasImage = Boolean(preview?.imageUrl);
   const hasPreview = Boolean(preview?.imageUrl || preview?.html);
@@ -16,6 +18,15 @@ export default function SelectedPreview() {
           Zoom: {derived.previewZoomLabel}
         </span>
         <div className="imageflow-preview-zoom-controls">
+          {preview?.html ? (
+            <button
+              type="button"
+              className="imageflow-preview-zoom-button"
+              onClick={() => setShowHtml((current) => !current)}
+            >
+              {showHtml ? "Hide HTML" : "View HTML"}
+            </button>
+          ) : null}
           <button
             type="button"
             className="imageflow-preview-zoom-button"
@@ -37,7 +48,7 @@ export default function SelectedPreview() {
       <div
         className={`imageflow-preview-card is-selected${
           hasPreview ? " has-image" : ""
-        }`}
+        }${preview?.html ? " has-html" : ""}`}
         role="button"
         tabIndex={0}
         onClick={() => actions.setViewMode("iterate")}
@@ -69,6 +80,18 @@ export default function SelectedPreview() {
             />
             <div className="imageflow-preview-shade" aria-hidden="true" />
           </>
+        ) : null}
+        {showHtml && preview?.html ? (
+          <div
+            className="imageflow-preview-html-panel"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <textarea
+              className="imageflow-preview-html-textarea"
+              readOnly
+              value={preview.html}
+            />
+          </div>
         ) : null}
         <div className="imageflow-preview-meta">
           <span className="imageflow-preview-label">

@@ -241,6 +241,7 @@ export async function POST(request) {
     const payload = await request.json();
     const count = clampNumber(Number(payload?.count) || 1, 1, MAX_PREVIEWS);
     const quality = payload?.quality === "pro" ? "pro" : "flash";
+    const renderMode = payload?.renderMode === "png" ? "png" : "html";
     const creativity = clampNumber(
       Number(payload?.creativity) || 0,
       0,
@@ -260,6 +261,9 @@ export async function POST(request) {
     const ai = new GoogleGenAI({ apiKey });
 
     const planPrompt = buildPlanPrompt({ count, nodeContext });
+    const planMaxTokens = Number(process.env.PREVIEW_PLAN_MAX_TOKENS) || 4096;
+    const htmlMaxTokens = Number(process.env.PREVIEW_HTML_MAX_TOKENS) || 16384;
+
     const planResponse = await ai.models.generateContent({
       model,
       contents: [
@@ -271,7 +275,7 @@ export async function POST(request) {
       config: {
         temperature,
         responseMimeType: "application/json",
-        maxOutputTokens: 2048,
+        maxOutputTokens: planMaxTokens,
       },
     });
 
@@ -296,7 +300,7 @@ export async function POST(request) {
           ],
           config: {
             temperature,
-            maxOutputTokens: 4096,
+            maxOutputTokens: htmlMaxTokens,
           },
         })
       )
@@ -317,9 +321,15 @@ export async function POST(request) {
       };
     });
 
-    const renderResult = await renderHtmlList(
-      htmlCandidates.map((candidate) => candidate.html)
-    );
+    const renderResult =
+      renderMode === "png"
+        ? await renderHtmlList(
+            htmlCandidates.map((candidate) => candidate.html)
+          )
+        : {
+            images: Array.from({ length: htmlCandidates.length }, () => null),
+            errors: Array.from({ length: htmlCandidates.length }, () => null),
+          };
 
     const previews = htmlCandidates.map((candidate, index) => ({
       id: candidate.plan?.id ?? `preview-${index + 1}`,
@@ -333,7 +343,7 @@ export async function POST(request) {
     }));
 
     const renderedAny = previews.some((preview) => preview.imageUrl);
-    if (!renderedAny) {
+    if (renderMode === "png" && !renderedAny) {
       const errors = renderResult.errors.filter(Boolean);
       const missingHtml = errors.filter((error) => error === "Missing HTML.")
         .length;
@@ -354,7 +364,7 @@ export async function POST(request) {
       );
     }
 
-    return NextResponse.json({ previews, model, temperature });
+    return NextResponse.json({ previews, model, temperature, renderMode });
   } catch (error) {
     return NextResponse.json(
       {

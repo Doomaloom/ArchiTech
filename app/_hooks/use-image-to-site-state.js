@@ -1811,6 +1811,7 @@ export default function useImageToSiteState() {
           count,
           quality: modelQuality,
           creativity: creativityValue,
+          renderMode: "html",
           nodeContext,
           title,
           name,
