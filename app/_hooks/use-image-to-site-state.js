@@ -213,6 +213,19 @@ const ensureUniqueId = (base, used) => {
   return next;
 };
 
+const normalizeRequirements = (requirements) => {
+  if (Array.isArray(requirements)) {
+    return requirements
+      .map((item) => (item == null ? "" : item.toString()).trim())
+      .filter(Boolean);
+  }
+  if (requirements == null) {
+    return [];
+  }
+  const text = requirements.toString().trim();
+  return text ? [text] : [];
+};
+
 const normalizeStructureTree = (input) => {
   if (!input || typeof input !== "object") {
     return null;
@@ -288,12 +301,17 @@ const buildFlowFromTree = (inputTree) => {
     const order = depthCounts.get(depth) ?? 0;
     depthCounts.set(depth, order + 1);
     const layoutDepth = Math.max(depth - 1, 0);
+    const description = node.description?.toString() ?? "";
+    const requirements = normalizeRequirements(node.requirements);
     nodes.push({
       id,
       data: {
         label,
         depth,
         kind: depth === 1 ? "page" : "component",
+        description,
+        requirements,
+        sourceId: node.id?.toString() ?? id,
       },
       position: { x: layoutDepth * 240, y: order * 120 },
       type: "default",
@@ -522,8 +540,10 @@ export default function useImageToSiteState() {
     }
   }, [nodes, selectedNodeId]);
 
-  const selectedNodeLabel =
-    nodes.find((node) => node.id === selectedNodeId)?.data?.label ?? "Unknown";
+  const selectedNode = nodes.find((node) => node.id === selectedNodeId);
+  const selectedNodeLabel = selectedNode?.data?.label ?? "Unknown";
+  const selectedNodeDescription = selectedNode?.data?.description ?? "";
+  const selectedNodeRequirements = selectedNode?.data?.requirements ?? [];
   const qualityValue = 100 - speedValue;
 
   const visibleFlow = useMemo(() => {
@@ -2732,6 +2752,8 @@ export default function useImageToSiteState() {
       isPreviewMode,
       isIterationMode,
       selectedNodeLabel,
+      selectedNodeDescription,
+      selectedNodeRequirements,
       qualityValue,
       overlayMode,
       isOverlayTool,

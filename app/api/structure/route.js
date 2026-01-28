@@ -21,19 +21,72 @@ const extractJson = (text) => {
   return text.slice(firstBrace, lastBrace + 1);
 };
 
+const normalizeRequirements = (requirements) => {
+  if (Array.isArray(requirements)) {
+    return requirements
+      .map((item) => (item == null ? "" : item.toString()).trim())
+      .filter(Boolean);
+  }
+  if (requirements == null) {
+    return [];
+  }
+  const text = requirements.toString().trim();
+  return text ? [text] : [];
+};
+
+const normalizeTreeNode = (node) => {
+  if (!node || typeof node !== "object") {
+    return node;
+  }
+  const next = { ...node };
+  next.description = next.description?.toString().trim() || "";
+  next.requirements = normalizeRequirements(next.requirements);
+  ["children", "items", "pages", "nodes"].forEach((key) => {
+    if (Array.isArray(next[key])) {
+      next[key] = next[key].map(normalizeTreeNode);
+    }
+  });
+  return next;
+};
+
+const normalizeTreePayload = (tree) => {
+  if (!tree || typeof tree !== "object") {
+    return tree;
+  }
+  if (tree.root && typeof tree.root === "object") {
+    return { ...tree, root: normalizeTreeNode(tree.root) };
+  }
+  return normalizeTreeNode(tree);
+};
+
 const buildPrompt = ({ title, name, details }) => {
   return [
     "You are an information architect for web apps.",
     "Return JSON only with this schema:",
     "{",
-    '  "root": { "id": "root", "label": "App", "children": [',
-    '    { "id": "home", "label": "Home", "children": [] }',
-    "  ] }",
+    '  "root": {',
+    '    "id": "root",',
+    '    "label": "App",',
+    '    "description": "Brief summary of the overall app",',
+    '    "requirements": ["Short requirement"],',
+    '    "children": [',
+    '      {',
+    '        "id": "home",',
+    '        "label": "Home",',
+    '        "description": "Brief summary of this page/section",',
+    '        "requirements": ["Short requirement"],',
+    '        "children": []',
+    "      }",
+    "    ]",
+    "  }",
     "}",
     "Rules:",
     "- Use unique kebab-case ids (<=30 chars).",
     "- 1 to 4 levels deep.",
     "- Prefer pages at depth 1, sections at depth 2, key components at depth 3+.",
+    "- Every node (including root) must include description and requirements.",
+    "- Descriptions: 1-2 short sentences.",
+    "- Requirements: array of 2-5 short, concrete strings.",
     "",
     "Brief:",
     `Title: ${title || "Untitled"}`,
@@ -89,7 +142,8 @@ export async function POST(request) {
 
     const rawText = response?.text ?? "";
     const jsonText = extractJson(rawText);
-    const tree = jsonText ? JSON.parse(jsonText) : null;
+    const parsedTree = jsonText ? JSON.parse(jsonText) : null;
+    const tree = normalizeTreePayload(parsedTree);
 
     if (!tree) {
       return NextResponse.json(
