@@ -7,12 +7,20 @@ export default function PreviewGrid() {
     <div
       className={`imageflow-previews imageflow-previews--${state.previewCount}`}
       aria-label="Generated previews"
+      aria-busy={state.isGeneratingPreviews}
     >
+      {state.previewError ? (
+        <div className="imageflow-preview-error" role="status">
+          {state.previewError}
+        </div>
+      ) : null}
       {Array.from({ length: state.previewCount }).map((_, index) => (
         <div
           key={`preview-${index}`}
           className={`imageflow-preview-card${
             state.selectedPreviewIndex === index ? " is-selected" : ""
+          }${state.previewItems[index]?.imageUrl ? " has-image" : ""}${
+            state.isGeneratingPreviews ? " is-loading" : ""
           }`}
           role="button"
           tabIndex={0}
@@ -24,7 +32,30 @@ export default function PreviewGrid() {
             }
           }}
         >
-          <span className="imageflow-preview-label">Preview {index + 1}</span>
+          {state.previewItems[index]?.imageUrl ? (
+            <>
+              <img
+                className="imageflow-preview-image"
+                src={state.previewItems[index].imageUrl}
+                alt={`Preview ${index + 1}`}
+                loading="lazy"
+              />
+              <div className="imageflow-preview-shade" aria-hidden="true" />
+            </>
+          ) : null}
+          <div className="imageflow-preview-meta">
+            <span className="imageflow-preview-label">Preview {index + 1}</span>
+            {state.previewItems[index]?.plan?.title ? (
+              <span className="imageflow-preview-title">
+                {state.previewItems[index].plan.title}
+              </span>
+            ) : null}
+            {!state.previewItems[index]?.imageUrl ? (
+              <span className="imageflow-preview-placeholder">
+                {state.isGeneratingPreviews ? "Generating..." : "No preview yet"}
+              </span>
+            ) : null}
+          </div>
           <button
             className="imageflow-preview-iterate"
             type="button"

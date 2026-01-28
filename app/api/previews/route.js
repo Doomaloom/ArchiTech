@@ -1,0 +1,329 @@
+import { NextResponse } from "next/server";
+import { GoogleGenAI } from "@google/genai";
+
+export const runtime = "nodejs";
+
+const FLASH_MODEL =
+  process.env.GEMINI_FLASH_MODEL ||
+  process.env.GEMINI_MODEL ||
+  "gemini-3-flash-preview";
+const PRO_MODEL = process.env.GEMINI_PRO_MODEL || "gemini-3-pro-preview";
+const MAX_PREVIEWS = 6;
+const VIEWPORT = { width: 1280, height: 900 };
+
+const clampNumber = (value, min, max) =>
+  Math.min(Math.max(value, min), max);
+
+const roundValue = (value, precision = 2) => {
+  const factor = 10 ** precision;
+  return Math.round(value * factor) / factor;
+};
+
+const extractJson = (text) => {
+  if (!text) {
+    return null;
+  }
+  const fenced = text.match(/```json\s*([\s\S]*?)```/i);
+  if (fenced?.[1]) {
+    return fenced[1].trim();
+  }
+  const firstBracket = text.indexOf("[");
+  const lastBracket = text.lastIndexOf("]");
+  const firstBrace = text.indexOf("{");
+  const lastBrace = text.lastIndexOf("}");
+  if (
+    firstBracket !== -1 &&
+    lastBracket !== -1 &&
+    (firstBrace === -1 || firstBracket < firstBrace)
+  ) {
+    return text.slice(firstBracket, lastBracket + 1);
+  }
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    return text.slice(firstBrace, lastBrace + 1);
+  }
+  return null;
+};
+
+const extractHtml = (text) => {
+  if (!text) {
+    return null;
+  }
+  const fenced =
+    text.match(/```html\s*([\s\S]*?)```/i) ||
+    text.match(/```\s*([\s\S]*?)```/i);
+  if (fenced?.[1]) {
+    return fenced[1].trim();
+  }
+  const htmlStart = text.search(/<!doctype html|<html|<body/i);
+  if (htmlStart !== -1) {
+    return text.slice(htmlStart).trim();
+  }
+  return text.trim();
+};
+
+const ensureHtmlDocument = (html) => {
+  if (!html) {
+    return "";
+  }
+  if (/<html[\s>]/i.test(html)) {
+    return html;
+  }
+  return [
+    "<!doctype html>",
+    "<html lang=\"en\">",
+    "<head>",
+    "<meta charset=\"utf-8\" />",
+    "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />",
+    "<title>Preview</title>",
+    "</head>",
+    "<body>",
+    html,
+    "</body>",
+    "</html>",
+  ].join("\n");
+};
+
+const normalizePlan = (plan, index) => {
+  const safe = plan ?? {};
+  const toList = (value) =>
+    Array.isArray(value)
+      ? value.map((entry) => entry?.toString()).filter(Boolean)
+      : [];
+  return {
+    id: safe.id?.toString() || `plan-${index + 1}`,
+    title: safe.title?.toString() || `Concept ${index + 1}`,
+    summary: safe.summary?.toString() || "",
+    layout: safe.layout?.toString() || "",
+    sections: toList(safe.sections),
+    styleKeywords: toList(safe.styleKeywords),
+  };
+};
+
+const parsePlans = (text, count) => {
+  const jsonText = extractJson(text);
+  if (!jsonText) {
+    return [];
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(jsonText);
+  } catch (error) {
+    return [];
+  }
+  const rawPlans = Array.isArray(parsed) ? parsed : parsed?.plans;
+  if (!Array.isArray(rawPlans)) {
+    return [];
+  }
+  return rawPlans.slice(0, count).map(normalizePlan);
+};
+
+const buildPlanPrompt = ({ count, nodeContext }) => {
+  return [
+    "You are a product designer generating layout concepts.",
+    `Create ${count} distinct plans for the requested page/component.`,
+    "Return JSON only with this schema:",
+    "{",
+    '  "plans": [',
+    "    {",
+    '      "id": "plan-1",',
+    '      "title": "Concept name",',
+    '      "summary": "1-2 sentence overview",',
+    '      "layout": "Short description of layout strategy",',
+    '      "sections": ["Section name", "Section name"],',
+    '      "styleKeywords": ["keyword", "keyword"]',
+    "    }",
+    "  ]",
+    "}",
+    "Rules:",
+    "- Plans must be materially different in layout and tone.",
+    "- Keep plans grounded in the provided node requirements.",
+    "",
+    "Node context:",
+    JSON.stringify(nodeContext, null, 2),
+  ].join("\n");
+};
+
+const buildHtmlPrompt = ({ plan, nodeContext }) => {
+  return [
+    "You are an expert frontend designer.",
+    "Create a complete HTML document (self-contained) that can be rendered in headless Chromium.",
+    "Constraints:",
+    "- Output HTML only. No markdown or explanations.",
+    "- Use inline CSS in a <style> tag. Optional inline JS allowed.",
+    "- Avoid external assets or fonts. Use gradients, SVG, or simple shapes instead.",
+    "- Ensure body margin is 0 and layout fits within 1280x900.",
+    "- Provide high contrast, clear hierarchy, and clean spacing.",
+    "",
+    "Plan:",
+    JSON.stringify(plan, null, 2),
+    "",
+    "Node context:",
+    JSON.stringify(nodeContext, null, 2),
+  ].join("\n");
+};
+
+const loadPuppeteer = async () => {
+  try {
+    const module = await import("puppeteer");
+    return module.default ?? module;
+  } catch (error) {
+    throw new Error(
+      "Puppeteer is required for preview rendering. Install puppeteer to enable previews."
+    );
+  }
+};
+
+const renderHtmlList = async (htmlList) => {
+  const puppeteer = await loadPuppeteer();
+  const browser = await puppeteer.launch({
+    headless: "new",
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  });
+
+  try {
+    const results = [];
+    for (const html of htmlList) {
+      if (!html) {
+        results.push(null);
+        continue;
+      }
+      const page = await browser.newPage();
+      try {
+        await page.setViewport({
+          width: VIEWPORT.width,
+          height: VIEWPORT.height,
+          deviceScaleFactor: 1,
+        });
+        await page.emulateMediaType("screen");
+        await page.setContent(html, {
+          waitUntil: ["domcontentloaded", "load"],
+          timeout: 20000,
+        });
+        const buffer = await page.screenshot({ type: "png", fullPage: true });
+        results.push(`data:image/png;base64,${buffer.toString("base64")}`);
+      } catch (error) {
+        results.push(null);
+      } finally {
+        await page.close();
+      }
+    }
+    return results;
+  } finally {
+    await browser.close();
+  }
+};
+
+export async function POST(request) {
+  try {
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: "Missing GEMINI_API_KEY or GOOGLE_API_KEY." },
+        { status: 500 }
+      );
+    }
+
+    const payload = await request.json();
+    const count = clampNumber(Number(payload?.count) || 1, 1, MAX_PREVIEWS);
+    const quality = payload?.quality === "pro" ? "pro" : "flash";
+    const creativity = clampNumber(
+      Number(payload?.creativity) || 0,
+      0,
+      100
+    );
+    const temperature = roundValue(0.2 + (creativity / 100) * 1.0);
+    const nodeContext = payload?.nodeContext ?? null;
+
+    if (!nodeContext?.node) {
+      return NextResponse.json(
+        { error: "Node context is required." },
+        { status: 400 }
+      );
+    }
+
+    const model = quality === "pro" ? PRO_MODEL : FLASH_MODEL;
+    const ai = new GoogleGenAI({ apiKey });
+
+    const planPrompt = buildPlanPrompt({ count, nodeContext });
+    const planResponse = await ai.models.generateContent({
+      model,
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: planPrompt }],
+        },
+      ],
+      config: {
+        temperature,
+        responseMimeType: "application/json",
+        maxOutputTokens: 2048,
+      },
+    });
+
+    const planText = planResponse?.text ?? "";
+    const plans = parsePlans(planText, count);
+    if (!plans.length) {
+      return NextResponse.json(
+        { error: "Failed to parse plan response.", raw: planText },
+        { status: 502 }
+      );
+    }
+
+    const htmlResponses = await Promise.allSettled(
+      plans.map((plan) =>
+        ai.models.generateContent({
+          model,
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: buildHtmlPrompt({ plan, nodeContext }) }],
+            },
+          ],
+          config: {
+            temperature,
+            maxOutputTokens: 4096,
+          },
+        })
+      )
+    );
+
+    const htmlCandidates = htmlResponses.map((result, index) => {
+      if (result.status !== "fulfilled") {
+        return {
+          plan: plans[index],
+          html: null,
+          error: result.reason?.message ?? "Failed to generate HTML.",
+        };
+      }
+      const rawHtml = extractHtml(result.value?.text ?? "");
+      return {
+        plan: plans[index],
+        html: ensureHtmlDocument(rawHtml),
+      };
+    });
+
+    const images = await renderHtmlList(
+      htmlCandidates.map((candidate) => candidate.html)
+    );
+
+    const previews = htmlCandidates.map((candidate, index) => ({
+      id: candidate.plan?.id ?? `preview-${index + 1}`,
+      plan: candidate.plan,
+      html: candidate.html,
+      imageUrl: images[index] ?? null,
+      error: candidate.error ?? null,
+      model,
+      temperature,
+    }));
+
+    return NextResponse.json({ previews, model, temperature });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error: "Failed to generate previews.",
+        message: error?.message ?? String(error),
+      },
+      { status: 500 }
+    );
+  }
+}

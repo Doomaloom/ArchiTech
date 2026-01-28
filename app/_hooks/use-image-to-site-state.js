@@ -226,6 +226,53 @@ const normalizeRequirements = (requirements) => {
   return text ? [text] : [];
 };
 
+const toNodeSnapshot = (node) => {
+  if (!node) {
+    return null;
+  }
+  const data = node.data ?? node;
+  return {
+    id: node.id?.toString() ?? "",
+    label: data.label?.toString() ?? "",
+    description: data.description?.toString() ?? "",
+    requirements: normalizeRequirements(data.requirements),
+    kind: data.kind?.toString() ?? "",
+  };
+};
+
+const buildNodeContext = (nodeId, nodes, edges) => {
+  if (!nodeId || !Array.isArray(nodes)) {
+    return { node: null, parent: null, children: [], path: [] };
+  }
+  const nodeMap = new Map(nodes.map((node) => [node.id, node]));
+  const getNode = (id) => toNodeSnapshot(nodeMap.get(id));
+  const parentEdge = edges?.find((edge) => edge.target === nodeId);
+  const parent = parentEdge ? getNode(parentEdge.source) : null;
+  const children = (edges ?? [])
+    .filter((edge) => edge.source === nodeId)
+    .map((edge) => getNode(edge.target))
+    .filter(Boolean);
+  const path = [];
+  let currentId = nodeId;
+  const seen = new Set();
+  while (currentId && !seen.has(currentId)) {
+    seen.add(currentId);
+    const entry = getNode(currentId);
+    if (!entry) {
+      break;
+    }
+    path.unshift(entry);
+    const nextEdge = (edges ?? []).find((edge) => edge.target === currentId);
+    currentId = nextEdge?.source ?? null;
+  }
+  return {
+    node: getNode(nodeId),
+    parent,
+    children,
+    path,
+  };
+};
+
 const normalizeStructureTree = (input) => {
   if (!input || typeof input !== "object") {
     return null;
@@ -361,13 +408,17 @@ export default function useImageToSiteState() {
   const [viewMode, setViewMode] = useState("start");
   const [previewCount, setPreviewCount] = useState(3);
   const [selectedPreviewIndex, setSelectedPreviewIndex] = useState(0);
-  const [speedValue, setSpeedValue] = useState(60);
+  const [modelQuality, setModelQuality] = useState("flash");
+  const [creativityValue, setCreativityValue] = useState(45);
   const [title, setTitle] = useState("");
   const [name, setName] = useState("");
   const [details, setDetails] = useState("");
   const [showComponents, setShowComponents] = useState(false);
   const [isGeneratingStructure, setIsGeneratingStructure] = useState(false);
   const [generationError, setGenerationError] = useState("");
+  const [isGeneratingPreviews, setIsGeneratingPreviews] = useState(false);
+  const [previewError, setPreviewError] = useState("");
+  const [previewItems, setPreviewItems] = useState([]);
   const [structureTree, setStructureTree] = useState(null);
   const [structureFlow, setStructureFlow] = useState(null);
   const [customFiles, setCustomFiles] = useState([]);
@@ -393,6 +444,7 @@ export default function useImageToSiteState() {
     },
   ]);
   const objectUrlsRef = useRef([]);
+  const previewRequestRef = useRef(0);
   const iterationRef = useRef(null);
   const iterationPreviewRef = useRef(null);
   const iterationSiteRef = useRef(null);
@@ -544,7 +596,8 @@ export default function useImageToSiteState() {
   const selectedNodeLabel = selectedNode?.data?.label ?? "Unknown";
   const selectedNodeDescription = selectedNode?.data?.description ?? "";
   const selectedNodeRequirements = selectedNode?.data?.requirements ?? [];
-  const qualityValue = 100 - speedValue;
+  const qualityLabel = modelQuality === "pro" ? "Pro" : "Flash";
+  const qualityIndex = modelQuality === "pro" ? 1 : 0;
 
   const visibleFlow = useMemo(() => {
     if (!structureFlow) {
@@ -1697,6 +1750,90 @@ export default function useImageToSiteState() {
     setViewMode("iterate");
   };
 
+  const handleGeneratePreviews = async () => {
+    if (isGeneratingPreviews) {
+      return;
+    }
+    setPreviewError("");
+    if (!structureFlow || !selectedNodeId) {
+      setPreviewError("Generate a structure and select a node first.");
+      return;
+    }
+    const nodeContext = buildNodeContext(selectedNodeId, nodes, edges);
+    if (!nodeContext?.node) {
+      setPreviewError("Selected node not found.");
+      return;
+    }
+
+    const requestId = previewRequestRef.current + 1;
+    previewRequestRef.current = requestId;
+    const count = clampValue(previewCount, 1, 6);
+    setSelectedPreviewIndex(0);
+    setViewMode("preview");
+    setIsGeneratingPreviews(true);
+    setPreviewItems(
+      Array.from({ length: count }, (_, index) => ({
+        id: `preview-${requestId}-${index}`,
+        status: "loading",
+        imageUrl: null,
+        plan: null,
+      }))
+    );
+
+    try {
+      const response = await fetch("/api/previews", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          count,
+          quality: modelQuality,
+          creativity: creativityValue,
+          nodeContext,
+          title,
+          name,
+          details,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || "Failed to generate previews.");
+      }
+      if (previewRequestRef.current !== requestId) {
+        return;
+      }
+      const previews = Array.isArray(payload?.previews) ? payload.previews : [];
+      setPreviewItems(
+        Array.from({ length: count }, (_, index) => {
+          const preview = previews[index];
+          if (!preview) {
+            return {
+              id: `preview-${requestId}-${index}`,
+              status: "empty",
+              imageUrl: null,
+              plan: null,
+            };
+          }
+          return {
+            ...preview,
+            status: preview.imageUrl ? "ready" : "empty",
+          };
+        })
+      );
+    } catch (error) {
+      if (previewRequestRef.current !== requestId) {
+        return;
+      }
+      setPreviewError(error?.message ?? "Failed to generate previews.");
+      setPreviewItems([]);
+    } finally {
+      if (previewRequestRef.current === requestId) {
+        setIsGeneratingPreviews(false);
+      }
+    }
+  };
+
   const handleGenerateStructure = async () => {
     if (isGeneratingStructure) {
       return;
@@ -2681,13 +2818,17 @@ export default function useImageToSiteState() {
       viewMode,
       previewCount,
       selectedPreviewIndex,
-      speedValue,
+      modelQuality,
+      creativityValue,
       title,
       name,
       details,
       showComponents,
       isGeneratingStructure,
       generationError,
+      isGeneratingPreviews,
+      previewError,
+      previewItems,
       structureTree,
       structureFlow,
       customFiles,
@@ -2754,7 +2895,8 @@ export default function useImageToSiteState() {
       selectedNodeLabel,
       selectedNodeDescription,
       selectedNodeRequirements,
-      qualityValue,
+      qualityLabel,
+      qualityIndex,
       overlayMode,
       isOverlayTool,
       isTextTool,
@@ -2787,7 +2929,8 @@ export default function useImageToSiteState() {
     actions: {
       setActiveIndex,
       setPreviewCount,
-      setSpeedValue,
+      setModelQuality,
+      setCreativityValue,
       setTitle,
       setName,
       setDetails,
@@ -2821,6 +2964,7 @@ export default function useImageToSiteState() {
       handleDeleteImage,
       handleSelectPreview,
       handleIteratePreview,
+      handleGeneratePreviews,
       handleGenerateStructure,
       handleNodeClick,
       handleOpenCodeFile,

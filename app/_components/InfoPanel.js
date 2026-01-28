@@ -163,31 +163,38 @@ export default function InfoPanel() {
                 </label>
                 <label className="imageflow-field">
                   <span className="imageflow-field-label">
-                    Speed: {state.speedValue}
+                    Quality: {derived.qualityLabel}
                   </span>
                   <input
                     className="imageflow-slider"
                     type="range"
                     min="0"
-                    max="100"
-                    value={state.speedValue}
+                    max="1"
+                    step="1"
+                    value={derived.qualityIndex}
                     onChange={(event) =>
-                      actions.setSpeedValue(Number(event.target.value))
+                      actions.setModelQuality(
+                        Number(event.target.value) === 1 ? "pro" : "flash"
+                      )
                     }
                   />
+                  <div className="imageflow-slider-labels">
+                    <span>Flash</span>
+                    <span>Pro</span>
+                  </div>
                 </label>
                 <label className="imageflow-field">
                   <span className="imageflow-field-label">
-                    Quality: {derived.qualityValue}
+                    Creativity: {state.creativityValue}
                   </span>
                   <input
                     className="imageflow-slider"
                     type="range"
                     min="0"
                     max="100"
-                    value={derived.qualityValue}
+                    value={state.creativityValue}
                     onChange={(event) =>
-                      actions.setSpeedValue(100 - Number(event.target.value))
+                      actions.setCreativityValue(Number(event.target.value))
                     }
                   />
                 </label>
@@ -195,22 +202,28 @@ export default function InfoPanel() {
               <button
                 className="imageflow-generate-button"
                 type="button"
-                onClick={() => {
-                  actions.setSelectedPreviewIndex(0);
-                  actions.setViewMode("preview");
-                }}
+                onClick={actions.handleGeneratePreviews}
+                disabled={state.isGeneratingPreviews}
               >
-                Generate previews
+                {state.isGeneratingPreviews
+                  ? "Generating previews..."
+                  : "Generate previews"}
               </button>
+              {state.previewError ? (
+                <p className="imageflow-error">{state.previewError}</p>
+              ) : null}
             </div>
           ) : state.viewMode === "preview" || state.viewMode === "selected" ? (
             <div className="imageflow-info-fields">
               <button
                 className="imageflow-generate-button"
                 type="button"
-                onClick={() => actions.setViewMode("preview")}
+                onClick={actions.handleGeneratePreviews}
+                disabled={state.isGeneratingPreviews}
               >
-                Regenerate previews
+                {state.isGeneratingPreviews
+                  ? "Generating previews..."
+                  : "Regenerate previews"}
               </button>
             </div>
           ) : (
