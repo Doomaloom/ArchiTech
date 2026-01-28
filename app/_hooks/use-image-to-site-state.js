@@ -28,6 +28,9 @@ const NOTE_PANEL_SIZE = { width: 240, height: 140 };
 const ZOOM_MIN = 0.4;
 const ZOOM_MAX = 3;
 const ZOOM_STEP = 0.2;
+const PREVIEW_ZOOM_MIN = 0.6;
+const PREVIEW_ZOOM_MAX = 1;
+const PREVIEW_ZOOM_STEP = 0.1;
 const HISTORY_LIMIT = 60;
 const HISTORY_DEBOUNCE_MS = 320;
 const NUDGE_STEP = 1;
@@ -408,6 +411,7 @@ export default function useImageToSiteState() {
   const [viewMode, setViewMode] = useState("start");
   const [previewCount, setPreviewCount] = useState(3);
   const [selectedPreviewIndex, setSelectedPreviewIndex] = useState(0);
+  const [previewZoom, setPreviewZoom] = useState(1);
   const [modelQuality, setModelQuality] = useState("flash");
   const [creativityValue, setCreativityValue] = useState(45);
   const [title, setTitle] = useState("");
@@ -598,6 +602,9 @@ export default function useImageToSiteState() {
   const selectedNodeRequirements = selectedNode?.data?.requirements ?? [];
   const qualityLabel = modelQuality === "pro" ? "Pro" : "Flash";
   const qualityIndex = modelQuality === "pro" ? 1 : 0;
+  const previewZoomLabel = `${Math.round(previewZoom * 100)}%`;
+  const canPreviewZoomOut = previewZoom > PREVIEW_ZOOM_MIN + 0.001;
+  const canPreviewZoomReset = Math.abs(previewZoom - 1) > 0.001;
 
   const visibleFlow = useMemo(() => {
     if (!structureFlow) {
@@ -1750,6 +1757,20 @@ export default function useImageToSiteState() {
     setViewMode("iterate");
   };
 
+  const handlePreviewZoomOut = () => {
+    setPreviewZoom((current) =>
+      clampValue(
+        roundValue(current - PREVIEW_ZOOM_STEP, 2),
+        PREVIEW_ZOOM_MIN,
+        PREVIEW_ZOOM_MAX
+      )
+    );
+  };
+
+  const handlePreviewZoomReset = () => {
+    setPreviewZoom(1);
+  };
+
   const handleGeneratePreviews = async () => {
     if (isGeneratingPreviews) {
       return;
@@ -2818,6 +2839,7 @@ export default function useImageToSiteState() {
       viewMode,
       previewCount,
       selectedPreviewIndex,
+      previewZoom,
       modelQuality,
       creativityValue,
       title,
@@ -2897,6 +2919,9 @@ export default function useImageToSiteState() {
       selectedNodeRequirements,
       qualityLabel,
       qualityIndex,
+      previewZoomLabel,
+      canPreviewZoomOut,
+      canPreviewZoomReset,
       overlayMode,
       isOverlayTool,
       isTextTool,
@@ -2964,6 +2989,8 @@ export default function useImageToSiteState() {
       handleDeleteImage,
       handleSelectPreview,
       handleIteratePreview,
+      handlePreviewZoomOut,
+      handlePreviewZoomReset,
       handleGeneratePreviews,
       handleGenerateStructure,
       handleNodeClick,

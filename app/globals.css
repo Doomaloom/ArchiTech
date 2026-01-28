@@ -2701,6 +2701,9 @@ body:has(.imageflow-iteration):has(#imageflow-sidebar-toggle:checked)
   height: 100%;
   display: grid;
   gap: 10px;
+  position: relative;
+  padding-top: 48px;
+  --preview-zoom: 1;
 }
 
 .imageflow-previews--1 {
@@ -2755,6 +2758,9 @@ body:has(.imageflow-iteration):has(#imageflow-sidebar-toggle:checked)
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transform: scale(var(--preview-zoom));
+  transform-origin: center;
+  transition: transform 180ms ease;
 }
 
 .imageflow-preview-shade {
@@ -2773,6 +2779,56 @@ body:has(.imageflow-iteration):has(#imageflow-sidebar-toggle:checked)
   gap: 6px;
   z-index: 1;
   pointer-events: none;
+}
+
+.imageflow-preview-toolbar {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  z-index: 3;
+}
+
+.imageflow-preview-zoom-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #64748b;
+}
+
+.imageflow-preview-zoom-controls {
+  display: flex;
+  gap: 6px;
+}
+
+.imageflow-preview-zoom-button {
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  background: rgba(248, 250, 252, 0.8);
+  color: #475569;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: border-color 160ms ease, color 160ms ease,
+    background 160ms ease;
+}
+
+.imageflow-preview-zoom-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.imageflow-preview-zoom-button:not(:disabled):hover {
+  border-color: rgba(249, 115, 22, 0.5);
+  color: #c2410c;
+  background: rgba(255, 237, 213, 0.9);
 }
 
 .imageflow-preview-card:not(.has-image) .imageflow-preview-meta {

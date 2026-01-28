@@ -1,12 +1,38 @@
 import { useImageToSite } from "./../../_context/image-to-site-context";
 
 export default function SelectedPreview() {
-  const { state, actions } = useImageToSite();
+  const { state, actions, derived } = useImageToSite();
   const preview = state.previewItems[state.selectedPreviewIndex];
   const hasImage = Boolean(preview?.imageUrl);
 
   return (
-    <div className="imageflow-previews imageflow-previews--1">
+    <div
+      className="imageflow-previews imageflow-previews--1"
+      style={{ "--preview-zoom": String(state.previewZoom) }}
+    >
+      <div className="imageflow-preview-toolbar">
+        <span className="imageflow-preview-zoom-label">
+          Zoom: {derived.previewZoomLabel}
+        </span>
+        <div className="imageflow-preview-zoom-controls">
+          <button
+            type="button"
+            className="imageflow-preview-zoom-button"
+            onClick={actions.handlePreviewZoomOut}
+            disabled={!derived.canPreviewZoomOut}
+          >
+            Zoom out
+          </button>
+          <button
+            type="button"
+            className="imageflow-preview-zoom-button"
+            onClick={actions.handlePreviewZoomReset}
+            disabled={!derived.canPreviewZoomReset}
+          >
+            Reset
+          </button>
+        </div>
+      </div>
       <div
         className={`imageflow-preview-card is-selected${
           hasImage ? " has-image" : ""
