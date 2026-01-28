@@ -75,6 +75,7 @@ const ensureHtmlDocument = (html) => {
     "<meta charset=\"utf-8\" />",
     "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />",
     "<title>Preview</title>",
+    "<style>html,body{width:100%;height:100%;margin:0;}</style>",
     "</head>",
     "<body>",
     html,
@@ -152,6 +153,8 @@ const buildHtmlPrompt = ({ plan, nodeContext }) => {
     "- Use inline CSS in a <style> tag. Optional inline JS allowed.",
     "- Avoid external assets or fonts. Use gradients, SVG, or simple shapes instead.",
     "- Ensure body margin is 0 and layout fits within 1280x900.",
+    "- Set html, body { width: 100%; height: 100%; margin: 0; }.",
+    "- Use a visible background; avoid pure white.",
     "- Provide high contrast, clear hierarchy, and clean spacing.",
     "",
     "Plan:",
@@ -177,14 +180,23 @@ const renderHtmlList = async (htmlList) => {
   const puppeteer = await loadPuppeteer();
   const browser = await puppeteer.launch({
     headless: "new",
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-gpu",
+    ],
+    executablePath:
+      process.env.PUPPETEER_EXECUTABLE_PATH || process.env.CHROME_BIN || undefined,
   });
 
   try {
     const results = [];
+    const errors = [];
     for (const html of htmlList) {
       if (!html) {
         results.push(null);
+        errors.push("Missing HTML.");
         continue;
       }
       const page = await browser.newPage();
@@ -199,15 +211,18 @@ const renderHtmlList = async (htmlList) => {
           waitUntil: ["domcontentloaded", "load"],
           timeout: 20000,
         });
+        await new Promise((resolve) => setTimeout(resolve, 150));
         const buffer = await page.screenshot({ type: "png", fullPage: true });
         results.push(`data:image/png;base64,${buffer.toString("base64")}`);
+        errors.push(null);
       } catch (error) {
         results.push(null);
+        errors.push(error?.message ?? "Failed to render HTML.");
       } finally {
         await page.close();
       }
     }
-    return results;
+    return { images: results, errors };
   } finally {
     await browser.close();
   }
@@ -302,7 +317,7 @@ export async function POST(request) {
       };
     });
 
-    const images = await renderHtmlList(
+    const renderResult = await renderHtmlList(
       htmlCandidates.map((candidate) => candidate.html)
     );
 
@@ -310,11 +325,34 @@ export async function POST(request) {
       id: candidate.plan?.id ?? `preview-${index + 1}`,
       plan: candidate.plan,
       html: candidate.html,
-      imageUrl: images[index] ?? null,
+      imageUrl: renderResult.images[index] ?? null,
+      renderError: renderResult.errors[index] ?? null,
       error: candidate.error ?? null,
       model,
       temperature,
     }));
+
+    const renderedAny = previews.some((preview) => preview.imageUrl);
+    if (!renderedAny) {
+      const errors = renderResult.errors.filter(Boolean);
+      const missingHtml = errors.filter((error) => error === "Missing HTML.")
+        .length;
+      let errorMessage =
+        "Preview rendering failed. Ensure Chromium is available for Puppeteer.";
+      if (errors.length && missingHtml === errors.length) {
+        errorMessage =
+          "Preview HTML generation failed. No HTML was returned by the model.";
+      } else if (errors.length) {
+        errorMessage = `Preview rendering failed: ${errors[0]}`;
+      }
+      return NextResponse.json(
+        {
+          error: errorMessage,
+          previews,
+        },
+        { status: 502 }
+      );
+    }
 
     return NextResponse.json({ previews, model, temperature });
   } catch (error) {

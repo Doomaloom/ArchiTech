@@ -43,7 +43,11 @@ export default function PreviewGrid() {
           key={`preview-${index}`}
           className={`imageflow-preview-card${
             state.selectedPreviewIndex === index ? " is-selected" : ""
-          }${state.previewItems[index]?.imageUrl ? " has-image" : ""}${
+          }${
+            state.previewItems[index]?.imageUrl || state.previewItems[index]?.html
+              ? " has-image"
+              : ""
+          }${
             state.isGeneratingPreviews ? " is-loading" : ""
           }`}
           role="button"
@@ -59,10 +63,21 @@ export default function PreviewGrid() {
           {state.previewItems[index]?.imageUrl ? (
             <>
               <img
-                className="imageflow-preview-image"
+                className="imageflow-preview-media"
                 src={state.previewItems[index].imageUrl}
                 alt={`Preview ${index + 1}`}
                 loading="lazy"
+              />
+              <div className="imageflow-preview-shade" aria-hidden="true" />
+            </>
+          ) : state.previewItems[index]?.html ? (
+            <>
+              <iframe
+                className="imageflow-preview-media imageflow-preview-frame"
+                title={`Preview ${index + 1} HTML`}
+                sandbox=""
+                loading="lazy"
+                srcDoc={state.previewItems[index].html}
               />
               <div className="imageflow-preview-shade" aria-hidden="true" />
             </>
@@ -74,9 +89,14 @@ export default function PreviewGrid() {
                 {state.previewItems[index].plan.title}
               </span>
             ) : null}
-            {!state.previewItems[index]?.imageUrl ? (
+            {!(state.previewItems[index]?.imageUrl ||
+              state.previewItems[index]?.html) ? (
               <span className="imageflow-preview-placeholder">
-                {state.isGeneratingPreviews ? "Generating..." : "No preview yet"}
+                {state.isGeneratingPreviews
+                  ? "Generating..."
+                  : state.previewItems[index]?.renderError ||
+                    state.previewItems[index]?.error ||
+                    "No preview yet"}
               </span>
             ) : null}
           </div>

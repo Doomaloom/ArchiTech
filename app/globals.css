@@ -2752,15 +2752,24 @@ body:has(.imageflow-iteration):has(#imageflow-sidebar-toggle:checked)
   opacity: 0.85;
 }
 
-.imageflow-preview-image {
+.imageflow-preview-media {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
   transform: scale(var(--preview-zoom));
   transform-origin: center;
   transition: transform 180ms ease;
+}
+
+.imageflow-preview-media:not(.imageflow-preview-frame) {
+  object-fit: cover;
+}
+
+.imageflow-preview-frame {
+  border: 0;
+  background: transparent;
+  pointer-events: none;
 }
 
 .imageflow-preview-shade {

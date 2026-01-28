@@ -4,6 +4,7 @@ export default function SelectedPreview() {
   const { state, actions, derived } = useImageToSite();
   const preview = state.previewItems[state.selectedPreviewIndex];
   const hasImage = Boolean(preview?.imageUrl);
+  const hasPreview = Boolean(preview?.imageUrl || preview?.html);
 
   return (
     <div
@@ -35,7 +36,7 @@ export default function SelectedPreview() {
       </div>
       <div
         className={`imageflow-preview-card is-selected${
-          hasImage ? " has-image" : ""
+          hasPreview ? " has-image" : ""
         }`}
         role="button"
         tabIndex={0}
@@ -50,10 +51,21 @@ export default function SelectedPreview() {
         {hasImage ? (
           <>
             <img
-              className="imageflow-preview-image"
+              className="imageflow-preview-media"
               src={preview.imageUrl}
               alt={`Preview ${state.selectedPreviewIndex + 1}`}
               loading="lazy"
+            />
+            <div className="imageflow-preview-shade" aria-hidden="true" />
+          </>
+        ) : preview?.html ? (
+          <>
+            <iframe
+              className="imageflow-preview-media imageflow-preview-frame"
+              title={`Preview ${state.selectedPreviewIndex + 1} HTML`}
+              sandbox=""
+              loading="lazy"
+              srcDoc={preview.html}
             />
             <div className="imageflow-preview-shade" aria-hidden="true" />
           </>
@@ -65,9 +77,11 @@ export default function SelectedPreview() {
           {preview?.plan?.title ? (
             <span className="imageflow-preview-title">{preview.plan.title}</span>
           ) : null}
-          {!hasImage ? (
+          {!hasPreview ? (
             <span className="imageflow-preview-placeholder">
-              {state.isGeneratingPreviews ? "Generating..." : "No preview yet"}
+              {state.isGeneratingPreviews
+                ? "Generating..."
+                : preview?.renderError || preview?.error || "No preview yet"}
             </span>
           ) : null}
         </div>

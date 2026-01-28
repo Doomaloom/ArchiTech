@@ -1818,11 +1818,14 @@ export default function useImageToSiteState() {
         }),
       });
       const payload = await response.json();
-      if (!response.ok) {
+      if (!response.ok && !payload?.previews) {
         throw new Error(payload?.error || "Failed to generate previews.");
       }
       if (previewRequestRef.current !== requestId) {
         return;
+      }
+      if (!response.ok) {
+        setPreviewError(payload?.error || payload?.message || "");
       }
       const previews = Array.isArray(payload?.previews) ? payload.previews : [];
       setPreviewItems(
