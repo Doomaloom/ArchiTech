@@ -59,6 +59,19 @@ const areBoundsEqual = (current, next) => {
   );
 };
 
+const isAnchorEqual = (current, next) => {
+  if (current === next) {
+    return true;
+  }
+  if (!Number.isFinite(current) && !Number.isFinite(next)) {
+    return true;
+  }
+  if (!Number.isFinite(current) || !Number.isFinite(next)) {
+    return false;
+  }
+  return Math.abs(current - next) < 0.5;
+};
+
 const applyControlsVisibility = (element, isVisible) => {
   if (!element) {
     return;
@@ -67,7 +80,34 @@ const applyControlsVisibility = (element, isVisible) => {
   element.style.pointerEvents = isVisible ? "auto" : "none";
 };
 
-const applyControlsPosition = (element, bounds) => {
+const getTopTransformControlAnchor = (previewEl) => {
+  if (!previewEl) {
+    return null;
+  }
+  const previewRect = previewEl.getBoundingClientRect();
+  const controls = previewEl.querySelectorAll(
+    ".imageflow-moveable .moveable-control, .imageflow-moveable .moveable-rotation"
+  );
+  let minTop = Infinity;
+  controls.forEach((control) => {
+    const rect = control.getBoundingClientRect();
+    if (rect.top < minTop) {
+      minTop = rect.top;
+    }
+  });
+  if (!Number.isFinite(minTop)) {
+    const controlBox = previewEl.querySelector(
+      ".imageflow-moveable .moveable-control-box"
+    );
+    if (!controlBox) {
+      return null;
+    }
+    minTop = controlBox.getBoundingClientRect().top;
+  }
+  return minTop - previewRect.top;
+};
+
+const applyControlsPosition = (element, bounds, anchorTop) => {
   if (!element) {
     return;
   }
@@ -76,7 +116,9 @@ const applyControlsPosition = (element, bounds) => {
     return;
   }
   const left = Math.max(8, bounds.left);
-  const top = Math.max(8, bounds.top);
+  const height = element.getBoundingClientRect().height || element.offsetHeight || 0;
+  const safeAnchor = Number.isFinite(anchorTop) ? anchorTop : bounds.top;
+  const top = Math.max(8, safeAnchor - height);
   element.style.left = `${left}px`;
   element.style.top = `${top}px`;
   applyControlsVisibility(element, true);
@@ -103,6 +145,7 @@ export default function IterationTransformControls({
 }) {
   const controlsRef = useRef(null);
   const boundsRef = useRef(null);
+  const anchorRef = useRef(null);
   const rafRef = useRef(null);
   const isSingleSelection =
     isVisible && Boolean(transformTargetId);
@@ -192,11 +235,16 @@ export default function IterationTransformControls({
     }
     rafRef.current = requestAnimationFrame(() => {
       const nextBounds = getSelectionBounds(previewEl, siteEl, boundsIds);
-      if (areBoundsEqual(boundsRef.current, nextBounds)) {
+      const nextAnchor = getTopTransformControlAnchor(previewEl);
+      if (
+        areBoundsEqual(boundsRef.current, nextBounds) &&
+        isAnchorEqual(anchorRef.current, nextAnchor)
+      ) {
         return;
       }
       boundsRef.current = nextBounds;
-      applyControlsPosition(controlsRef.current, nextBounds);
+      anchorRef.current = nextAnchor;
+      applyControlsPosition(controlsRef.current, nextBounds, nextAnchor);
     });
     return () => {
       if (rafRef.current) {

@@ -3054,7 +3054,7 @@ body:has(.imageflow-iteration):has(#imageflow-sidebar-toggle:checked)
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: #0f172a;
-  transform: translate(-2px, -12px);
+  transform: translateX(-2px);
   z-index: 6;
 }
 
