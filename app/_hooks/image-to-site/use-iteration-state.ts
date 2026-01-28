@@ -39,6 +39,8 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
   });
   const textEditsApiRef = useRef({
     removeTextEditsForIds: () => {},
+    applyTextStyles: () => {},
+    getTextStyles: () => null,
   });
 
   const tools = useIterationTools();
@@ -79,6 +81,7 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
     isIterationMode,
     iterationSiteRef,
     scheduleHistoryCommit,
+    textEditsApiRef,
   });
 
   const detachment = useIterationDetachedLayers({
@@ -205,6 +208,8 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
 
   textEditsApiRef.current = {
     removeTextEditsForIds: textEdits.actions.removeTextEditsForIds,
+    applyTextStyles: textEdits.actions.applyTextStyles,
+    getTextStyles: (id) => textEdits.state.textEdits[id]?.styles ?? null,
   };
 
   const annotations = useIterationAnnotations({
@@ -353,6 +358,10 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
     moveTargetIds,
   ]);
 
+  const primaryMoveTargetId =
+    moveTargetIds.length === 1 ? moveTargetIds[0] : null;
+
+
   const iterationPatch = useMemo(
     () =>
       buildIterationPatch({
@@ -417,6 +426,7 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
       selectedElementId: selection.state.selectedElementId,
       selectedElementIds: selection.state.selectedElementIds,
       elementTransforms: transforms.state.elementTransforms,
+      scaleLock: transforms.state.scaleLock,
       zoomLevel: viewport.derived.zoomLevel,
       panOffset: viewport.derived.panOffset,
       isSpacePanning: viewport.state.isSpacePanning,
@@ -459,6 +469,7 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
       canUndo: history.derived.canUndo,
       canRedo: history.derived.canRedo,
       hasNestedSelection: nestedSelectionIds.length > 0,
+      primaryMoveTargetId,
     },
     refs: {
       iterationRef,
@@ -493,6 +504,7 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
       handleTextContentChange: textEdits.actions.handleTextContentChange,
       handleTextStyleChange: textEdits.actions.handleTextStyleChange,
       handleResetTextEdit: textEdits.actions.handleResetTextEdit,
+      applyTextStyles: textEdits.actions.applyTextStyles,
       handleOverlayPointerDown: annotations.actions.handleOverlayPointerDown,
       handleOverlayPointerMove: annotations.actions.handleOverlayPointerMove,
       handleOverlayPointerEnd: annotations.actions.handleOverlayPointerEnd,
@@ -501,6 +513,10 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
       handleSelectElement: selection.actions.handleSelectElement,
       handleToggleHighlight: selection.actions.handleToggleHighlight,
       updateElementTransform: transforms.actions.updateElementTransform,
+      setScaleLock: transforms.actions.setScaleLock,
+      toggleScaleLock: transforms.actions.toggleScaleLock,
+      handleScaleStart: transforms.actions.handleScaleStart,
+      handleScaleEnd: transforms.actions.handleScaleEnd,
       handleTransformStart: () => setIsTransforming(true),
       handleTransformEnd: () => setIsTransforming(false),
       handleSelectoEnd: selection.actions.handleSelectoEnd,
@@ -527,6 +543,7 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
         layers.actions.handleToggleLayerFolderVisibility,
       handleToggleLayerFolderLock: layers.actions.handleToggleLayerFolderLock,
       getTransformState: transforms.helpers.getTransformState,
+      getTransformControlState: transforms.helpers.getTransformControlState,
     },
   };
 }

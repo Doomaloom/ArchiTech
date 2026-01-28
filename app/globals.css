@@ -3058,6 +3058,85 @@ body:has(.imageflow-iteration):has(#imageflow-sidebar-toggle:checked)
   z-index: 6;
 }
 
+.imageflow-transform-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.imageflow-transform-label {
+  font-size: 9px;
+  letter-spacing: 0.16em;
+}
+
+.imageflow-transform-inputs {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.imageflow-transform-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.06);
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+
+.imageflow-transform-input {
+  width: 52px;
+  border: none;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  outline: none;
+  text-align: right;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.imageflow-transform-unit {
+  font-size: 9px;
+  opacity: 0.6;
+}
+
+.imageflow-transform-lock {
+  border: 1px solid rgba(15, 23, 42, 0.2);
+  background: rgba(15, 23, 42, 0.05);
+  color: #0f172a;
+  border-radius: 999px;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  transition: background 160ms ease, transform 160ms ease, color 160ms ease;
+}
+
+.imageflow-transform-lock svg {
+  width: 14px;
+  height: 14px;
+}
+
+.imageflow-transform-lock.is-locked {
+  background: rgba(15, 23, 42, 0.16);
+}
+
+.imageflow-transform-lock:hover {
+  background: rgba(15, 23, 42, 0.12);
+  transform: translateY(-1px);
+}
+
+.imageflow-transform-lock:active {
+  transform: translateY(0);
+}
+
 .imageflow-transform-unlink {
   border: 1px solid rgba(249, 115, 22, 0.35);
   background: rgba(249, 115, 22, 0.12);

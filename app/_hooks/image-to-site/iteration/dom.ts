@@ -75,6 +75,34 @@ export const getEditableTextElement = (element) => {
   return element;
 };
 
+const hasNestedGemNode = (element) => {
+  if (!element?.querySelector) {
+    return false;
+  }
+  return Boolean(element.querySelector("[data-gem-id]"));
+};
+
+const hasTextContent = (element) => {
+  const text = element?.textContent ?? "";
+  return Boolean(text.trim());
+};
+
+export const isTextTransformTarget = (element) => {
+  if (!element) {
+    return false;
+  }
+  if (getEditableTextElement(element)) {
+    return true;
+  }
+  if (hasNestedGemNode(element)) {
+    return false;
+  }
+  return hasTextContent(element);
+};
+
+export const getTransformTextElement = (element) =>
+  isTextTransformTarget(element) ? element : null;
+
 export const getTextSnapshot = (element) => {
   if (!element || typeof window === "undefined") {
     return null;

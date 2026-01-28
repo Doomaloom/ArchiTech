@@ -1,4 +1,8 @@
 - Follow SOLID Conventions.
+- Follow OOP conventions
+- Follow inheritance conventions.
+- Do not stray from the above three principles when appropriate.
+
 - Keep hooks small and focused.
 - A single hook should have one clear responsibility.
 - Hooks should not exceed ~100 lines unless strongly justified.

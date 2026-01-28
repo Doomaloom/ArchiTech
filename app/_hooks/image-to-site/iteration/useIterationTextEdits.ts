@@ -163,6 +163,31 @@ export default function useIterationTextEdits({
     updateTextEdits(textEditDraft.id, { styles: { [key]: value } });
   };
 
+  const applyTextStyles = (id, styles, commitLabel = "Text edit") => {
+    if (!id || !styles) {
+      return;
+    }
+    const nextStyles = Object.entries(styles).reduce((acc, [key, value]) => {
+      if (typeof value === "number" && Number.isNaN(value)) {
+        return acc;
+      }
+      return { ...acc, [key]: value };
+    }, {});
+    if (!Object.keys(nextStyles).length) {
+      return;
+    }
+    if (commitLabel) {
+      scheduleHistoryCommit(commitLabel);
+    }
+    updateTextEdits(id, { styles: nextStyles });
+    setTextEditDraft((current) => {
+      if (!current || current.id !== id) {
+        return current;
+      }
+      return { ...current, ...nextStyles };
+    });
+  };
+
   const handleResetTextEdit = () => {
     if (!textEditDraft?.id) {
       return;
@@ -210,6 +235,7 @@ export default function useIterationTextEdits({
       handleTextContentChange,
       handleTextStyleChange,
       handleResetTextEdit,
+      applyTextStyles,
       removeTextEditsForIds,
       setTextEditDraft,
       setTextEdits,

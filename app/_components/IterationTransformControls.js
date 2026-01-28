@@ -86,16 +86,38 @@ export default function IterationTransformControls({
   previewRef,
   siteRef,
   selectionIds,
+  transformTargetId,
   isVisible,
+  showUnlink,
   onUnlink,
   elementTransforms,
   zoomLevel,
   panOffset,
   stageSize,
+  textEdits,
+  scaleLock,
+  onToggleScaleLock,
+  onUpdateScale,
+  onUpdateFontSize,
+  getControlState,
 }) {
   const controlsRef = useRef(null);
   const boundsRef = useRef(null);
   const rafRef = useRef(null);
+  const isSingleSelection =
+    isVisible && Boolean(transformTargetId);
+  const boundsIds = transformTargetId ? [transformTargetId] : selectionIds;
+  const target = isSingleSelection
+    ? siteRef.current?.querySelector(`[data-gem-id="${transformTargetId}"]`)
+    : null;
+  const controlState =
+    isSingleSelection && getControlState
+      ? getControlState({
+          id: transformTargetId,
+          target,
+          textStyles: textEdits?.[transformTargetId]?.styles,
+        })
+      : null;
   const handleUnlinkPointerDown = (event) => {
     event.stopPropagation();
     event.preventDefault();
@@ -109,6 +131,49 @@ export default function IterationTransformControls({
     onUnlink?.();
   };
 
+  const handleScaleChange = (axis) => (event) => {
+    if (!isSingleSelection) {
+      return;
+    }
+    const value = Number(event.target.value);
+    if (!Number.isFinite(value)) {
+      return;
+    }
+    const scaleValue = value / 100;
+    const next =
+      axis === "x" ? { scaleX: scaleValue } : { scaleY: scaleValue };
+    if (scaleLock) {
+      next.scaleX = scaleValue;
+      next.scaleY = scaleValue;
+    }
+    onUpdateScale?.(transformTargetId, next, target ?? null);
+  };
+
+  const handleFontSizeChange = (event) => {
+    if (!isSingleSelection) {
+      return;
+    }
+    const value = Number(event.target.value);
+    if (!Number.isFinite(value)) {
+      return;
+    }
+    onUpdateFontSize?.(transformTargetId, value);
+  };
+
+  const handleToggleScaleLock = (event) => {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+    onToggleScaleLock?.(!scaleLock);
+  };
+
+  const handleToggleScaleLockKeyDown = (event) => {
+    if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+    event.preventDefault();
+    onToggleScaleLock?.(!scaleLock);
+  };
+
   useLayoutEffect(() => {
     if (!isVisible) {
       boundsRef.current = null;
@@ -117,7 +182,7 @@ export default function IterationTransformControls({
     }
     const previewEl = previewRef.current;
     const siteEl = siteRef.current;
-    if (!previewEl || !siteEl || !selectionIds.length) {
+    if (!previewEl || !siteEl || !boundsIds.length) {
       boundsRef.current = null;
       applyControlsVisibility(controlsRef.current, false);
       return;
@@ -126,7 +191,7 @@ export default function IterationTransformControls({
       cancelAnimationFrame(rafRef.current);
     }
     rafRef.current = requestAnimationFrame(() => {
-      const nextBounds = getSelectionBounds(previewEl, siteEl, selectionIds);
+      const nextBounds = getSelectionBounds(previewEl, siteEl, boundsIds);
       if (areBoundsEqual(boundsRef.current, nextBounds)) {
         return;
       }
@@ -144,8 +209,10 @@ export default function IterationTransformControls({
     panOffset,
     previewRef,
     selectionIds,
+    transformTargetId,
     siteRef,
     stageSize,
+    textEdits,
     zoomLevel,
   ]);
 
@@ -158,41 +225,135 @@ export default function IterationTransformControls({
       className="imageflow-transform-controls"
       ref={controlsRef}
       style={{ opacity: 0, pointerEvents: "none" }}
+      onPointerDown={(event) => event.stopPropagation()}
     >
-      <button
-        className="imageflow-transform-unlink"
-        type="button"
-        onClick={handleUnlinkClick}
-        onPointerDown={handleUnlinkPointerDown}
-        aria-label="Unlink from folder"
-      >
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path
-            d="M9 15l-2 2a3 3 0 01-4.2-4.2l2-2"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M15 9l2-2a3 3 0 114.2 4.2l-2 2"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M8 8l8 8"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </button>
+      {controlState ? (
+        <div className="imageflow-transform-group">
+          {controlState.kind === "object" ? (
+            <>
+              <span className="imageflow-transform-label">Scale</span>
+              <div className="imageflow-transform-inputs">
+                <label className="imageflow-transform-field">
+                  <span>W%</span>
+                  <input
+                    className="imageflow-transform-input"
+                    type="number"
+                    step="0.1"
+                    min="1"
+                    max="800"
+                    value={controlState.scaleXPercent}
+                    onChange={handleScaleChange("x")}
+                  />
+                </label>
+                <label className="imageflow-transform-field">
+                  <span>H%</span>
+                  <input
+                    className="imageflow-transform-input"
+                    type="number"
+                    step="0.1"
+                    min="1"
+                    max="800"
+                    value={controlState.scaleYPercent}
+                    onChange={handleScaleChange("y")}
+                  />
+                </label>
+              </div>
+              <button
+                className={`imageflow-transform-lock${
+                  scaleLock ? " is-locked" : ""
+                }`}
+                type="button"
+                onPointerDown={handleToggleScaleLock}
+                onKeyDown={handleToggleScaleLockKeyDown}
+                aria-pressed={Boolean(scaleLock)}
+                aria-label={scaleLock ? "Unlock uniform scaling" : "Lock uniform scaling"}
+                title={scaleLock ? "Unlock uniform scaling" : "Lock uniform scaling"}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <rect
+                    x="5"
+                    y="11"
+                    width="14"
+                    height="9"
+                    rx="2"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                  />
+                  {scaleLock ? (
+                    <path
+                      d="M8 11V8a4 4 0 018 0v3"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                    />
+                  ) : (
+                    <path
+                      d="M9 11V8a3.5 3.5 0 017 0"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                    />
+                  )}
+                </svg>
+              </button>
+            </>
+          ) : (
+            <>
+              <span className="imageflow-transform-label">Font</span>
+              <label className="imageflow-transform-field">
+                <input
+                  className="imageflow-transform-input"
+                  type="number"
+                  min="6"
+                  max="200"
+                  value={controlState.fontSize ?? ""}
+                  onChange={handleFontSizeChange}
+                />
+                <span className="imageflow-transform-unit">px</span>
+              </label>
+            </>
+          )}
+        </div>
+      ) : null}
+      {showUnlink ? (
+        <button
+          className="imageflow-transform-unlink"
+          type="button"
+          onClick={handleUnlinkClick}
+          onPointerDown={handleUnlinkPointerDown}
+          aria-label="Unlink from folder"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M9 15l-2 2a3 3 0 01-4.2-4.2l2-2"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M15 9l2-2a3 3 0 114.2 4.2l-2 2"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M8 8l8 8"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+      ) : null}
     </div>
   );
 }
