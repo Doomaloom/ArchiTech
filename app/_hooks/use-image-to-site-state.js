@@ -189,6 +189,129 @@ const getEditableTextElement = (element) => {
   return element;
 };
 
+const toKebabCase = (value) => {
+  if (!value) {
+    return "node";
+  }
+  const normalized = value
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return normalized.slice(0, 30) || "node";
+};
+
+const ensureUniqueId = (base, used) => {
+  let next = base;
+  let index = 1;
+  while (used.has(next)) {
+    next = `${base}-${index}`;
+    index += 1;
+  }
+  used.add(next);
+  return next;
+};
+
+const normalizeStructureTree = (input) => {
+  if (!input || typeof input !== "object") {
+    return null;
+  }
+  if (input.root) {
+    return input.root;
+  }
+  if (input.tree) {
+    return input.tree;
+  }
+  if (Array.isArray(input.pages)) {
+    return {
+      id: "root",
+      label: "App",
+      children: input.pages,
+    };
+  }
+  if (Array.isArray(input)) {
+    return {
+      id: "root",
+      label: "App",
+      children: input,
+    };
+  }
+  return input;
+};
+
+const getTreeChildren = (node) => {
+  if (!node || typeof node !== "object") {
+    return [];
+  }
+  if (Array.isArray(node.children)) {
+    return node.children;
+  }
+  if (Array.isArray(node.items)) {
+    return node.items;
+  }
+  if (Array.isArray(node.pages)) {
+    return node.pages;
+  }
+  if (Array.isArray(node.nodes)) {
+    return node.nodes;
+  }
+  return [];
+};
+
+const buildFlowFromTree = (inputTree) => {
+  const root = normalizeStructureTree(inputTree);
+  if (!root) {
+    return null;
+  }
+  const nodes = [];
+  const edges = [];
+  const depthCounts = new Map();
+  const usedIds = new Set();
+
+  const walk = (node, depth = 0, parentId = null) => {
+    if (!node || typeof node !== "object") {
+      return;
+    }
+    if (depth === 0) {
+      getTreeChildren(node).forEach((child) => walk(child, depth + 1, null));
+      return;
+    }
+    const label =
+      node.label?.toString() ||
+      node.name?.toString() ||
+      node.title?.toString() ||
+      node.id?.toString() ||
+      "Untitled";
+    const baseId = toKebabCase(node.id || label);
+    const id = ensureUniqueId(baseId, usedIds);
+    const order = depthCounts.get(depth) ?? 0;
+    depthCounts.set(depth, order + 1);
+    const layoutDepth = Math.max(depth - 1, 0);
+    nodes.push({
+      id,
+      data: {
+        label,
+        depth,
+        kind: depth === 1 ? "page" : "component",
+      },
+      position: { x: layoutDepth * 240, y: order * 120 },
+      type: "default",
+    });
+    if (parentId) {
+      edges.push({
+        id: `${parentId}-${id}`,
+        source: parentId,
+        target: id,
+      });
+    }
+    getTreeChildren(node).forEach((child) => walk(child, depth + 1, id));
+  };
+
+  walk(root, 0, null);
+  return { nodes, edges };
+};
+
 const getTextSnapshot = (element) => {
   if (!element || typeof window === "undefined") {
     return null;
@@ -215,6 +338,7 @@ export default function useImageToSiteState() {
   const [fileMeta, setFileMeta] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [gallery, setGallery] = useState([]);
+  const [galleryFiles, setGalleryFiles] = useState([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [viewMode, setViewMode] = useState("start");
   const [previewCount, setPreviewCount] = useState(3);
@@ -223,6 +347,11 @@ export default function useImageToSiteState() {
   const [title, setTitle] = useState("");
   const [name, setName] = useState("");
   const [details, setDetails] = useState("");
+  const [showComponents, setShowComponents] = useState(false);
+  const [isGeneratingStructure, setIsGeneratingStructure] = useState(false);
+  const [generationError, setGenerationError] = useState("");
+  const [structureTree, setStructureTree] = useState(null);
+  const [structureFlow, setStructureFlow] = useState(null);
   const [customFiles, setCustomFiles] = useState([]);
   const [activeCodeFileId, setActiveCodeFileId] = useState(
     CODE_FILE_GROUPS[0].items[0].id
@@ -309,7 +438,7 @@ export default function useImageToSiteState() {
       type: "default",
     }))
   );
-  const [edges, , onEdgesChange] = useEdgesState(DEMO_EDGES);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(DEMO_EDGES);
   const [historyState, setHistoryState] = useState(() => ({
     past: [],
     present: null,
@@ -331,6 +460,7 @@ export default function useImageToSiteState() {
   }, [fileMeta]);
 
   const activePreview = gallery[activeIndex] ?? fileMeta?.previewUrl ?? null;
+  const activeImageFile = galleryFiles[activeIndex] ?? null;
   const codeFileGroups = useMemo(() => {
     if (!customFiles.length) {
       return CODE_FILE_GROUPS;
@@ -371,19 +501,6 @@ export default function useImageToSiteState() {
   }, []);
 
   useEffect(() => {
-    const selectedId = DEMO_PAGES[activeIndex % DEMO_PAGES.length]?.id ?? null;
-    if (selectedId) {
-      setSelectedNodeId(selectedId);
-    }
-    setNodes((current) =>
-      current.map((node) => ({
-        ...node,
-        selected: node.id === selectedId,
-      }))
-    );
-  }, [activeIndex, setNodes]);
-
-  useEffect(() => {
     setNodes((current) =>
       current.map((node) => ({
         ...node,
@@ -392,9 +509,53 @@ export default function useImageToSiteState() {
     );
   }, [selectedNodeId, setNodes]);
 
+  useEffect(() => {
+    if (!nodes.length) {
+      if (selectedNodeId) {
+        setSelectedNodeId(null);
+      }
+      return;
+    }
+    const exists = nodes.some((node) => node.id === selectedNodeId);
+    if (!exists) {
+      setSelectedNodeId(nodes[0].id);
+    }
+  }, [nodes, selectedNodeId]);
+
   const selectedNodeLabel =
-    DEMO_PAGES.find((page) => page.id === selectedNodeId)?.label ?? "Unknown";
+    nodes.find((node) => node.id === selectedNodeId)?.data?.label ?? "Unknown";
   const qualityValue = 100 - speedValue;
+
+  const visibleFlow = useMemo(() => {
+    if (!structureFlow) {
+      return null;
+    }
+    if (showComponents) {
+      return structureFlow;
+    }
+    const pageNodes = structureFlow.nodes.filter(
+      (node) => node.data?.kind === "page"
+    );
+    const pageIds = new Set(pageNodes.map((node) => node.id));
+    const pageEdges = structureFlow.edges.filter(
+      (edge) => pageIds.has(edge.source) && pageIds.has(edge.target)
+    );
+    return { nodes: pageNodes, edges: pageEdges };
+  }, [showComponents, structureFlow]);
+
+  useEffect(() => {
+    if (!visibleFlow) {
+      return;
+    }
+    setNodes(visibleFlow.nodes);
+    setEdges(visibleFlow.edges);
+    setSelectedNodeId((current) => {
+      if (visibleFlow.nodes.some((node) => node.id === current)) {
+        return current;
+      }
+      return visibleFlow.nodes[0]?.id ?? null;
+    });
+  }, [setEdges, setNodes, visibleFlow]);
 
   useEffect(() => {
     const buttons = Array.from(
@@ -1409,6 +1570,10 @@ export default function useImageToSiteState() {
         ...previews.map((preview) => preview.url),
         ...current,
       ]);
+      setGalleryFiles((current) => [
+        ...previews.map((preview) => preview.file),
+        ...current,
+      ]);
       setActiveIndex(0);
       const primary = previews[0];
       if (primary) {
@@ -1488,7 +1653,11 @@ export default function useImageToSiteState() {
       return;
     }
     const nextGallery = gallery.filter((_, index) => index !== activeIndex);
+    const nextGalleryFiles = galleryFiles.filter(
+      (_, index) => index !== activeIndex
+    );
     setGallery(nextGallery);
+    setGalleryFiles(nextGalleryFiles);
     const nextIndex = nextGallery.length
       ? Math.min(activeIndex, nextGallery.length - 1)
       : 0;
@@ -1506,6 +1675,48 @@ export default function useImageToSiteState() {
   const handleIteratePreview = (index) => {
     setSelectedPreviewIndex(index);
     setViewMode("iterate");
+  };
+
+  const handleGenerateStructure = async () => {
+    if (isGeneratingStructure) {
+      return;
+    }
+    setGenerationError("");
+    if (!activeImageFile) {
+      setGenerationError("Upload an image before generating the structure.");
+      return;
+    }
+    setIsGeneratingStructure(true);
+    try {
+      const formData = new FormData();
+      formData.append("image", activeImageFile, activeImageFile.name);
+      formData.append("title", title);
+      formData.append("name", name);
+      formData.append("details", details);
+
+      const response = await fetch("/api/structure", {
+        method: "POST",
+        body: formData,
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || "Failed to generate structure.");
+      }
+
+      const tree = payload?.tree ?? payload?.structure ?? payload?.root ?? payload;
+      const flow = buildFlowFromTree(tree);
+      if (!flow) {
+        throw new Error("No structure tree returned.");
+      }
+      setStructureFlow(flow);
+      setStructureTree(tree);
+      setShowComponents(false);
+      setViewMode("nodes");
+    } catch (error) {
+      setGenerationError(error?.message ?? "Failed to generate structure.");
+    } finally {
+      setIsGeneratingStructure(false);
+    }
   };
 
   const handleNodeClick = (_, node) => {
@@ -2445,6 +2656,7 @@ export default function useImageToSiteState() {
       fileMeta,
       isDragging,
       gallery,
+      galleryFiles,
       activeIndex,
       viewMode,
       previewCount,
@@ -2453,6 +2665,11 @@ export default function useImageToSiteState() {
       title,
       name,
       details,
+      showComponents,
+      isGeneratingStructure,
+      generationError,
+      structureTree,
+      structureFlow,
       customFiles,
       activeCodeFileId,
       openCodeTabs,
@@ -2552,6 +2769,7 @@ export default function useImageToSiteState() {
       setTitle,
       setName,
       setDetails,
+      setShowComponents,
       setViewMode,
       setSelectedPreviewIndex,
       setCodePanelMode,
@@ -2581,6 +2799,7 @@ export default function useImageToSiteState() {
       handleDeleteImage,
       handleSelectPreview,
       handleIteratePreview,
+      handleGenerateStructure,
       handleNodeClick,
       handleOpenCodeFile,
       handleEditorChange,

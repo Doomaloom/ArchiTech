@@ -250,10 +250,16 @@ export default function InfoPanel() {
               <button
                 className="imageflow-generate-button"
                 type="button"
-                onClick={() => actions.setViewMode("nodes")}
+                onClick={actions.handleGenerateStructure}
+                disabled={state.isGeneratingStructure || !derived.hasFile}
               >
-                Generate Website Structure
+                {state.isGeneratingStructure
+                  ? "Generating Structure..."
+                  : "Generate Website Structure"}
               </button>
+              {state.generationError ? (
+                <p className="imageflow-error">{state.generationError}</p>
+              ) : null}
             </>
           )}
         </>
