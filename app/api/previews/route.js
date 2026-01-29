@@ -8,6 +8,7 @@ const FLASH_MODEL =
   process.env.GEMINI_MODEL ||
   "gemini-3-flash-preview";
 const PRO_MODEL = process.env.GEMINI_PRO_MODEL || "gemini-3-pro-preview";
+const IDEOGRAM_ENDPOINT = "https://api.ideogram.ai/v1/ideogram-v3/generate";
 const MAX_PREVIEWS = 6;
 const VIEWPORT = { width: 1280, height: 900 };
 
@@ -165,6 +166,91 @@ const buildHtmlPrompt = ({ plan, nodeContext }) => {
   ].join("\n");
 };
 
+const buildIdeogramPrompt = ({ plan, nodeContext }) => {
+  const node = nodeContext?.node ?? {};
+  const requirements = Array.isArray(node?.requirements)
+    ? node.requirements.filter(Boolean)
+    : [];
+  const sections = Array.isArray(plan?.sections)
+    ? plan.sections.filter(Boolean)
+    : [];
+  const keywords = Array.isArray(plan?.styleKeywords)
+    ? plan.styleKeywords.filter(Boolean)
+    : [];
+
+  return [
+    "High-fidelity UI mockup of a modern product website.",
+    node?.label ? `Page: ${node.label}` : null,
+    node?.description ? `Description: ${node.description}` : null,
+    requirements.length ? `Requirements: ${requirements.join("; ")}` : null,
+    plan?.title ? `Concept: ${plan.title}` : null,
+    plan?.summary ? `Summary: ${plan.summary}` : null,
+    plan?.layout ? `Layout: ${plan.layout}` : null,
+    sections.length ? `Sections: ${sections.join(", ")}` : null,
+    keywords.length ? `Style keywords: ${keywords.join(", ")}` : null,
+    "Use clear hierarchy, crisp typography, and generous spacing.",
+    "Avoid watermarks, avoid blurry text, keep copy legible.",
+    "Landscape canvas similar to 1280x900.",
+  ]
+    .filter(Boolean)
+    .join("\n");
+};
+
+const requestIdeogramImage = async ({ prompt, apiKey }) => {
+  const formData = new FormData();
+  formData.append("prompt", prompt);
+  formData.append("num_images", "1");
+  formData.append("style_type", "DESIGN");
+  formData.append("rendering_speed", "QUALITY");
+  formData.append(
+    "negative_prompt",
+    "blurry, low resolution, watermark, unreadable text"
+  );
+
+  const response = await fetch(IDEOGRAM_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Api-Key": apiKey,
+    },
+    body: formData,
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(
+      payload?.error || payload?.message || "Ideogram request failed."
+    );
+  }
+  const imageUrl = payload?.data?.[0]?.url;
+  if (!imageUrl) {
+    throw new Error("Ideogram response missing image url.");
+  }
+  return imageUrl;
+};
+
+const generateIdeogramImages = async ({ plans, nodeContext, apiKey }) => {
+  const results = await Promise.allSettled(
+    plans.map((plan) =>
+      requestIdeogramImage({
+        prompt: buildIdeogramPrompt({ plan, nodeContext }),
+        apiKey,
+      })
+    )
+  );
+
+  const images = [];
+  const errors = [];
+  results.forEach((result) => {
+    if (result.status === "fulfilled") {
+      images.push(result.value);
+      errors.push(null);
+      return;
+    }
+    images.push(null);
+    errors.push(result.reason?.message ?? "Ideogram request failed.");
+  });
+  return { images, errors };
+};
+
 const loadPuppeteer = async () => {
   try {
     const module = await import("puppeteer");
@@ -241,7 +327,13 @@ export async function POST(request) {
     const payload = await request.json();
     const count = clampNumber(Number(payload?.count) || 1, 1, MAX_PREVIEWS);
     const quality = payload?.quality === "pro" ? "pro" : "flash";
-    const renderMode = payload?.renderMode === "png" ? "png" : "html";
+    const ideogramKey = process.env.IDEOGRAM_API_KEY;
+    const useIdeogram = Boolean(ideogramKey);
+    const renderMode = useIdeogram
+      ? "ideogram"
+      : payload?.renderMode === "png"
+      ? "png"
+      : "html";
     const creativity = clampNumber(
       Number(payload?.creativity) || 0,
       0,
@@ -321,15 +413,22 @@ export async function POST(request) {
       };
     });
 
-    const renderResult =
-      renderMode === "png"
-        ? await renderHtmlList(
-            htmlCandidates.map((candidate) => candidate.html)
-          )
-        : {
-            images: Array.from({ length: htmlCandidates.length }, () => null),
-            errors: Array.from({ length: htmlCandidates.length }, () => null),
-          };
+    let renderResult = {
+      images: Array.from({ length: htmlCandidates.length }, () => null),
+      errors: Array.from({ length: htmlCandidates.length }, () => null),
+    };
+
+    if (useIdeogram) {
+      renderResult = await generateIdeogramImages({
+        plans,
+        nodeContext,
+        apiKey: ideogramKey,
+      });
+    } else if (renderMode === "png") {
+      renderResult = await renderHtmlList(
+        htmlCandidates.map((candidate) => candidate.html)
+      );
+    }
 
     const previews = htmlCandidates.map((candidate, index) => ({
       id: candidate.plan?.id ?? `preview-${index + 1}`,
@@ -343,6 +442,19 @@ export async function POST(request) {
     }));
 
     const renderedAny = previews.some((preview) => preview.imageUrl);
+    if (useIdeogram && !renderedAny) {
+      const errors = renderResult.errors.filter(Boolean);
+      const errorMessage = errors.length
+        ? `Ideogram rendering failed: ${errors[0]}`
+        : "Ideogram rendering failed. No images were returned.";
+      return NextResponse.json(
+        {
+          error: errorMessage,
+          previews,
+        },
+        { status: 502 }
+      );
+    }
     if (renderMode === "png" && !renderedAny) {
       const errors = renderResult.errors.filter(Boolean);
       const missingHtml = errors.filter((error) => error === "Missing HTML.")

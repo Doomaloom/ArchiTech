@@ -3194,6 +3194,12 @@ body:has(.imageflow-iteration):has(#imageflow-sidebar-toggle:checked)
   transform-origin: center center;
 }
 
+.imageflow-iteration-site [data-gem-id][contenteditable="true"] {
+  cursor: text;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
 .imageflow-iteration-preview.is-zoom-tool .imageflow-iteration-site [data-gem-id] {
   cursor: zoom-in;
 }

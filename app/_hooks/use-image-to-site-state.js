@@ -216,6 +216,34 @@ const ensureUniqueId = (base, used) => {
   return next;
 };
 
+const focusEditableElement = (element) => {
+  if (!element) {
+    return;
+  }
+  if (typeof element.focus === "function") {
+    element.focus();
+  }
+  if (element.tagName === "INPUT" || element.tagName === "TEXTAREA") {
+    const length = element.value?.length ?? 0;
+    if (typeof element.setSelectionRange === "function") {
+      element.setSelectionRange(length, length);
+    }
+    return;
+  }
+  if (typeof window === "undefined" || !window.getSelection) {
+    return;
+  }
+  const selection = window.getSelection();
+  if (!selection) {
+    return;
+  }
+  const range = document.createRange();
+  range.selectNodeContents(element);
+  range.collapse(false);
+  selection.removeAllRanges();
+  selection.addRange(range);
+};
+
 const normalizeRequirements = (requirements) => {
   if (Array.isArray(requirements)) {
     return requirements
@@ -453,6 +481,7 @@ export default function useImageToSiteState() {
   const iterationPreviewRef = useRef(null);
   const iterationSiteRef = useRef(null);
   const textBaseRef = useRef({});
+  const parentSizeRef = useRef({});
   const panStartRef = useRef(null);
   const historyLockRef = useRef(false);
   const historyLabelRef = useRef("Edit");
@@ -884,9 +913,13 @@ export default function useImageToSiteState() {
       }
       const styles = entry?.styles ?? {};
       if (typeof entry?.text === "string") {
+        const isActive = typeof document !== "undefined" &&
+          document.activeElement === element;
         if (element.tagName === "INPUT" || element.tagName === "TEXTAREA") {
-          element.value = entry.text;
-        } else {
+          if (!isActive) {
+            element.value = entry.text;
+          }
+        } else if (!element.isContentEditable || !isActive) {
           element.textContent = entry.text;
         }
       }
@@ -944,6 +977,71 @@ export default function useImageToSiteState() {
   }, [isIterationMode, textEdits]);
 
   useEffect(() => {
+    const container = iterationSiteRef.current;
+    if (!container) {
+      return;
+    }
+    const activeEdits = container.querySelectorAll("[data-gem-inline-edit]");
+    activeEdits.forEach((element) => {
+      element.removeAttribute("contenteditable");
+      element.removeAttribute("data-gem-inline-edit");
+      element.removeAttribute("spellcheck");
+    });
+    if (!isIterationMode || iterationTool !== "text" || !selectedElementId) {
+      return;
+    }
+    const element = container.querySelector(
+      `[data-gem-id="${selectedElementId}"]`
+    );
+    const editable = getEditableTextElement(element);
+    if (!editable) {
+      return;
+    }
+    if (!editable.hasAttribute("contenteditable")) {
+      editable.setAttribute("contenteditable", "true");
+    }
+    editable.setAttribute("data-gem-inline-edit", "true");
+    editable.setAttribute("spellcheck", "false");
+  }, [isIterationMode, iterationTool, selectedElementId]);
+
+  useEffect(() => {
+    const container = iterationSiteRef.current;
+    if (!container || !isIterationMode || iterationTool !== "text") {
+      return;
+    }
+    const handleInlineInput = (event) => {
+      const target = event.target;
+      const element = target?.closest?.("[data-gem-id]");
+      if (!element) {
+        return;
+      }
+      const id = element.dataset?.gemId;
+      if (!id) {
+        return;
+      }
+      const editable = getEditableTextElement(element);
+      if (!editable) {
+        return;
+      }
+      const nextText =
+        editable.tagName === "INPUT" || editable.tagName === "TEXTAREA"
+          ? editable.value ?? ""
+          : editable.textContent ?? "";
+      scheduleHistoryCommit("Text edit");
+      updateTextEdits(id, { text: nextText });
+      if (textEditDraft?.id === id) {
+        setTextEditDraft((current) =>
+          current ? { ...current, text: nextText } : current
+        );
+      }
+    };
+    container.addEventListener("input", handleInlineInput, true);
+    return () => {
+      container.removeEventListener("input", handleInlineInput, true);
+    };
+  }, [isIterationMode, iterationTool, textEditDraft?.id]);
+
+  useEffect(() => {
     if (!isIterationMode || iterationTool !== "text") {
       setTextEditDraft(null);
       return;
@@ -973,6 +1071,112 @@ export default function useImageToSiteState() {
       ...(overrides?.styles ?? {}),
     });
   }, [isIterationMode, iterationTool, selectedElementId, textEdits]);
+
+  useEffect(() => {
+    const container = iterationSiteRef.current;
+    if (!container) {
+      return;
+    }
+    if (!isIterationMode) {
+      Object.entries(parentSizeRef.current).forEach(([id, snapshot]) => {
+        const element = container.querySelector(`[data-gem-id="${id}"]`);
+        if (!element) {
+          return;
+        }
+        element.style.width = snapshot.width;
+        element.style.height = snapshot.height;
+        element.style.minWidth = snapshot.minWidth;
+        element.style.minHeight = snapshot.minHeight;
+      });
+      parentSizeRef.current = {};
+      return;
+    }
+    if (!Object.keys(baseLayout).length) {
+      return;
+    }
+    const frame = requestAnimationFrame(() => {
+      const scale = zoomState.zoom || 1;
+      const elements = Array.from(container.querySelectorAll("[data-gem-id]"));
+      const parentMap = new Map();
+
+      elements.forEach((element) => {
+        const parent = element.parentElement?.closest("[data-gem-id]");
+        if (!parent) {
+          return;
+        }
+        const parentId = parent.dataset?.gemId;
+        if (!parentId) {
+          return;
+        }
+        if (!parentMap.has(parentId)) {
+          parentMap.set(parentId, { element: parent, children: [] });
+        }
+        parentMap.get(parentId).children.push(element);
+      });
+
+      const updated = new Set();
+      parentMap.forEach(({ element, children }, parentId) => {
+        if (!element || !children.length) {
+          return;
+        }
+        const parentRect = element.getBoundingClientRect();
+        if (!parentRect.width && !parentRect.height) {
+          return;
+        }
+        let maxRight = 0;
+        let maxBottom = 0;
+        children.forEach((child) => {
+          const rect = child.getBoundingClientRect();
+          const right = (rect.right - parentRect.left) / scale;
+          const bottom = (rect.bottom - parentRect.top) / scale;
+          if (right > maxRight) {
+            maxRight = right;
+          }
+          if (bottom > maxBottom) {
+            maxBottom = bottom;
+          }
+        });
+        const base = baseLayout[parentId]?.base ?? {};
+        const targetWidth = Math.max(base.width ?? 0, Math.ceil(maxRight));
+        const targetHeight = Math.max(base.height ?? 0, Math.ceil(maxBottom));
+        if (!Number.isFinite(targetWidth) || !Number.isFinite(targetHeight)) {
+          return;
+        }
+        if (!parentSizeRef.current[parentId]) {
+          parentSizeRef.current[parentId] = {
+            width: element.style.width,
+            height: element.style.height,
+            minWidth: element.style.minWidth,
+            minHeight: element.style.minHeight,
+          };
+        }
+        if (targetWidth) {
+          element.style.minWidth = `${targetWidth}px`;
+        }
+        if (targetHeight) {
+          element.style.minHeight = `${targetHeight}px`;
+        }
+        updated.add(parentId);
+      });
+
+      Object.keys(parentSizeRef.current).forEach((id) => {
+        if (updated.has(id)) {
+          return;
+        }
+        const element = container.querySelector(`[data-gem-id="${id}"]`);
+        const snapshot = parentSizeRef.current[id];
+        if (element && snapshot) {
+          element.style.width = snapshot.width;
+          element.style.height = snapshot.height;
+          element.style.minWidth = snapshot.minWidth;
+          element.style.minHeight = snapshot.minHeight;
+        }
+        delete parentSizeRef.current[id];
+      });
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [baseLayout, elementTransforms, isIterationMode, textEdits, zoomState.zoom]);
 
   useEffect(() => {
     setDraftCircle(null);
@@ -2445,6 +2649,17 @@ export default function useImageToSiteState() {
     const id = target.dataset?.gemId;
     if (!id || isLayerHidden(id) || isLayerDeleted(id)) {
       return;
+    }
+    if (iterationTool === "text") {
+      const editable = getEditableTextElement(target);
+      if (editable) {
+        if (!editable.hasAttribute("contenteditable")) {
+          editable.setAttribute("contenteditable", "true");
+        }
+        editable.setAttribute("data-gem-inline-edit", "true");
+        editable.setAttribute("spellcheck", "false");
+        queueMicrotask(() => focusEditableElement(editable));
+      }
     }
     if (event.shiftKey) {
       setSelectedElementIds((current) => {
