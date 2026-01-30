@@ -8,9 +8,35 @@ const FLASH_MODEL =
   process.env.GEMINI_MODEL ||
   "gemini-3-flash-preview";
 const PRO_MODEL = process.env.GEMINI_PRO_MODEL || "gemini-3-pro-preview";
-const IDEOGRAM_ENDPOINT = "https://api.ideogram.ai/v1/ideogram-v3/generate";
+const IDEOGRAM_ENDPOINT =
+  "https://api.ideogram.ai/v1/ideogram-v3/generate-transparent";
 const MAX_PREVIEWS = 6;
 const VIEWPORT = { width: 1280, height: 900 };
+const IDEOGRAM_ASPECT_RATIOS = new Set([
+  "1x3",
+  "3x1",
+  "1x2",
+  "2x1",
+  "9x16",
+  "16x9",
+  "10x16",
+  "16x10",
+  "2x3",
+  "3x2",
+  "3x4",
+  "4x3",
+  "4x5",
+  "5x4",
+  "1x1",
+]);
+const IDEOGRAM_RENDERING_SPEEDS = new Set([
+  "FLASH",
+  "TURBO",
+  "DEFAULT",
+  "QUALITY",
+]);
+const IDEOGRAM_MAGIC_PROMPTS = new Set(["AUTO", "ON", "OFF"]);
+const IDEOGRAM_UPSCALE_FACTORS = new Set(["X1", "X2", "X4"]);
 
 const clampNumber = (value, min, max) =>
   Math.min(Math.max(value, min), max);
@@ -18,6 +44,45 @@ const clampNumber = (value, min, max) =>
 const roundValue = (value, precision = 2) => {
   const factor = 10 ** precision;
   return Math.round(value * factor) / factor;
+};
+
+const resolveIdeogramParams = (nodeContext) => {
+  const analysis = nodeContext?.node?.imageAnalysis ?? {};
+  const ideogram = analysis?.ideogram ?? {};
+  return {
+    aspect_ratio: ideogram.aspect_ratio,
+    rendering_speed: ideogram.rendering_speed,
+    magic_prompt: ideogram.magic_prompt,
+    upscale_factor: ideogram.upscale_factor,
+    seed: ideogram.seed,
+    negative_prompt: ideogram.negative_prompt,
+  };
+};
+
+const normalizeIdeogramParams = (params) => {
+  if (!params || typeof params !== "object") {
+    return {};
+  }
+  const normalized = {};
+  if (params.aspect_ratio && IDEOGRAM_ASPECT_RATIOS.has(params.aspect_ratio)) {
+    normalized.aspect_ratio = params.aspect_ratio;
+  }
+  if (params.rendering_speed && IDEOGRAM_RENDERING_SPEEDS.has(params.rendering_speed)) {
+    normalized.rendering_speed = params.rendering_speed;
+  }
+  if (params.magic_prompt && IDEOGRAM_MAGIC_PROMPTS.has(params.magic_prompt)) {
+    normalized.magic_prompt = params.magic_prompt;
+  }
+  if (params.upscale_factor && IDEOGRAM_UPSCALE_FACTORS.has(params.upscale_factor)) {
+    normalized.upscale_factor = params.upscale_factor;
+  }
+  if (params.negative_prompt) {
+    normalized.negative_prompt = params.negative_prompt.toString();
+  }
+  if (params.seed != null && Number.isFinite(Number(params.seed))) {
+    normalized.seed = Number(params.seed);
+  }
+  return normalized;
 };
 
 const extractJson = (text) => {
@@ -137,7 +202,9 @@ const buildPlanPrompt = ({ count, nodeContext }) => {
     "  ]",
     "}",
     "Rules:",
-    "- Plans must be materially different in layout and tone.",
+    "- Keep plans as faithful to the uploaded images as possible.",
+    "- Focus on matching colors, shapes, spacing, and placement.",
+    "- Plans can be subtle alternatives but avoid big departures.",
     "- Keep plans grounded in the provided node requirements.",
     "",
     "Node context:",
@@ -157,6 +224,7 @@ const buildHtmlPrompt = ({ plan, nodeContext }) => {
     "- Set html, body { width: 100%; height: 100%; margin: 0; }.",
     "- Use a visible background; avoid pure white.",
     "- Provide high contrast, clear hierarchy, and clean spacing.",
+    "- Match the uploaded image analysis as closely as possible (colors, shapes, placement).",
     "",
     "Plan:",
     JSON.stringify(plan, null, 2),
@@ -177,12 +245,73 @@ const buildIdeogramPrompt = ({ plan, nodeContext }) => {
   const keywords = Array.isArray(plan?.styleKeywords)
     ? plan.styleKeywords.filter(Boolean)
     : [];
+  const imageDescriptions = Array.isArray(node?.imageDescriptions)
+    ? node.imageDescriptions.filter(Boolean)
+    : [];
+  const imageAnalysis = node?.imageAnalysis ?? null;
+  const analysisColors = Array.isArray(imageAnalysis?.colors)
+    ? imageAnalysis.colors.filter(Boolean)
+    : [];
+  const analysisShapes = Array.isArray(imageAnalysis?.shapes)
+    ? imageAnalysis.shapes.filter(Boolean)
+    : [];
+  const analysisComponents = Array.isArray(imageAnalysis?.components)
+    ? imageAnalysis.components.filter(Boolean)
+    : [];
+  const analysisKeywords = Array.isArray(imageAnalysis?.styleKeywords)
+    ? imageAnalysis.styleKeywords.filter(Boolean)
+    : [];
+  const placement =
+    imageAnalysis?.placement?.toString().trim() ||
+    imageAnalysis?.layout?.placement?.toString().trim() ||
+    "";
+  const typography =
+    imageAnalysis?.typography?.notes?.toString().trim() ||
+    imageAnalysis?.typography?.style?.toString().trim() ||
+    "";
+  const background = imageAnalysis?.background?.toString().trim() || "";
+  const imagery = imageAnalysis?.imagery?.toString().trim() || "";
+  const pathLabels = Array.isArray(nodeContext?.path)
+    ? nodeContext.path
+        .map((entry) => entry?.label?.toString().trim())
+        .filter(Boolean)
+    : [];
+  const childLabels = Array.isArray(nodeContext?.children)
+    ? nodeContext.children
+        .map((entry) => entry?.label?.toString().trim())
+        .filter(Boolean)
+    : [];
 
   return [
     "High-fidelity UI mockup of a modern product website.",
+    "Match the provided visual analysis as closely as possible.",
+    "Only include website UI layers on a transparent background.",
     node?.label ? `Page: ${node.label}` : null,
     node?.description ? `Description: ${node.description}` : null,
+    imageDescriptions.length
+      ? `Image references: ${imageDescriptions.join(" | ")}`
+      : null,
+    imageAnalysis?.summary
+      ? `Visual summary: ${imageAnalysis.summary}`
+      : null,
+    analysisColors.length ? `Dominant colors: ${analysisColors.join(", ")}` : null,
+    analysisShapes.length ? `Shapes: ${analysisShapes.join(", ")}` : null,
+    placement ? `Placement: ${placement}` : null,
+    analysisComponents.length
+      ? `Components: ${analysisComponents.join(", ")}`
+      : null,
+    typography ? `Typography: ${typography}` : null,
+    background ? `Background: ${background}` : null,
+    imagery ? `Imagery: ${imagery}` : null,
+    analysisKeywords.length
+      ? `Style cues: ${analysisKeywords.join(", ")}`
+      : null,
     requirements.length ? `Requirements: ${requirements.join("; ")}` : null,
+    pathLabels.length ? `App path: ${pathLabels.join(" > ")}` : null,
+    nodeContext?.parent?.label
+      ? `Parent section: ${nodeContext.parent.label}`
+      : null,
+    childLabels.length ? `Child sections: ${childLabels.join(", ")}` : null,
     plan?.title ? `Concept: ${plan.title}` : null,
     plan?.summary ? `Summary: ${plan.summary}` : null,
     plan?.layout ? `Layout: ${plan.layout}` : null,
@@ -196,16 +325,31 @@ const buildIdeogramPrompt = ({ plan, nodeContext }) => {
     .join("\n");
 };
 
-const requestIdeogramImage = async ({ prompt, apiKey }) => {
+const requestIdeogramImage = async ({ prompt, apiKey, ideogramParams }) => {
+  const normalizedParams = normalizeIdeogramParams(ideogramParams);
   const formData = new FormData();
   formData.append("prompt", prompt);
   formData.append("num_images", "1");
-  formData.append("style_type", "DESIGN");
-  formData.append("rendering_speed", "QUALITY");
+  formData.append(
+    "rendering_speed",
+    normalizedParams.rendering_speed || "QUALITY"
+  );
+  formData.append(
+    "magic_prompt",
+    normalizedParams.magic_prompt || "OFF"
+  );
+  formData.append("upscale_factor", normalizedParams.upscale_factor || "X2");
   formData.append(
     "negative_prompt",
-    "blurry, low resolution, watermark, unreadable text"
+    normalizedParams.negative_prompt ||
+      "people, characters, objects, scenery, product photography, device mockups, watermarks, blurry text, low resolution, unreadable text"
   );
+  if (normalizedParams.seed != null) {
+    formData.append("seed", String(normalizedParams.seed));
+  }
+  if (normalizedParams.aspect_ratio) {
+    formData.append("aspect_ratio", normalizedParams.aspect_ratio);
+  }
 
   const response = await fetch(IDEOGRAM_ENDPOINT, {
     method: "POST",
@@ -228,11 +372,13 @@ const requestIdeogramImage = async ({ prompt, apiKey }) => {
 };
 
 const generateIdeogramImages = async ({ plans, nodeContext, apiKey }) => {
+  const ideogramParams = resolveIdeogramParams(nodeContext);
   const results = await Promise.allSettled(
     plans.map((plan) =>
       requestIdeogramImage({
         prompt: buildIdeogramPrompt({ plan, nodeContext }),
         apiKey,
+        ideogramParams,
       })
     )
   );

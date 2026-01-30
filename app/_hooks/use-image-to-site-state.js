@@ -257,6 +257,19 @@ const normalizeRequirements = (requirements) => {
   return text ? [text] : [];
 };
 
+const normalizeImageDescriptions = (value) => {
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => (entry == null ? "" : entry.toString()).trim())
+      .filter(Boolean);
+  }
+  if (value == null) {
+    return [];
+  }
+  const text = value.toString().trim();
+  return text ? [text] : [];
+};
+
 const toNodeSnapshot = (node) => {
   if (!node) {
     return null;
@@ -268,6 +281,10 @@ const toNodeSnapshot = (node) => {
     description: data.description?.toString() ?? "",
     requirements: normalizeRequirements(data.requirements),
     kind: data.kind?.toString() ?? "",
+    imageDescriptions: normalizeImageDescriptions(
+      data.imageDescriptions ?? data.imageDescription
+    ),
+    imageAnalysis: data.imageAnalysis ?? null,
   };
 };
 
@@ -381,6 +398,9 @@ const buildFlowFromTree = (inputTree) => {
     const layoutDepth = Math.max(depth - 1, 0);
     const description = node.description?.toString() ?? "";
     const requirements = normalizeRequirements(node.requirements);
+    const imageDescriptions = normalizeImageDescriptions(
+      node.imageDescriptions ?? node.imageDescription
+    );
     nodes.push({
       id,
       data: {
@@ -389,6 +409,8 @@ const buildFlowFromTree = (inputTree) => {
         kind: depth === 1 ? "page" : "component",
         description,
         requirements,
+        imageDescriptions,
+        imageAnalysis: node.imageAnalysis ?? null,
         sourceId: node.id?.toString() ?? id,
       },
       position: { x: layoutDepth * 240, y: order * 120 },
@@ -2112,6 +2134,9 @@ export default function useImageToSiteState() {
     try {
       const formData = new FormData();
       formData.append("image", activeImageFile, activeImageFile.name);
+      galleryFiles.forEach((file) => {
+        formData.append("images", file, file.name);
+      });
       formData.append("title", title);
       formData.append("name", name);
       formData.append("details", details);
