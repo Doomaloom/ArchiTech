@@ -115,6 +115,12 @@ body:has(.imageflow-iteration):has(#imageflow-sidebar-toggle:checked)
   justify-content: center;
 }
 
+.sidebar-footer {
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
 body:has(.imageflow-iteration) .sidebar-rail {
   --sidebar-scrollbar-offset: 10px;
 }
@@ -147,6 +153,13 @@ body:has(.imageflow-iteration) .sidebar-footer {
   flex-direction: column;
   gap: 14px;
   align-items: center;
+}
+
+.sidebar-rail[data-workflow-mode="image-to-site"]
+  [data-workflow-group="inspire"],
+.sidebar-rail[data-workflow-mode="inspire"]
+  [data-workflow-group="image-to-site"] {
+  display: none;
 }
 
 .rail-buttons-bottom {
@@ -400,6 +413,41 @@ body:has(.imageflow-iteration):not(:has(#imageflow-sidebar-toggle:checked))
   flex-direction: column;
   align-items: center;
   gap: 6px;
+}
+
+.workflow-toggle-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.workflow-toggle-label {
+  font-size: 7px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(100, 116, 139, 0.9);
+}
+
+.workflow-toggle-circle {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  color: #4b5563;
+}
+
+.workflow-toggle-circle .button-icon {
+  width: 16px;
+  height: 16px;
 }
 
 .imageflow-sidebar-toggle-label {
