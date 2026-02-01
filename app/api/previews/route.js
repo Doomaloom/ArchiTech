@@ -473,13 +473,7 @@ export async function POST(request) {
     const payload = await request.json();
     const count = clampNumber(Number(payload?.count) || 1, 1, MAX_PREVIEWS);
     const quality = payload?.quality === "pro" ? "pro" : "flash";
-    const ideogramKey = process.env.IDEOGRAM_API_KEY;
-    const useIdeogram = Boolean(ideogramKey);
-    const renderMode = useIdeogram
-      ? "ideogram"
-      : payload?.renderMode === "png"
-      ? "png"
-      : "html";
+    const renderMode = payload?.renderMode === "png" ? "png" : "html";
     const creativity = clampNumber(
       Number(payload?.creativity) || 0,
       0,
@@ -564,13 +558,7 @@ export async function POST(request) {
       errors: Array.from({ length: htmlCandidates.length }, () => null),
     };
 
-    if (useIdeogram) {
-      renderResult = await generateIdeogramImages({
-        plans,
-        nodeContext,
-        apiKey: ideogramKey,
-      });
-    } else if (renderMode === "png") {
+    if (renderMode === "png") {
       renderResult = await renderHtmlList(
         htmlCandidates.map((candidate) => candidate.html)
       );
@@ -588,19 +576,6 @@ export async function POST(request) {
     }));
 
     const renderedAny = previews.some((preview) => preview.imageUrl);
-    if (useIdeogram && !renderedAny) {
-      const errors = renderResult.errors.filter(Boolean);
-      const errorMessage = errors.length
-        ? `Ideogram rendering failed: ${errors[0]}`
-        : "Ideogram rendering failed. No images were returned.";
-      return NextResponse.json(
-        {
-          error: errorMessage,
-          previews,
-        },
-        { status: 502 }
-      );
-    }
     if (renderMode === "png" && !renderedAny) {
       const errors = renderResult.errors.filter(Boolean);
       const missingHtml = errors.filter((error) => error === "Missing HTML.")
