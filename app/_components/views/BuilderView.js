@@ -9,15 +9,7 @@ export default function BuilderView() {
 
   return (
     <div className="imageflow-builder">
-      <div className="imageflow-builder-actions is-floating">
-        <button
-          type="button"
-          className="imageflow-generate-button is-ghost"
-          onClick={() => actions.setViewMode("preview")}
-        >
-          Back to previews
-        </button>
-      </div>
+
       <div className="imageflow-builder-stage" aria-busy={!isReady}>
         <div className="imageflow-builder-canvas" ref={containerRef} />
         {!isReady ? (

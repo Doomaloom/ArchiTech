@@ -5788,7 +5788,8 @@ body:has(.imageflow-iteration):has(#imageflow-sidebar-toggle:checked)
 }
 
 .imageflow-dropzone.is-builder {
-  background: #f8fafc;
+  background: transparent;
+  border-color: var(--imageflow-dropzone-border);
 }
 
 .imageflow-builder {
@@ -5837,11 +5838,160 @@ body:has(.imageflow-iteration):has(#imageflow-sidebar-toggle:checked)
   height: 100%;
   border: 1px solid #e2e8f0;
   border-radius: 14px;
-  background: #0b1221;
+  background: transparent;
   overflow: hidden;
   position: relative;
 }
 
+/* GrapesJS theme overrides (builder) */
+.imageflow-builder {
+  --gjs-quaternary-color: black !important;
+  --gjs-tertiary-color: rgba(249, 115, 22, 0.5);
+  --gjs-secondary-dark-color: rgba(255, 255, 255, 0.7);
+  --gjs-field-bg: #ffffff;
+  --gjs-editor-font: Arial, sans-serif !important;
+  --gjs-main-font: var(--gjs-editor-font);
+}
+
+@media (prefers-color-scheme: dark) {
+  .imageflow-builder {
+    --gjs-quaternary-color: #b45309;
+  }
+}
+
+/* GrapesJS surface tweaks */
+.imageflow-builder .gjs-two-color {
+  color: #171717 !important;
+}
+
+.imageflow-builder .gjs-one-bg {
+  /* Override GrapesJS default var(--gjs-primary-color) background */
+  background-color: #ffffff30 !important;
+}
+
+/* GrapesJS base typography */
+.imageflow-builder .gjs-editor,
+.imageflow-builder .gjs-editor * {
+  font-family: var(--gjs-editor-font) !important;
+}
+
+/* GrapesJS form controls */
+.imageflow-builder .gjs-field input,
+.imageflow-builder .gjs-field select,
+.imageflow-builder .gjs-field textarea,
+.imageflow-builder .gjs-radio-item-label,
+.imageflow-builder .gjs-field {
+  background-color: var(--gjs-field-bg) !important;
+}
+
+/* GrapesJS select text color */
+.imageflow-builder .gjs-sm-field select,
+.imageflow-builder .gjs-clm-field select,
+.imageflow-builder .gjs-clm-select select {
+  color: #000000 !important;
+  background-color: #ffffff !important;
+}
+
+.imageflow-builder .gjs-sm-field input,
+.imageflow-builder .gjs-clm-field input,
+.imageflow-builder .gjs-clm-select input {
+  color: #000000 !important;
+}
+
+.imageflow-builder option,
+.imageflow-builder optgroup {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+.gjs-clm-tags #gjs-clm-tags-c {
+    display: flex;
+    flex-wrap: wrap;
+    vertical-align: top;
+    overflow: hidden;
+    color: white !important;
+}
+
+.imageflow-builder option:checked,
+.imageflow-builder option:hover {
+  background-color: rgba(249, 115, 22, 0.14) !important;
+  color: #000000 !important;
+}
+
+.imageflow-builder .gjs-clm-field,
+.imageflow-builder .gjs-sm-composite.gjs-clm-select {
+  background-color: var(--gjs-secondary-dark-color) !important;
+  border: 0 !important;
+}
+
+.gjs-sm-field.gjs-sm-composite, .gjs-sm-composite.gjs-clm-field, .gjs-sm-composite.gjs-clm-select {
+    border: 0 !important;
+}
+
+.imageflow-builder .gjs-clm-tags-c {
+  color: #ffffff !important;
+}
+
+/* GrapesJS toolbar icon replacements (inline masks, matches sidebar style) */
+.imageflow-builder .gjs-pn-btn.fa {
+  font-size: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.imageflow-builder .gjs-pn-btn.fa::before {
+  content: "";
+  width: 18px;
+  height: 18px;
+  background-color: currentColor;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+}
+
+.imageflow-builder .gjs-pn-btn.fa-paint-brush::before {
+  mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M16.8 2.8l4.4 4.4-9.9 9.9a3.5 3.5 0 01-2.48 1.03H6.5a2 2 0 010-4h1.6z' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/><path d='M4.5 18.5c0 1.38 1.12 2.5 2.5 2.5a2 2 0 002-2c0-1.1-.9-2-2-2h-2.5z' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M16.8 2.8l4.4 4.4-9.9 9.9a3.5 3.5 0 01-2.48 1.03H6.5a2 2 0 010-4h1.6z' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/><path d='M4.5 18.5c0 1.38 1.12 2.5 2.5 2.5a2 2 0 002-2c0-1.1-.9-2-2-2h-2.5z' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+}
+
+.imageflow-builder .gjs-pn-btn.fa-cog::before {
+  mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 9.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5z' fill='none' stroke='%23000' stroke-width='1.6'/><path d='M19.4 9.5l1.1-1.9-2-3.4-2.1.5a6.5 6.5 0 00-2.8-1.2L13 1h-2l-.6 2.5a6.5 6.5 0 00-2.8 1.2l-2.1-.5-2 3.4 1.1 1.9a6.5 6.5 0 000 3.0l-1.1 1.9 2 3.4 2.1-.5a6.5 6.5 0 002.8 1.2l.6 2.5h2l.6-2.5a6.5 6.5 0 002.8-1.2l2.1.5 2-3.4-1.1-1.9a6.5 6.5 0 000-3z' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 9.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5z' fill='none' stroke='%23000' stroke-width='1.6'/><path d='M19.4 9.5l1.1-1.9-2-3.4-2.1.5a6.5 6.5 0 00-2.8-1.2L13 1h-2l-.6 2.5a6.5 6.5 0 00-2.8 1.2l-2.1-.5-2 3.4 1.1 1.9a6.5 6.5 0 000 3.0l-1.1 1.9 2 3.4 2.1-.5a6.5 6.5 0 002.8 1.2l.6 2.5h2l.6-2.5a6.5 6.5 0 002.8-1.2l2.1.5 2-3.4-1.1-1.9a6.5 6.5 0 000-3z' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+}
+
+.imageflow-builder .gjs-pn-btn.fa-bars::before {
+  mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M4 7h16M4 12h16M4 17h16' stroke='%23000' stroke-width='1.8' stroke-linecap='round' /></svg>");
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M4 7h16M4 12h16M4 17h16' stroke='%23000' stroke-width='1.8' stroke-linecap='round' /></svg>");
+}
+
+.imageflow-builder .gjs-pn-btn.fa-th-large::before {
+  mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M5 5h6v6H5zM13 5h6v6h-6zM5 13h6v6H5zM13 13h6v6h-6z' fill='none' stroke='%23000' stroke-width='1.6' stroke-linejoin='round'/></svg>");
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M5 5h6v6H5zM13 5h6v6h-6zM5 13h6v6H5zM13 13h6v6h-6z' fill='none' stroke='%23000' stroke-width='1.6' stroke-linejoin='round'/></svg>");
+}
+
+.imageflow-builder .gjs-pn-btn.fa-square-o::before {
+  mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect x='6' y='6' width='12' height='12' rx='2' ry='2' fill='none' stroke='%23000' stroke-width='1.6'/></svg>");
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect x='6' y='6' width='12' height='12' rx='2' ry='2' fill='none' stroke='%23000' stroke-width='1.6'/></svg>");
+}
+
+.imageflow-builder .gjs-pn-btn.fa-eye::before {
+  mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M2.5 12S6.5 6 12 6s9.5 6 9.5 6-4 6-9.5 6S2.5 12 2.5 12z' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/><circle cx='12' cy='12' r='2.6' fill='none' stroke='%23000' stroke-width='1.6'/></svg>");
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M2.5 12S6.5 6 12 6s9.5 6 9.5 6-4 6-9.5 6S2.5 12 2.5 12z' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/><circle cx='12' cy='12' r='2.6' fill='none' stroke='%23000' stroke-width='1.6'/></svg>");
+}
+
+.imageflow-builder .gjs-pn-btn.fa-arrows-alt::before {
+  mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M8 4H4v4m0-4l6 6M16 4h4v4m0-4l-6 6M4 16v4h4m-4 0l6-6M20 16v4h-4m4 0l-6-6' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M8 4H4v4m0-4l6 6M16 4h4v4m0-4l-6 6M4 16v4h4m-4 0l6-6M20 16v4h-4m4 0l-6-6' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+}
+
+.imageflow-builder .gjs-pn-btn.fa-code::before {
+  mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M9 17L4 12l5-5M15 7l5 5-5 5' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M9 17L4 12l5-5M15 7l5 5-5 5' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+}
 .imageflow-builder-loader {
   position: absolute;
   inset: 0;
