@@ -112,11 +112,11 @@ export default function PreviewGrid() {
           ) : null}
           <div className="imageflow-preview-meta">
             <span className="imageflow-preview-label">Preview {index + 1}</span>
-            {state.previewItems[index]?.plan?.title ? (
-              <span className="imageflow-preview-title">
-                {state.previewItems[index].plan.title}
-              </span>
-            ) : null}
+          {state.previewItems[index]?.plan?.title ? (
+            <span className="imageflow-preview-title">
+              {state.previewItems[index].plan.title}
+            </span>
+          ) : null}
             {!(state.previewItems[index]?.imageUrl ||
               state.previewItems[index]?.html) ? (
               <span className="imageflow-preview-placeholder">
@@ -128,16 +128,6 @@ export default function PreviewGrid() {
               </span>
             ) : null}
           </div>
-          <button
-            className="imageflow-preview-iterate"
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              actions.handleIteratePreview(index);
-            }}
-          >
-            Iterate
-          </button>
         </div>
       ))}
     </div>

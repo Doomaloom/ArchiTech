@@ -21,9 +21,27 @@ const ensureGrapesStylesheet = () => {
   document.head.appendChild(link);
 };
 
-export default function useGrapesBuilder({ onReady } = {}) {
+const parseHtmlContent = (html) => {
+  if (!html || typeof DOMParser === "undefined") {
+    return { components: STARTER_HTML, styles: STARTER_STYLES };
+  }
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, "text/html");
+  doc.querySelectorAll("script").forEach((script) => script.remove());
+  const styleTags = Array.from(doc.querySelectorAll("style"));
+  const styles = styleTags.map((style) => style.textContent || "").join("\n");
+  styleTags.forEach((style) => style.remove());
+  const bodyHtml = doc.body ? doc.body.innerHTML : html;
+  return {
+    components: bodyHtml || STARTER_HTML,
+    styles: styles || STARTER_STYLES,
+  };
+};
+
+export default function useGrapesBuilder({ onReady, htmlContent } = {}) {
   const containerRef = useRef(null);
   const editorRef = useRef(null);
+  const lastHtmlRef = useRef("");
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
@@ -61,6 +79,21 @@ export default function useGrapesBuilder({ onReady } = {}) {
       editorRef.current = null;
     };
   }, [onReady]);
+
+  useEffect(() => {
+    if (!editorRef.current || !isReady) {
+      return;
+    }
+    const nextHtml = htmlContent || "";
+    if (nextHtml === lastHtmlRef.current) {
+      return;
+    }
+    const { components, styles } = parseHtmlContent(nextHtml);
+    const editor = editorRef.current;
+    editor.setComponents(components);
+    editor.setStyle(styles);
+    lastHtmlRef.current = nextHtml;
+  }, [htmlContent, isReady]);
 
   return { containerRef, editor: editorRef.current, isReady };
 }

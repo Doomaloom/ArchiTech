@@ -51,11 +51,11 @@ export default function SelectedPreview() {
         }${preview?.html ? " has-html" : ""}`}
         role="button"
         tabIndex={0}
-        onClick={() => actions.handleIteratePreview(state.selectedPreviewIndex)}
+        onClick={() => actions.handleSelectPreview(state.selectedPreviewIndex)}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
-            actions.handleIteratePreview(state.selectedPreviewIndex);
+            actions.handleSelectPreview(state.selectedPreviewIndex);
           }
         }}
       >
@@ -108,16 +108,6 @@ export default function SelectedPreview() {
             </span>
           ) : null}
         </div>
-        <button
-          className="imageflow-preview-iterate"
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            actions.handleIteratePreview(state.selectedPreviewIndex);
-          }}
-        >
-          Iterate
-        </button>
       </div>
     </div>
   );

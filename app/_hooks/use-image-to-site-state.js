@@ -107,10 +107,12 @@ export default function useImageToSiteState() {
   const viewMode = useViewMode();
   const previewSettings = usePreviewSettings({
     setViewMode: viewMode.setViewMode,
+    currentViewMode: viewMode.viewMode,
   });
   const [previewItems, setPreviewItems] = useState(() =>
     normalizePreviewItems([], previewSettings.state.previewCount)
   );
+  const [builderHtml, setBuilderHtml] = useState("");
   const [previewZoom, setPreviewZoom] = useState(PREVIEW_ZOOM_MAX);
   const [previewError, setPreviewError] = useState("");
   const [isGeneratingPreviews, setIsGeneratingPreviews] = useState(false);
@@ -275,6 +277,9 @@ export default function useImageToSiteState() {
       );
       setPreviewItems(normalized);
       previewSettings.actions.setSelectedPreviewIndex(0);
+      const generatedHtml =
+        normalized.find((preview) => preview?.html)?.html || "";
+      setBuilderHtml(generatedHtml);
       viewMode.setViewMode("preview");
     } catch (error) {
       setPreviewError(error?.message ?? "Failed to generate previews.");
@@ -299,6 +304,15 @@ export default function useImageToSiteState() {
   const qualityLabel = modelQuality === "pro" ? "Pro" : "Flash";
   const qualityIndex = modelQuality === "pro" ? 1 : 0;
 
+  useEffect(() => {
+    const selectedPreview =
+      previewItems[previewSettings.state.selectedPreviewIndex];
+    if (!selectedPreview?.html) {
+      return;
+    }
+    setBuilderHtml(selectedPreview.html);
+  }, [previewItems, previewSettings.state.selectedPreviewIndex]);
+
   return {
     state: {
       fileMeta: gallery.state.fileMeta,
@@ -306,6 +320,7 @@ export default function useImageToSiteState() {
       gallery: gallery.state.gallery,
       activeIndex: gallery.state.activeIndex,
       previewItems,
+      builderHtml,
       viewMode: viewMode.viewMode,
       previewCount: previewSettings.state.previewCount,
       selectedPreviewIndex: previewSettings.state.selectedPreviewIndex,
@@ -436,6 +451,7 @@ export default function useImageToSiteState() {
       setSelectedPreviewIndex: previewSettings.actions.setSelectedPreviewIndex,
       setCodePanelMode: codeWorkspace.actions.setCodePanelMode,
       setAgentInput: agentChat.actions.setAgentInput,
+      setBuilderHtml,
       setIterationTool: iteration.actions.setIterationTool,
       setShowTransformControls: iteration.actions.setShowTransformControls,
       setShowLayers: iteration.actions.setShowLayers,

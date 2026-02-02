@@ -135,19 +135,22 @@ export default function RootLayout({ children }) {
                       viewBox="0 0 24 24"
                       aria-hidden="true"
                     >
-                      <rect
-                        x="4"
-                        y="5"
-                        width="16"
-                        height="14"
-                        rx="2"
-                        ry="2"
+                      <path
+                        d="M4.8 15.6l-.8 3.6 3.6-.8L19 7.9a2 2 0 000-2.8l-1.9-1.9a2 2 0 00-2.8 0L4.8 15.6z"
                         fill="none"
                         stroke="currentColor"
                         strokeWidth="1.6"
+                        strokeLinejoin="round"
                       />
                       <path
-                        d="M8 9h8M8 13h5M8 17h6"
+                        d="M13.4 4.6l3.9 3.9"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                        strokeLinecap="round"
+                      />
+                      <path
+                        d="M4 19l4.5-1.1"
                         fill="none"
                         stroke="currentColor"
                         strokeWidth="1.6"

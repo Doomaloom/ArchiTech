@@ -4,8 +4,10 @@ import useGrapesBuilder from "./../../_hooks/use-grapes-builder";
 import { useImageToSite } from "./../../_context/image-to-site-context";
 
 export default function BuilderView() {
-  const { actions } = useImageToSite();
-  const { containerRef, isReady } = useGrapesBuilder();
+  const { state } = useImageToSite();
+  const { containerRef, isReady } = useGrapesBuilder({
+    htmlContent: state.builderHtml,
+  });
 
   return (
     <div className="imageflow-builder">
