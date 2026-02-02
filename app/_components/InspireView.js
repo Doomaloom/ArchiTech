@@ -82,6 +82,7 @@ const PROJECT_TREE = [
 const INSPIRE_STEPS = {
   DESCRIPTION: "project-description",
   STYLE: "style",
+  TREE: "project-tree",
   WORKSPACE: "inspire-workspace",
   PREVIEWS: "previews",
   ITERATION: "iteration",
@@ -265,7 +266,7 @@ export default function InspireView() {
     );
   }, [selectedStyleId]);
 
-  const layoutClassName = `imageflow-layout inspire-layout${
+  const layoutClassName = `imageflow-layout inspire-layout is-no-gallery${
     inspireStep === INSPIRE_STEPS.CODE ? " is-code" : ""
   }${
     inspireStep === INSPIRE_STEPS.ITERATION ? " is-preview-only" : ""
@@ -304,6 +305,46 @@ export default function InspireView() {
               </div>
             </button>
           ))}
+        </div>
+      );
+    }
+    if (inspireStep === INSPIRE_STEPS.TREE) {
+      return (
+        <div className="inspire-tree-panel">
+          <div className="inspire-tree-header">
+            <div>
+              <span className="inspire-tree-kicker">Project tree</span>
+              <h2>Structure outline</h2>
+              <p>Drafted sections based on the selected style.</p>
+            </div>
+            <button className="imageflow-generate-button" type="button">
+              Regenerate tree
+            </button>
+          </div>
+          <div className="inspire-tree-layout">
+            <ul className="inspire-tree-list">
+              {PROJECT_TREE.map((node) => (
+                <li key={node.id}>
+                  <span>{node.label}</span>
+                  <span className="inspire-tree-role">Page</span>
+                </li>
+              ))}
+            </ul>
+            <div className="inspire-tree-summary">
+              <div>
+                <span>Style</span>
+                <strong>{selectedStyle.title}</strong>
+              </div>
+              <div>
+                <span>Pages</span>
+                <strong>{PROJECT_TREE.length}</strong>
+              </div>
+              <div>
+                <span>Focus</span>
+                <strong>{projectBrief.goals || "Conversion"}</strong>
+              </div>
+            </div>
+          </div>
         </div>
       );
     }
@@ -547,6 +588,28 @@ export default function InspireView() {
         </aside>
       );
     }
+    if (inspireStep === INSPIRE_STEPS.TREE) {
+      return (
+        <aside className="imageflow-info inspire-info">
+          <div className="imageflow-info-header">
+            <p className="imageflow-info-kicker">Structure</p>
+            <h1 className="imageflow-info-title">Review the tree</h1>
+            <p className="imageflow-info-subtitle">
+              Validate the page outline before generating previews.
+            </p>
+          </div>
+          <div className="imageflow-info-fields">
+            <button
+              className="imageflow-generate-button"
+              type="button"
+              onClick={() => setInspireStep(INSPIRE_STEPS.WORKSPACE)}
+            >
+              Continue to workspace
+            </button>
+          </div>
+        </aside>
+      );
+    }
     if (inspireStep === INSPIRE_STEPS.WORKSPACE) {
       return (
         <aside className="imageflow-info inspire-info">
@@ -602,9 +665,9 @@ export default function InspireView() {
             <button
               className="imageflow-generate-button"
               type="button"
-              onClick={() => setInspireStep(INSPIRE_STEPS.WORKSPACE)}
+              onClick={() => setInspireStep(INSPIRE_STEPS.TREE)}
             >
-              Continue to workspace
+              Continue to project tree
             </button>
           </div>
         </aside>
@@ -729,29 +792,7 @@ export default function InspireView() {
     );
   };
 
-  const renderGalleryPanel = () => {
-    if (inspireStep === INSPIRE_STEPS.ITERATION || inspireStep === INSPIRE_STEPS.CODE) {
-      return null;
-    }
-    return (
-      <section className="imageflow-gallery inspire-gallery">
-        <div className="imageflow-gallery-header">
-          <h2 className="imageflow-gallery-title">Project tree</h2>
-          <span className="imageflow-gallery-meta">Drafted</span>
-        </div>
-        <ul className="inspire-tree">
-          {PROJECT_TREE.map((node) => (
-            <li key={node.id} className="inspire-tree-item">
-              {node.label}
-            </li>
-          ))}
-        </ul>
-        <div className="inspire-tree-footer">
-          Based on {selectedStyle.title} - {projectBrief.name || "New project"}
-        </div>
-      </section>
-    );
-  };
+  const renderGalleryPanel = () => null;
 
   const dropzoneClassName = `imageflow-dropzone inspire-dropzone${
     inspireStep === INSPIRE_STEPS.CODE ? " is-code" : ""

@@ -213,6 +213,12 @@ const INSPIRE_BUTTONS = [
   },
   { id: "style", label: "Style", icon: "palette", step: "style" },
   {
+    id: "project-tree",
+    label: "Project tree",
+    icon: "structure",
+    step: "project-tree",
+  },
+  {
     id: "inspire-workspace",
     label: "Inspire workspace",
     icon: "sparkle",
