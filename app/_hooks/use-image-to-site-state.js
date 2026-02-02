@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useEffect, useMemo, useState } from "react";
 import useAgentChat from "./use-agent-chat";
 import useCodeWorkspace from "./use-code-workspace";
 import useDetails from "./use-details";
@@ -9,22 +10,294 @@ import useNodeGraph from "./use-node-graph";
 import usePreviewSettings from "./use-preview-settings";
 import useViewMode from "./use-view-mode";
 
+const PREVIEW_ZOOM_MIN = 0.6;
+const PREVIEW_ZOOM_MAX = 1;
+const PREVIEW_ZOOM_STEP = 0.1;
+
+const clampValue = (value, min, max) => Math.min(Math.max(value, min), max);
+
+const resolveChildren = (node) =>
+  node?.children || node?.items || node?.pages || node?.nodes || [];
+
+const resolveStructureRoot = (structureFlow) => {
+  if (!structureFlow) {
+    return null;
+  }
+  if (structureFlow.root && typeof structureFlow.root === "object") {
+    return structureFlow.root;
+  }
+  return structureFlow;
+};
+
+const buildStructureIndex = (root) => {
+  if (!root) {
+    return null;
+  }
+  const nodesById = {};
+  const parentById = {};
+  const stack = [{ node: root, parentId: null }];
+  while (stack.length) {
+    const current = stack.pop();
+    const node = current.node;
+    if (!node || typeof node !== "object") {
+      continue;
+    }
+    const id = node.id?.toString();
+    if (!id) {
+      continue;
+    }
+    nodesById[id] = node;
+    if (current.parentId) {
+      parentById[id] = current.parentId;
+    }
+    const children = resolveChildren(node);
+    for (let i = children.length - 1; i >= 0; i -= 1) {
+      const child = children[i];
+      if (!child || typeof child !== "object") {
+        continue;
+      }
+      const childId = child.id?.toString();
+      if (!childId) {
+        continue;
+      }
+      stack.push({ node: child, parentId: id });
+    }
+  }
+  return { nodesById, parentById };
+};
+
+const buildNodeContext = ({ nodesById, parentById, selectedNodeId }) => {
+  if (!nodesById || !selectedNodeId) {
+    return null;
+  }
+  const node = nodesById[selectedNodeId];
+  if (!node) {
+    return null;
+  }
+  const parentId = parentById[selectedNodeId] ?? null;
+  const parent = parentId ? nodesById[parentId] : null;
+  const children = resolveChildren(node);
+  const path = [];
+  let cursorId = selectedNodeId;
+  while (cursorId) {
+    const current = nodesById[cursorId];
+    if (!current) {
+      break;
+    }
+    path.push({
+      id: current.id,
+      label: current.label ?? current.id,
+    });
+    cursorId = parentById[cursorId];
+  }
+  path.reverse();
+  return { node, parent, children, path };
+};
+
+const normalizePreviewItems = (items, count) => {
+  const safeItems = Array.isArray(items) ? items : [];
+  const next = safeItems.slice(0, count);
+  while (next.length < count) {
+    next.push({});
+  }
+  return next;
+};
+
 export default function useImageToSiteState() {
   const viewMode = useViewMode();
   const previewSettings = usePreviewSettings({
     setViewMode: viewMode.setViewMode,
   });
+  const [previewItems, setPreviewItems] = useState(() =>
+    normalizePreviewItems([], previewSettings.state.previewCount)
+  );
+  const [previewZoom, setPreviewZoom] = useState(PREVIEW_ZOOM_MAX);
+  const [previewError, setPreviewError] = useState("");
+  const [isGeneratingPreviews, setIsGeneratingPreviews] = useState(false);
+  const [modelQuality, setModelQuality] = useState("flash");
+  const [creativityValue, setCreativityValue] = useState(40);
+  const [structureFlow, setStructureFlow] = useState(null);
+  const [showComponents, setShowComponents] = useState(false);
+  const [isGeneratingStructure, setIsGeneratingStructure] = useState(false);
+  const [generationError, setGenerationError] = useState("");
   const codeWorkspace = useCodeWorkspace();
   const agentChat = useAgentChat();
   const gallery = useGallery({
     onFilesIngested: codeWorkspace.actions.addCustomFiles,
   });
   const details = useDetails();
-  const nodeGraph = useNodeGraph({ activeIndex: gallery.state.activeIndex });
+  const nodeGraph = useNodeGraph({
+    activeIndex: gallery.state.activeIndex,
+    structureFlow,
+    showComponents,
+  });
   const iteration = useIterationState({
     isIterationMode: viewMode.isIterationMode,
     selectedPreviewIndex: previewSettings.state.selectedPreviewIndex,
   });
+
+  useEffect(() => {
+    setPreviewItems((current) => {
+      if (current.length === previewSettings.state.previewCount) {
+        return current;
+      }
+      if (current.length > previewSettings.state.previewCount) {
+        return current.slice(0, previewSettings.state.previewCount);
+      }
+      const next = current.slice();
+      while (next.length < previewSettings.state.previewCount) {
+        next.push({});
+      }
+      return next;
+    });
+    if (
+      previewSettings.state.selectedPreviewIndex >=
+      previewSettings.state.previewCount
+    ) {
+      previewSettings.actions.setSelectedPreviewIndex(
+        Math.max(previewSettings.state.previewCount - 1, 0)
+      );
+    }
+  }, [
+    previewSettings.state.previewCount,
+    previewSettings.state.selectedPreviewIndex,
+    previewSettings.actions,
+  ]);
+
+  const structureRoot = useMemo(
+    () => resolveStructureRoot(structureFlow),
+    [structureFlow]
+  );
+  const structureIndex = useMemo(
+    () => buildStructureIndex(structureRoot),
+    [structureRoot]
+  );
+  const selectedNodeContext = useMemo(
+    () =>
+      buildNodeContext({
+        nodesById: structureIndex?.nodesById ?? null,
+        parentById: structureIndex?.parentById ?? null,
+        selectedNodeId: nodeGraph.state.selectedNodeId,
+      }),
+    [nodeGraph.state.selectedNodeId, structureIndex]
+  );
+
+  const handlePreviewZoomOut = useCallback(() => {
+    setPreviewZoom((current) =>
+      clampValue(current - PREVIEW_ZOOM_STEP, PREVIEW_ZOOM_MIN, PREVIEW_ZOOM_MAX)
+    );
+  }, []);
+
+  const handlePreviewZoomReset = useCallback(() => {
+    setPreviewZoom(PREVIEW_ZOOM_MAX);
+  }, []);
+
+  const handleGenerateStructure = useCallback(async () => {
+    const primaryImage = gallery.derived.activeImageFile;
+    if (!primaryImage) {
+      setGenerationError("Upload an image before generating structure.");
+      return;
+    }
+    setIsGeneratingStructure(true);
+    setGenerationError("");
+    try {
+      const formData = new FormData();
+      formData.append("image", primaryImage);
+      gallery.state.imageFiles.forEach((file) => {
+        formData.append("images", file);
+      });
+      formData.append("title", details.state.title);
+      formData.append("name", details.state.name);
+      formData.append("details", details.state.details);
+      const response = await fetch("/api/structure", {
+        method: "POST",
+        body: formData,
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setGenerationError(
+          payload?.error || payload?.message || "Failed to generate structure."
+        );
+        return;
+      }
+      setStructureFlow(payload?.tree ?? null);
+      viewMode.setViewMode("nodes");
+    } catch (error) {
+      setGenerationError(error?.message ?? "Failed to generate structure.");
+    } finally {
+      setIsGeneratingStructure(false);
+    }
+  }, [
+    details.state.details,
+    details.state.name,
+    details.state.title,
+    gallery.derived.activeImageFile,
+    gallery.state.imageFiles,
+    viewMode,
+  ]);
+
+  const handleGeneratePreviews = useCallback(async () => {
+    if (!selectedNodeContext?.node) {
+      setPreviewError("Select a node before generating previews.");
+      return;
+    }
+    setIsGeneratingPreviews(true);
+    setPreviewError("");
+    try {
+      const response = await fetch("/api/previews", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          count: previewSettings.state.previewCount,
+          quality: modelQuality,
+          creativity: creativityValue,
+          renderMode: "html",
+          nodeContext: selectedNodeContext,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setPreviewError(
+          payload?.error || payload?.message || "Failed to generate previews."
+        );
+        const fallback = normalizePreviewItems(
+          payload?.previews ?? [],
+          previewSettings.state.previewCount
+        );
+        setPreviewItems(fallback);
+        return;
+      }
+      const normalized = normalizePreviewItems(
+        payload?.previews ?? [],
+        previewSettings.state.previewCount
+      );
+      setPreviewItems(normalized);
+      previewSettings.actions.setSelectedPreviewIndex(0);
+      viewMode.setViewMode("preview");
+    } catch (error) {
+      setPreviewError(error?.message ?? "Failed to generate previews.");
+    } finally {
+      setIsGeneratingPreviews(false);
+    }
+  }, [
+    creativityValue,
+    modelQuality,
+    previewSettings.actions,
+    previewSettings.state.previewCount,
+    selectedNodeContext,
+    viewMode,
+  ]);
+
+  const previewZoomLabel = useMemo(
+    () => `${Math.round(previewZoom * 100)}%`,
+    [previewZoom]
+  );
+  const canPreviewZoomOut = previewZoom > PREVIEW_ZOOM_MIN + 0.001;
+  const canPreviewZoomReset = previewZoom !== PREVIEW_ZOOM_MAX;
+  const qualityLabel = modelQuality === "pro" ? "Pro" : "Flash";
+  const qualityIndex = modelQuality === "pro" ? 1 : 0;
 
   return {
     state: {
@@ -32,10 +305,20 @@ export default function useImageToSiteState() {
       isDragging: gallery.state.isDragging,
       gallery: gallery.state.gallery,
       activeIndex: gallery.state.activeIndex,
+      previewItems,
       viewMode: viewMode.viewMode,
       previewCount: previewSettings.state.previewCount,
       selectedPreviewIndex: previewSettings.state.selectedPreviewIndex,
       speedValue: previewSettings.state.speedValue,
+      previewZoom,
+      previewError,
+      isGeneratingPreviews,
+      modelQuality,
+      creativityValue,
+      structureFlow,
+      showComponents,
+      isGeneratingStructure,
+      generationError,
       title: details.state.title,
       name: details.state.name,
       details: details.state.details,
@@ -94,6 +377,11 @@ export default function useImageToSiteState() {
       dropMeta: gallery.derived.dropMeta,
       fileSizeLabel: gallery.derived.fileSizeLabel,
       activePreview: gallery.derived.activePreview,
+      previewZoomLabel,
+      canPreviewZoomOut,
+      canPreviewZoomReset,
+      qualityLabel,
+      qualityIndex,
       codeFileGroups: codeWorkspace.derived.codeFileGroups,
       codeTreeGroups: codeWorkspace.derived.codeTreeGroups,
       activeCodeFile: codeWorkspace.derived.activeCodeFile,
@@ -137,6 +425,10 @@ export default function useImageToSiteState() {
       setActiveIndex: gallery.actions.setActiveIndex,
       setPreviewCount: previewSettings.actions.setPreviewCount,
       setSpeedValue: previewSettings.actions.setSpeedValue,
+      setPreviewZoom,
+      setModelQuality,
+      setCreativityValue,
+      setShowComponents,
       setTitle: details.actions.setTitle,
       setName: details.actions.setName,
       setDetails: details.actions.setDetails,
@@ -169,6 +461,10 @@ export default function useImageToSiteState() {
       handleDeleteImage: gallery.actions.handleDeleteImage,
       handleSelectPreview: previewSettings.actions.handleSelectPreview,
       handleIteratePreview: previewSettings.actions.handleIteratePreview,
+      handlePreviewZoomOut,
+      handlePreviewZoomReset,
+      handleGeneratePreviews,
+      handleGenerateStructure,
       handleNodeClick: nodeGraph.actions.handleNodeClick,
       handleOpenCodeFile: codeWorkspace.actions.handleOpenCodeFile,
       handleEditorChange: codeWorkspace.actions.handleEditorChange,

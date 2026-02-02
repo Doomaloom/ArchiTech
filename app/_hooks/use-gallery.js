@@ -6,6 +6,7 @@ import formatFileSize from "../_lib/format";
 
 export default function useGallery({ onFilesIngested } = {}) {
   const [fileMeta, setFileMeta] = useState(null);
+  const [imageFiles, setImageFiles] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [gallery, setGallery] = useState([]);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -17,21 +18,43 @@ export default function useGallery({ onFilesIngested } = {}) {
     };
   }, []);
 
+  useEffect(() => {
+    if (!imageFiles.length || !gallery.length) {
+      return;
+    }
+    const activeFile = imageFiles[activeIndex];
+    const activeUrl = gallery[activeIndex];
+    if (!activeFile || !activeUrl) {
+      return;
+    }
+    setFileMeta({
+      name: activeFile.name,
+      size: activeFile.size,
+      previewUrl: activeUrl,
+    });
+  }, [activeIndex, gallery, imageFiles]);
+
   const ingestFiles = (fileList) => {
     const files = Array.from(fileList ?? []);
     if (!files.length) {
       return;
     }
 
-    const imageFiles = files.filter((file) => file.type.startsWith("image/"));
-    if (imageFiles.length) {
-      const previews = imageFiles.map((file) => {
+    const nextImageFiles = files.filter((file) =>
+      file.type.startsWith("image/")
+    );
+    if (nextImageFiles.length) {
+      const previews = nextImageFiles.map((file) => {
         const url = URL.createObjectURL(file);
         objectUrlsRef.current.push(url);
         return { file, url };
       });
       setGallery((current) => [
         ...previews.map((preview) => preview.url),
+        ...current,
+      ]);
+      setImageFiles((current) => [
+        ...previews.map((preview) => preview.file),
         ...current,
       ]);
       setActiveIndex(0);
@@ -97,13 +120,24 @@ export default function useGallery({ onFilesIngested } = {}) {
       return;
     }
     const nextGallery = gallery.filter((_, index) => index !== activeIndex);
+    const nextImageFiles = imageFiles.filter((_, index) => index !== activeIndex);
     setGallery(nextGallery);
+    setImageFiles(nextImageFiles);
     const nextIndex = nextGallery.length
       ? Math.min(activeIndex, nextGallery.length - 1)
       : 0;
     setActiveIndex(nextIndex);
     if (!nextGallery.length) {
       setFileMeta(null);
+      return;
+    }
+    const nextFile = nextImageFiles[nextIndex];
+    if (nextFile) {
+      setFileMeta({
+        name: nextFile.name,
+        size: nextFile.size,
+        previewUrl: nextGallery[nextIndex],
+      });
     }
   };
 
@@ -122,6 +156,7 @@ export default function useGallery({ onFilesIngested } = {}) {
   }, [fileMeta]);
 
   const activePreview = gallery[activeIndex] ?? fileMeta?.previewUrl ?? null;
+  const activeImageFile = imageFiles[activeIndex] ?? null;
 
   return {
     state: {
@@ -129,6 +164,7 @@ export default function useGallery({ onFilesIngested } = {}) {
       isDragging,
       gallery,
       activeIndex,
+      imageFiles,
     },
     derived: {
       hasFile,
@@ -136,6 +172,7 @@ export default function useGallery({ onFilesIngested } = {}) {
       dropMeta,
       fileSizeLabel,
       activePreview,
+      activeImageFile,
     },
     actions: {
       setActiveIndex,
