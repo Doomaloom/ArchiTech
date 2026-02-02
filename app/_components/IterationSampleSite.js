@@ -1,4 +1,4 @@
-const IterationSampleSite = () => (
+const IterationSampleSite = ({ showLinkHint = true }) => (
   <main className="iteration-site">
     <header className="iteration-header">
       <div className="iteration-logo" data-gem-id="logo">
@@ -24,20 +24,50 @@ const IterationSampleSite = () => (
         <p className="iteration-subtitle" data-gem-id="hero-subtitle">
           Upload a layout and refine it with precise AI iterations.
         </p>
-        <div className="iteration-hero-actions">
-          <button className="iteration-primary" data-gem-id="hero-primary" type="button">
+        <div
+          className="iteration-hero-actions"
+          data-gem-id="hero-actions"
+          data-gem-folder="hero-actions"
+          data-gem-folder-name="Hero Actions"
+          data-gem-folder-parent="true"
+        >
+          <button
+            className="iteration-primary"
+            data-gem-id="hero-primary"
+            data-gem-folder="hero-actions"
+            type="button"
+          >
             Generate site
           </button>
-          <button className="iteration-secondary" data-gem-id="hero-secondary" type="button">
+          <button
+            className="iteration-secondary"
+            data-gem-id="hero-secondary"
+            data-gem-folder="hero-actions"
+            type="button"
+          >
             View plans
           </button>
         </div>
       </div>
-      <div className="iteration-hero-card" data-gem-id="hero-card">
-        <div className="iteration-card-title" data-gem-id="hero-card-title">
+      <div
+        className="iteration-hero-card"
+        data-gem-id="hero-card"
+        data-gem-folder="hero-card"
+        data-gem-folder-name="Hero Card"
+        data-gem-folder-parent="true"
+      >
+        <div
+          className="iteration-card-title"
+          data-gem-id="hero-card-title"
+          data-gem-folder="hero-card"
+        >
           Variant A
         </div>
-        <div className="iteration-card-body" data-gem-id="hero-card-body">
+        <div
+          className="iteration-card-body"
+          data-gem-id="hero-card-body"
+          data-gem-folder="hero-card"
+        >
           Preview ready for iteration.
         </div>
       </div>
@@ -49,11 +79,35 @@ const IterationSampleSite = () => (
           Keep structure intact while you nudge elements.
         </p>
       </article>
-      <article className="iteration-feature" data-gem-id="feature-2">
-        <h3 data-gem-id="feature-2-title">Versioned notes</h3>
-        <p data-gem-id="feature-2-copy">
+      <article
+        className="iteration-feature iteration-feature-nesting"
+        data-gem-id="feature-2"
+        data-gem-folder="notes-stack"
+        data-gem-folder-name="Notes Container"
+        data-gem-folder-parent="true"
+      >
+        <span
+          className="iteration-feature-tag"
+          data-gem-id="feature-2-tag"
+          data-gem-folder="notes-stack"
+        >
+          Nested group
+        </span>
+        <h3 data-gem-id="feature-2-title" data-gem-folder="notes-stack">
+          Versioned notes
+        </h3>
+        <p data-gem-id="feature-2-copy" data-gem-folder="notes-stack">
           Circle issues and capture intent.
         </p>
+        {showLinkHint ? (
+          <span
+            className="iteration-feature-hint"
+            data-gem-id="feature-2-hint"
+            data-gem-folder="notes-stack"
+          >
+            Select me -&gt; UNLINK
+          </span>
+        ) : null}
       </article>
       <article className="iteration-feature" data-gem-id="feature-3">
         <h3 data-gem-id="feature-3-title">AI patches</h3>

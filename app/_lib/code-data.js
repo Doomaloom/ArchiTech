@@ -1,3 +1,4 @@
+/** @type {import("./code-types").CodeFileGroup[]} */
 export const CODE_FILE_GROUPS = [
   {
     label: "gem-studio",
@@ -19,6 +20,7 @@ export const CODE_FILE_GROUPS = [
   },
 ];
 
+/** @type {Record<string, string>} */
 export const INITIAL_CODE_CONTENTS = {
   "src/app/layout.tsx": `export const metadata = {
   title: "Gem Studio",

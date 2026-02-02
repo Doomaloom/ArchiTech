@@ -11,6 +11,7 @@ import IterationLayersPanel from "../IterationLayersPanel";
 import IterationPatchPanel from "../IterationPatchPanel";
 import IterationSampleSite from "../IterationSampleSite";
 import IterationTextPanel from "../IterationTextPanel";
+import IterationTransformControls from "../IterationTransformControls";
 import IterationSidebarRail from "../IterationSidebarRail";
 
 const ITERATION_SCOPE = ".imageflow-iteration-site .iteration-preview-root";
@@ -265,6 +266,20 @@ export default function IterateView() {
   const showDock =
     showLayersPanel || showTextPanel || showHistoryPanel || state.showPatch;
   const useSidebarRail = true;
+  const showTransformControls =
+    derived.canTransform &&
+    state.showTransformControls &&
+    state.selectedElementIds.length > 0;
+  const showUnlinkControl =
+    derived.canTransform &&
+    state.showTransformControls &&
+    derived.hasNestedSelection;
+  const lockScale = state.scaleLock;
+  const hasLayout = Object.keys(state.baseLayout ?? {}).length > 0;
+  const isHintLinked = Object.values(state.layerFolders ?? {}).some((folder) =>
+    (folder.layerIds ?? []).includes("feature-2-hint")
+  );
+  const showLinkHint = !hasLayout || isHintLinked;
   const canvasStyle = {
     transform: `translate3d(${derived.panOffset.x}px, ${derived.panOffset.y}px, 0) scale(${derived.zoomLevel})`,
   };
@@ -332,7 +347,7 @@ export default function IterateView() {
                     />
                   </>
                 ) : (
-                  <IterationSampleSite />
+                  <IterationSampleSite showLinkHint={showLinkHint} />
                 )}
               </div>
               <div
@@ -409,6 +424,30 @@ export default function IterateView() {
                 </Stage>
               </div>
             </div>
+            <IterationTransformControls
+              previewRef={refs.iterationPreviewRef}
+              siteRef={refs.iterationSiteRef}
+              selectionIds={state.selectedElementIds}
+              transformTargetId={derived.primaryMoveTargetId}
+              isVisible={showTransformControls}
+              showUnlink={showUnlinkControl}
+              onUnlink={actions.handleUnlinkSelection}
+              elementTransforms={state.elementTransforms}
+              zoomLevel={derived.zoomLevel}
+              panOffset={derived.panOffset}
+              stageSize={derived.stageSize}
+              textEdits={state.textEdits}
+              scaleLock={state.scaleLock}
+              onToggleScaleLock={actions.toggleScaleLock}
+              onUpdateScale={actions.updateElementTransform}
+              onUpdateFontSize={(id, value) =>
+                actions.applyTextStyles(id, { fontSize: value }, "Transform")
+              }
+              getControlState={actions.getTransformControlState}
+              onAlign={actions.handleAlignElements}
+              alignmentScopeLabel={derived.alignmentScopeLabel}
+              canAlign={derived.canAlign}
+            />
             <span className="imageflow-iteration-zoom-indicator">
               {Math.round(derived.zoomLevel * 100)}%
             </span>
@@ -468,7 +507,7 @@ export default function IterateView() {
               draggable
               scalable
               rotatable
-              keepRatio={false}
+              keepRatio={lockScale}
               origin={false}
               snappable={state.snapToGrid || state.snapToGuides}
               snapGridWidth={state.snapToGrid ? state.gridSize : 0}
@@ -490,12 +529,14 @@ export default function IterateView() {
                   : "imageflow-moveable is-hidden"
               }
               onDragStart={({ set, target }) => {
+                actions.handleTransformStart?.();
                 const id = target?.dataset?.gemId;
                 const current = id ? actions.getTransformState?.(id) : null;
                 if (current) {
                   set([current.x, current.y]);
                 }
               }}
+              onDragEnd={() => actions.handleTransformEnd?.()}
               onDrag={({ target, beforeTranslate }) => {
                 const id = target?.dataset?.gemId;
                 if (target && id) {
@@ -507,7 +548,11 @@ export default function IterateView() {
                 }
               }}
               onScaleStart={({ set, dragStart, target }) => {
+                actions.handleTransformStart?.();
                 const id = target?.dataset?.gemId;
+                if (id) {
+                  actions.handleScaleStart?.(id, target);
+                }
                 const current = id ? actions.getTransformState?.(id) : null;
                 if (current) {
                   set([current.scaleX, current.scaleY]);
@@ -515,6 +560,13 @@ export default function IterateView() {
                     dragStart.set([current.x, current.y]);
                   }
                 }
+              }}
+              onScaleEnd={({ target }) => {
+                const id = target?.dataset?.gemId;
+                if (id) {
+                  actions.handleScaleEnd?.(id);
+                }
+                actions.handleTransformEnd?.();
               }}
               onScale={({ target, scale, drag }) => {
                 const id = target?.dataset?.gemId;
@@ -532,6 +584,7 @@ export default function IterateView() {
                 actions.updateElementTransform(id, next, target);
               }}
               onRotateStart={({ set, dragStart, target }) => {
+                actions.handleTransformStart?.();
                 const id = target?.dataset?.gemId;
                 const current = id ? actions.getTransformState?.(id) : null;
                 if (current) {
@@ -541,6 +594,7 @@ export default function IterateView() {
                   }
                 }
               }}
+              onRotateEnd={() => actions.handleTransformEnd?.()}
               onRotate={({ target, rotation, drag }) => {
                 const id = target?.dataset?.gemId;
                 if (!target || !id) {
@@ -554,6 +608,7 @@ export default function IterateView() {
                 actions.updateElementTransform(id, next, target);
               }}
               onDragGroupStart={(event) => {
+                actions.handleTransformStart?.();
                 event.events.forEach((childEvent) => {
                   const id = childEvent.target?.dataset?.gemId;
                   const current = id ? actions.getTransformState?.(id) : null;
@@ -562,6 +617,7 @@ export default function IterateView() {
                   }
                 });
               }}
+              onDragGroupEnd={() => actions.handleTransformEnd?.()}
               onDragGroup={(event) => {
                 event.events.forEach((childEvent) => {
                   const id = childEvent.target?.dataset?.gemId;
@@ -579,8 +635,12 @@ export default function IterateView() {
                 });
               }}
               onScaleGroupStart={(event) => {
+                actions.handleTransformStart?.();
                 event.events.forEach((childEvent) => {
                   const id = childEvent.target?.dataset?.gemId;
+                  if (id) {
+                    actions.handleScaleStart?.(id, childEvent.target);
+                  }
                   const current = id ? actions.getTransformState?.(id) : null;
                   if (current) {
                     childEvent.set([current.scaleX, current.scaleY]);
@@ -589,6 +649,15 @@ export default function IterateView() {
                     }
                   }
                 });
+              }}
+              onScaleGroupEnd={(event) => {
+                event.events.forEach((childEvent) => {
+                  const id = childEvent.target?.dataset?.gemId;
+                  if (id) {
+                    actions.handleScaleEnd?.(id);
+                  }
+                });
+                actions.handleTransformEnd?.();
               }}
               onScaleGroup={(event) => {
                 event.events.forEach((childEvent) => {
@@ -608,6 +677,7 @@ export default function IterateView() {
                 });
               }}
               onRotateGroupStart={(event) => {
+                actions.handleTransformStart?.();
                 event.events.forEach((childEvent) => {
                   const id = childEvent.target?.dataset?.gemId;
                   const current = id ? actions.getTransformState?.(id) : null;
@@ -619,6 +689,7 @@ export default function IterateView() {
                   }
                 });
               }}
+              onRotateGroupEnd={() => actions.handleTransformEnd?.()}
               onRotateGroup={(event) => {
                 event.events.forEach((childEvent) => {
                   const id = childEvent.target?.dataset?.gemId;
