@@ -127,33 +127,6 @@ export default function RootLayout({ children }) {
                   <button
                     className="rail-button"
                     type="button"
-                    aria-label="Iterate"
-                    data-imageflow-step="iterate"
-                  >
-                    <svg
-                      className="button-icon"
-                      viewBox="0 0 24 24"
-                      aria-hidden="true"
-                    >
-                      <path
-                        d="M4 20l4-1 9-9-3-3-9 9-1 4z"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.6"
-                        strokeLinejoin="round"
-                      />
-                      <path
-                        d="M13 5l3 3"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.6"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                  </button>
-                  <button
-                    className="rail-button"
-                    type="button"
                     aria-label="Builder"
                     data-imageflow-step="builder"
                   >
