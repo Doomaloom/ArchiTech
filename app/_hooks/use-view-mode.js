@@ -9,6 +9,7 @@ const VIEW_MODE_HASHES = new Set([
   "selected",
   "iterate",
   "code",
+  "builder",
 ]);
 
 export default function useViewMode() {

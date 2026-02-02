@@ -7,22 +7,23 @@ import { useImageToSite } from "./../_context/image-to-site-context";
 
 export default function ImageToSiteView() {
   const { state, derived } = useImageToSite();
+  const isBuilder = state.viewMode === "builder";
+  const hideSidePanels = state.viewMode === "code" || isBuilder;
+  const layoutClassName = `imageflow-layout${
+    isBuilder ? " is-builder" : hideSidePanels ? " is-code" : ""
+  }${derived.isPreviewMode ? " is-preview-only" : ""}`;
 
   return (
     <div className="imageflow-shell">
       <div className="imageflow-panel">
         <ImageflowMenuBar />
         <ImageflowRulers />
-        <div
-          className={`imageflow-layout${
-            state.viewMode === "code" ? " is-code" : ""
-          }${derived.isPreviewMode ? " is-preview-only" : ""}`}
-        >
+        <div className={layoutClassName}>
           <DropzonePanel />
-          {state.viewMode === "code" || derived.isPreviewMode ? null : (
+          {hideSidePanels || derived.isPreviewMode ? null : (
             <GalleryPanel />
           )}
-          {derived.isPreviewMode ? null : <InfoPanel />}
+          {derived.isPreviewMode || hideSidePanels ? null : <InfoPanel />}
         </div>
       </div>
     </div>

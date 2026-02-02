@@ -6,6 +6,7 @@ import NodesView from "./views/NodesView";
 import PreviewGrid from "./views/PreviewGrid";
 import SelectedPreview from "./views/SelectedPreview";
 import UploadView from "./views/UploadView";
+import BuilderView from "./views/BuilderView";
 
 export default function DropzonePanel() {
   const { state, derived, actions } = useImageToSite();
@@ -16,13 +17,17 @@ export default function DropzonePanel() {
         state.isDragging ? " is-dragging" : ""
       }${state.viewMode === "nodes" ? " is-tree" : ""}${
         derived.isPreviewMode ? " is-preview" : ""
-      }${state.viewMode === "code" ? " is-code" : ""}`}
+      }${state.viewMode === "code" ? " is-code" : ""}${
+        state.viewMode === "builder" ? " is-builder" : ""
+      }`}
       onDragOver={actions.handleDragOver}
       onDragLeave={actions.handleDragLeave}
       onDrop={actions.handleDrop}
     >
       {state.viewMode === "code" ? (
         <CodeEditorView />
+      ) : state.viewMode === "builder" ? (
+        <BuilderView />
       ) : (
         <>
           {derived.isIterationMode ? null : <MediaControls />}
