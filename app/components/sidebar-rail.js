@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
+import { useWorkflow } from "../_context/workflow-context";
 
 const ICONS = {
   home: (
@@ -209,17 +209,19 @@ const INSPIRE_BUTTONS = [
     id: "project-description",
     label: "Project description",
     icon: "document",
+    step: "project-description",
   },
-  { id: "style", label: "Style", icon: "palette" },
+  { id: "style", label: "Style", icon: "palette", step: "style" },
   {
     id: "inspire-workspace",
     label: "Inspire workspace",
     icon: "sparkle",
+    step: "inspire-workspace",
   },
-  { id: "previews", label: "Previews", icon: "preview", step: "preview" },
-  { id: "iteration", label: "Iteration", icon: "iterate", step: "iterate" },
+  { id: "previews", label: "Previews", icon: "preview", step: "previews" },
+  { id: "iteration", label: "Iteration", icon: "iterate", step: "iteration" },
   { id: "code", label: "Code editor", icon: "code", step: "code" },
-  { id: "settings", label: "Settings", icon: "settings" },
+  { id: "settings", label: "Settings", icon: "settings", step: "settings" },
 ];
 
 const BUTTON_SETS = {
@@ -228,8 +230,8 @@ const BUTTON_SETS = {
 };
 
 export default function SidebarRail() {
-  const [workflowMode, setWorkflowMode] = useState("image-to-site");
-
+  const { workflowMode, inspireStep, setWorkflowMode, setInspireStep } =
+    useWorkflow();
   const buttonSets = BUTTON_SETS;
 
   return (
@@ -262,10 +264,14 @@ export default function SidebarRail() {
             {buttonSets.inspire.map((button) => (
               <button
                 key={button.id}
-                className="rail-button"
+                className={`rail-button${
+                  inspireStep === button.step ? " is-active" : ""
+                }`}
                 type="button"
+                onClick={() => setInspireStep(button.step)}
                 aria-label={button.label}
-                data-imageflow-step={button.step}
+                aria-pressed={inspireStep === button.step}
+                data-workflow-step={button.step}
               >
                 {ICONS[button.icon]}
               </button>
@@ -280,8 +286,8 @@ export default function SidebarRail() {
               className="workflow-toggle-circle"
               type="button"
               onClick={() =>
-                setWorkflowMode((current) =>
-                  current === "image-to-site" ? "inspire" : "image-to-site"
+                setWorkflowMode(
+                  workflowMode === "image-to-site" ? "inspire" : "image-to-site"
                 )
               }
               aria-pressed={workflowMode === "inspire"}
