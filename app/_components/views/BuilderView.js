@@ -16,7 +16,7 @@ const normalizeRect = (rect) => {
 };
 
 export default function BuilderView() {
-  const { state } = useImageToSite();
+  const { state, actions } = useImageToSite();
   const { containerRef, isReady } = useGrapesBuilder({
     htmlContent: state.builderHtml,
   });
@@ -25,7 +25,11 @@ export default function BuilderView() {
 
   return (
     <div className="imageflow-builder">
-      <BuilderSidebarRail annotations={annotations} />
+      <BuilderSidebarRail
+        annotations={annotations}
+        builderTuningValue={state.builderTuningValue}
+        onBuilderTuningChange={actions.setBuilderTuningValue}
+      />
       <div className="imageflow-builder-stage" aria-busy={!isReady}>
         <div className="imageflow-builder-canvas" ref={containerRef} />
         <div

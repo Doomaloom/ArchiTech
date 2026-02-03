@@ -39,7 +39,7 @@ export default function useBuilderAnnotations() {
   const [annotations, setAnnotations] = useState([]);
   const [activeDraw, setActiveDraw] = useState(null);
   const [modeActive, setModeActive] = useState(false);
-  const [tool, setTool] = useState("pencil"); // "pencil" | "rect" | "restart"
+  const [tool, setTool] = useState("pencil"); // "pencil" | "rect" | "clear" | "restart"
   const [pendingUploadId, setPendingUploadId] = useState(null);
 
   const toLocalPoint = useCallback((event) => {
@@ -54,6 +54,12 @@ export default function useBuilderAnnotations() {
   const handlePointerDown = useCallback(
     (event) => {
       if (!modeActive || event.button !== 0) return;
+      if (tool === "clear") {
+        setAnnotations([]);
+        setActiveDraw(null);
+        setModeActive(false);
+        return;
+      }
       const point = toLocalPoint(event);
       if (!point) return;
       event.preventDefault();

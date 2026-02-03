@@ -2766,6 +2766,60 @@ body:has(.imageflow-builder):has(#imageflow-sidebar-toggle:checked)
   color: #94a3b8;
 }
 
+/* Builder tuning slider (custom, non-native) */
+.builder-param-slider {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0 14px;
+}
+
+.builder-param-track {
+  position: relative;
+  width: 34px;
+  height: 162px;
+  touch-action: none;
+}
+
+.builder-param-track-line {
+  position: absolute;
+  left: 50%;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  background: #f59e0b;
+  border-radius: 999px;
+  transform: translateX(-50%);
+}
+
+.builder-param-thumb {
+  position: absolute;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #f59e0b;
+  transform: translate(-50%, 50%);
+  pointer-events: auto;
+  cursor: grab;
+  touch-action: none;
+}
+
+.builder-param-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #b45309;
+  letter-spacing: 0.04em;
+}
+
+.builder-param-value {
+  font-size: 10px;
+  font-weight: 700;
+  color: #b45309;
+  letter-spacing: 0.04em;
+}
+
 .imageflow-previews {
   width: 100%;
   height: 100%;
