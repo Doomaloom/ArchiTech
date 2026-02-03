@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import useGrapesBuilder from "./../../_hooks/use-grapes-builder";
 import { useImageToSite } from "./../../_context/image-to-site-context";
 import useBuilderAnnotations from "./../../_hooks/use-builder-annotations";
@@ -15,6 +15,20 @@ const normalizeRect = (rect) => {
   return { x, y, width: Math.abs(width), height: Math.abs(height) };
 };
 
+const darkenHsl = (color) => {
+  if (typeof color !== "string") return color;
+  return color.replace(/(\d+)%\)\s*$/, (_, lightness) => {
+    const next = Math.max(0, Math.min(100, Number(lightness) - 25));
+    return `${next}%)`;
+  });
+};
+
+const adjustTextareaHeight = (element) => {
+  if (!element) return;
+  element.style.height = "auto";
+  element.style.height = `${Math.max(element.scrollHeight, 24)}px`;
+};
+
 export default function BuilderView() {
   const { state, actions } = useImageToSite();
   const { containerRef, isReady } = useGrapesBuilder({
@@ -22,6 +36,61 @@ export default function BuilderView() {
   });
   const annotations = useBuilderAnnotations();
   const fileInputRef = useRef(null);
+  const [hoveredAnnotationId, setHoveredAnnotationId] = useState(null);
+
+  const getOverlayPoint = (event) => {
+    const rect = annotations.refs.overlayRef.current?.getBoundingClientRect();
+    if (!rect) return null;
+    return {
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
+    };
+  };
+
+  const findAnnotationAtPoint = (point) => {
+    if (!point) return null;
+    for (const annotation of annotations.state.annotations) {
+      const bounds =
+        annotation.type === "rect"
+          ? normalizeRect(annotation.rect)
+          : (() => {
+              if (!annotation.points?.length) return null;
+              const xs = annotation.points.map((p) => p.x);
+              const ys = annotation.points.map((p) => p.y);
+              const minX = Math.min(...xs);
+              const maxX = Math.max(...xs);
+              const minY = Math.min(...ys);
+              const maxY = Math.max(...ys);
+              return {
+                x: minX,
+                y: minY,
+                width: Math.max(maxX - minX, 1),
+                height: Math.max(maxY - minY, 1),
+              };
+            })();
+      if (!bounds) continue;
+      const withinX = point.x >= bounds.x && point.x <= bounds.x + bounds.width;
+      const withinY = point.y >= bounds.y && point.y <= bounds.y + bounds.height;
+      if (withinX && withinY) {
+        return annotation.id;
+      }
+    }
+    return null;
+  };
+
+  const handleOverlayPointerMove = (event) => {
+    const point = getOverlayPoint(event);
+    const overId = findAnnotationAtPoint(point);
+    setHoveredAnnotationId((current) =>
+      current === overId ? current : overId ?? null
+    );
+    annotations.actions.handlePointerMove(event);
+  };
+
+  const handleOverlayPointerLeave = (event) => {
+    setHoveredAnnotationId(null);
+    annotations.actions.handlePointerUp(event);
+  };
 
   return (
     <div className="imageflow-builder">
@@ -38,9 +107,9 @@ export default function BuilderView() {
           }`}
           ref={annotations.refs.overlayRef}
           onPointerDown={annotations.actions.handlePointerDown}
-          onPointerMove={annotations.actions.handlePointerMove}
+          onPointerMove={handleOverlayPointerMove}
           onPointerUp={annotations.actions.handlePointerUp}
-          onPointerLeave={annotations.actions.handlePointerUp}
+          onPointerLeave={handleOverlayPointerLeave}
         >
           <svg className="builder-annotation-canvas">
             {annotations.state.annotations.map((annotation) =>
@@ -146,18 +215,32 @@ export default function BuilderView() {
         </div>
         <div className="builder-annotation-notes">
           {annotations.state.annotations.map((annotation) => {
-            const anchor =
+            const bounds =
               annotation.type === "rect"
                 ? normalizeRect(annotation.rect)
-                : annotation.points[0];
-            if (!anchor) return null;
+                : (() => {
+                    if (!annotation.points?.length) return null;
+                    const xs = annotation.points.map((p) => p.x);
+                    const ys = annotation.points.map((p) => p.y);
+                    const minX = Math.min(...xs);
+                    const maxX = Math.max(...xs);
+                    const minY = Math.min(...ys);
+                    const maxY = Math.max(...ys);
+                    return {
+                      x: minX,
+                      y: minY,
+                      width: Math.max(maxX - minX, 1),
+                      height: Math.max(maxY - minY, 1),
+                    };
+                  })();
+            if (!bounds) return null;
             return (
               <div
                 key={`${annotation.id}-note`}
                 className="builder-annotation-note"
                 style={{
-                  left: anchor.x + 12,
-                  top: anchor.y + 12,
+                  left: bounds.x + bounds.width + 12,
+                  top: bounds.y - 6,
                   borderColor: annotation.color,
                   color: annotation.color,
                 }}
@@ -165,12 +248,15 @@ export default function BuilderView() {
                 <textarea
                   value={annotation.note}
                   placeholder="Add a note..."
-                  onChange={(event) =>
+                  onFocus={(event) => adjustTextareaHeight(event.target)}
+                  onInput={(event) => adjustTextareaHeight(event.target)}
+                  onChange={(event) => {
+                    adjustTextareaHeight(event.target);
                     annotations.actions.handleNoteChange(
                       annotation.id,
                       event.target.value
-                    )
-                  }
+                    );
+                  }}
                 />
               </div>
             );
@@ -199,13 +285,16 @@ export default function BuilderView() {
               <button
                 key={`${annotation.id}-imgbtn`}
                 type="button"
-                className="builder-annotation-image-button"
+                className={`builder-annotation-image-button${
+                  hoveredAnnotationId === annotation.id ? " is-visible" : ""
+                }`}
                 style={{
                   left: bounds.x + bounds.width / 2,
                   top: bounds.y + bounds.height / 2,
-                  color: annotation.color,
-                  borderColor: annotation.color,
+                  color: darkenHsl(annotation.color),
                 }}
+                onMouseEnter={() => setHoveredAnnotationId(annotation.id)}
+                onMouseLeave={() => setHoveredAnnotationId(null)}
                 onClick={() => {
                   annotations.actions.setPendingUploadId(annotation.id);
                   fileInputRef.current?.click();
@@ -213,7 +302,7 @@ export default function BuilderView() {
                 aria-label="Attach image"
                 title="Attach image"
               >
-                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="48" height="48" aria-hidden="true">
                   <path
                     d="M4 6a2 2 0 012-2h12a2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V6z"
                     fill="none"

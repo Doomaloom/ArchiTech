@@ -3351,6 +3351,32 @@ body:has(.imageflow-builder):has(#imageflow-sidebar-toggle:checked)
   box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.35) inset,
     0 0 0 4px rgba(15, 118, 110, 0.18);
   border-radius: 8px;
+  --highlight-icon-size: 40px;
+  --highlight-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 14l4 4 8-8-4-4-8 8zM4 20h7' fill='none' stroke='%230f766e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.imageflow-iteration-site [data-gem-id].is-highlighted::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--highlight-icon-size);
+  height: var(--highlight-icon-size);
+  background-image: var(--highlight-icon);
+  background-color: transparent;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.9);
+  transition: opacity 160ms ease, transform 160ms ease;
+  pointer-events: none;
+}
+
+.imageflow-iteration-site
+  [data-gem-id].is-highlighted.is-highlight-hovered::after {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
 }
 
 .imageflow-iteration-site [data-gem-id].is-nesting-parent {
@@ -6009,19 +6035,24 @@ body:has(.imageflow-builder):has(#imageflow-sidebar-toggle:checked)
 
 .builder-annotation-note {
   position: absolute;
-  min-width: 160px;
+  min-width: 0 !important;
+  width: fit-content;
   max-width: 220px;
+  min-height: 0 !important;
   background: #ffffff;
   border: 2px solid currentColor;
   border-radius: 12px;
-  padding: 10px;
+  padding: 6px 8px;
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
   color: #0f172a;
   font-family: Arial, sans-serif;
+  display: inline-block;
 }
 
 .builder-annotation-note textarea {
-  width: 100%;
+  width: fit-content;
+  min-width: 0 !important;
+  max-width: 220px;
   border: 0;
   background: transparent;
   resize: vertical;
@@ -6030,6 +6061,9 @@ body:has(.imageflow-builder):has(#imageflow-sidebar-toggle:checked)
   line-height: 1.4;
   font-family: Arial, sans-serif;
   color: inherit;
+  min-height: 0 !important;
+  height: auto;
+  padding: 0;
 }
 
 .builder-annotation-note,
@@ -6040,22 +6074,33 @@ body:has(.imageflow-builder):has(#imageflow-sidebar-toggle:checked)
 .builder-annotation-image-button {
   position: absolute;
   transform: translate(-50%, -50%);
-  width: 32px;
-  height: 32px;
+  width: 56px;
+  height: 56px;
   border-radius: 999px;
-  border: 1px solid currentColor;
-  background: #ffffff;
-  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.12);
+  border: none;
+  background: transparent;
+  box-shadow: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   padding: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 150ms ease, transform 150ms ease;
+  transform-origin: center;
+}
+
+.builder-annotation-image-button.is-visible {
+  opacity: 1;
   pointer-events: auto;
+  transform: translate(-50%, -50%) scale(1);
 }
 
 .builder-annotation-image-button:hover {
-  background: #fff7ed;
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1.05);
+  background: transparent;
 }
 
 /* GrapesJS theme overrides (builder) */
