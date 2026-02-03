@@ -373,6 +373,14 @@ const installToolbarIconFix = (editor) => {
           display: none !important;
         }
 
+        .gjs-selected {
+          outline: 2px solid #4d9cff !important;
+          outline-offset: -2px !important;
+          box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.6),
+            0 0 16px rgba(77, 156, 255, 0.65),
+            0 0 32px rgba(123, 92, 255, 0.45) !important;
+        }
+
         .gjs-com-badge [style*="background"],
         .gjs-badge [style*="background"] {
           background: transparent !important;

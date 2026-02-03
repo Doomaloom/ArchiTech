@@ -6167,6 +6167,13 @@ div {
   --gjs-field-bg: #ffffff;
   --gjs-editor-font: Arial, sans-serif !important;
   --gjs-main-font: var(--gjs-editor-font);
+  --gjs-color-blue: #4d9cff;
+  --gjs-color-red: #ff5c5c;
+  --gjs-color-yellow: #ffd84d;
+  --gjs-color-warn: #ffd84d;
+  --gjs-color-green: #3dff8a;
+  --gjs-color-highlight: #7b5cff;
+  --gjs-placeholder-background-color: var(--gjs-color-green);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -6178,6 +6185,49 @@ div {
 /* GrapesJS surface tweaks */
 .imageflow-builder .gjs-two-color {
   color: #171717 !important;
+}
+
+.imageflow-builder .gjs-cv-canvas .gjs-highlighter,
+.imageflow-builder .gjs-cv-canvas .gjs-highlighter-sel,
+.imageflow-builder .gjs-cv-canvas .gjs-highlighter-warning {
+  outline-color: #4d9cff !important;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.65),
+    0 0 14px rgba(77, 156, 255, 0.6),
+    0 0 28px rgba(123, 92, 255, 0.4);
+}
+
+.imageflow-builder .gjs-cv-canvas .gjs-highlighter-warning {
+  outline-color: #ffd84d !important;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.65),
+    0 0 14px rgba(255, 216, 77, 0.65),
+    0 0 28px rgba(255, 216, 77, 0.4);
+  filter: drop-shadow(0 0 8px rgba(255, 216, 77, 0.7));
+}
+
+.imageflow-builder .gjs-color-warn,
+.imageflow-builder .gjs-color-warn svg,
+.imageflow-builder .gjs-color-warn path {
+  color: #ffd84d !important;
+  fill: #ffd84d !important;
+  stroke: #ffd84d !important;
+  text-shadow: 0 0 10px rgba(255, 216, 77, 0.75);
+  filter: drop-shadow(0 0 8px rgba(255, 216, 77, 0.7));
+}
+
+.imageflow-builder .gjs-placeholder,
+.imageflow-builder .gjs-com-placeholder,
+.imageflow-builder .gjs-placeholder-int,
+.imageflow-builder .gjs-com-placeholder-int {
+  outline-color: #3dff8a !important;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.65),
+    0 0 14px rgba(61, 255, 138, 0.6),
+    0 0 28px rgba(61, 255, 138, 0.4);
+}
+
+.imageflow-builder .gjs-com-badge,
+.imageflow-builder .gjs-badge {
+  box-shadow: 0 8px 22px rgba(77, 156, 255, 0.3),
+    0 0 18px rgba(123, 92, 255, 0.35);
 }
 
 .imageflow-builder .gjs-one-bg {
