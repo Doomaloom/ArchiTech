@@ -23,10 +23,36 @@ const darkenHsl = (color) => {
   });
 };
 
-const adjustTextareaHeight = (element) => {
+const lightenHsl = (color) => {
+  if (typeof color !== "string") return color;
+  const match = color.match(
+    /hsl\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%\s*\)/
+  );
+  if (!match) return color;
+  const [, h, s, l] = match;
+  const nextL = Math.min(94, Number(l) + 18);
+  const nextS = Math.max(8, Number(s) * 0.5);
+  return `hsl(${h}, ${nextS}%, ${nextL}%)`;
+};
+
+const adjustTextareaSize = (element) => {
   if (!element) return;
+  const minWidth = 60;
+  const maxWidth = 240;
+  const minHeight = 22;
+
   element.style.height = "auto";
-  element.style.height = `${Math.max(element.scrollHeight, 24)}px`;
+  element.style.width = "auto";
+
+  const targetWidth = Math.min(
+    Math.max(element.scrollWidth, minWidth),
+    maxWidth
+  );
+  element.style.width = `${targetWidth}px`;
+
+  element.style.height = "auto";
+  const targetHeight = Math.max(element.scrollHeight, minHeight);
+  element.style.height = `${targetHeight}px`;
 };
 
 export default function BuilderView() {
@@ -242,21 +268,23 @@ export default function BuilderView() {
                   left: bounds.x + bounds.width + 12,
                   top: bounds.y - 6,
                   borderColor: annotation.color,
-                  color: annotation.color,
+                  color: darkenHsl(annotation.color),
+                  backgroundColor: "rgba(255, 255, 255, 1)",
                 }}
               >
                 <textarea
                   value={annotation.note}
                   placeholder="Add a note..."
-                  onFocus={(event) => adjustTextareaHeight(event.target)}
-                  onInput={(event) => adjustTextareaHeight(event.target)}
+                  onFocus={(event) => adjustTextareaSize(event.target)}
+                  onInput={(event) => adjustTextareaSize(event.target)}
                   onChange={(event) => {
-                    adjustTextareaHeight(event.target);
+                    adjustTextareaSize(event.target);
                     annotations.actions.handleNoteChange(
                       annotation.id,
                       event.target.value
                     );
                   }}
+                  ref={(el) => el && adjustTextareaSize(el)}
                 />
               </div>
             );

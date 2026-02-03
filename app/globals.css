@@ -6036,7 +6036,7 @@ body:has(.imageflow-builder):has(#imageflow-sidebar-toggle:checked)
 .builder-annotation-note {
   position: absolute;
   min-width: 0 !important;
-  width: fit-content;
+  width: auto;
   max-width: 220px;
   min-height: 0 !important;
   background: #ffffff;
@@ -6050,12 +6050,12 @@ body:has(.imageflow-builder):has(#imageflow-sidebar-toggle:checked)
 }
 
 .builder-annotation-note textarea {
-  width: fit-content;
+  width: auto;
   min-width: 0 !important;
   max-width: 220px;
   border: 0;
   background: transparent;
-  resize: vertical;
+  resize: none;
   outline: none;
   font-size: 13px;
   line-height: 1.4;
@@ -6064,6 +6064,10 @@ body:has(.imageflow-builder):has(#imageflow-sidebar-toggle:checked)
   min-height: 0 !important;
   height: auto;
   padding: 0;
+  box-sizing: content-box;
+  overflow: hidden;
+  display: inline-block;
+  white-space: pre-wrap;
 }
 
 .builder-annotation-note,
