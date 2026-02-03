@@ -104,6 +104,96 @@ const applyCanvasScrollbarStyles = (editor) => {
   doc.head.appendChild(style);
 };
 
+const normalizeToolbarLabel = (label) =>
+  typeof label === "string" ? label.toLowerCase() : "";
+
+const isMoveToolbarItem = (item) => {
+  if (!item) return false;
+  if (item.command === "tlb-move") return true;
+  if (item.attributes?.draggable) return true;
+  const label = normalizeToolbarLabel(item.label);
+  return label.includes("move") || label.includes("arrows");
+};
+
+const isEditToolbarItem = (item) => {
+  if (!item) return false;
+  if (item.command === "image-editor") return true;
+  const label = normalizeToolbarLabel(item.label);
+  return label.includes("pencil") || label.includes("edit");
+};
+
+const mergeClassNames = (baseClass, nextClass) => {
+  const base = typeof baseClass === "string" ? baseClass.split(" ") : [];
+  const trimmed = base.map((value) => value.trim()).filter(Boolean);
+  if (!trimmed.includes(nextClass)) {
+    trimmed.push(nextClass);
+  }
+  return trimmed.join(" ");
+};
+
+const ensureMoveToolbarItem = (item, stylePrefix) => {
+  const attrs = { ...(item.attributes || {}) };
+  const requiredClass = `${stylePrefix}no-touch-actions`;
+  const nextClass = mergeClassNames(attrs.class, requiredClass);
+  const needsClassUpdate = nextClass !== (attrs.class || "");
+  const needsDraggable = attrs.draggable !== true;
+  if (!needsClassUpdate && !needsDraggable && item.command === "tlb-move") {
+    return item;
+  }
+  return {
+    ...item,
+    command: "tlb-move",
+    attributes: {
+      ...attrs,
+      draggable: true,
+      class: nextClass,
+    },
+  };
+};
+
+const ensureEditToolbarItem = (item, commandId) => {
+  if (item.command === commandId) {
+    return item;
+  }
+  return {
+    ...item,
+    command: commandId,
+  };
+};
+
+const applyToolbarBehaviorFixes = (editor, openStylesPanel) => {
+  if (!editor) return () => {};
+  const commandId = "open-styles-panel";
+  if (!editor.Commands?.get?.(commandId)) {
+    editor.Commands?.add?.(commandId, {
+      run: () => openStylesPanel(),
+    });
+  }
+  const stylePrefix = editor.Config?.stylePrefix || "gjs-";
+  const updateToolbar = (component) => {
+    if (!component?.get) return;
+    const toolbar = component.get("toolbar");
+    if (!Array.isArray(toolbar) || toolbar.length === 0) return;
+    const nextToolbar = toolbar.map((item) => {
+      if (isMoveToolbarItem(item)) {
+        return ensureMoveToolbarItem(item, stylePrefix);
+      }
+      if (isEditToolbarItem(item)) {
+        return ensureEditToolbarItem(item, commandId);
+      }
+      return item;
+    });
+    const changed = nextToolbar.some((item, index) => item !== toolbar[index]);
+    if (changed) {
+      component.set("toolbar", nextToolbar);
+    }
+  };
+  editor.on("component:selected", updateToolbar);
+  return () => {
+    editor.off("component:selected", updateToolbar);
+  };
+};
+
 const getToolbarIconData = (label, index) => {
   const normalized = (label || "").toLowerCase();
   const match = TOOLBAR_ICON_DEFS.find((iconDef) =>
@@ -208,6 +298,89 @@ const installToolbarIconFix = (editor) => {
       style.textContent = `
         .gjs-toolbar, .gjs-toolbar * {
           color: #000000 !important;
+        }
+
+        .gjs-badge,
+        .gjs-com-badge,
+        .gjs-com-badge span,
+        .gjs-com-badge div,
+        .gjs-com-badge i,
+        .gjs-com-badge svg {
+          background: rgba(255, 255, 255, 0.72) !important;
+          color: #0f172a !important;
+          border: 1px solid rgba(255, 255, 255, 0.9) !important;
+          border-radius: 10px !important;
+          padding: 4px 8px !important;
+          font-size: 11px !important;
+          font-weight: 600 !important;
+          letter-spacing: 0.02em !important;
+          box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12),
+            inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+          backdrop-filter: blur(14px) saturate(140%) !important;
+          -webkit-backdrop-filter: blur(14px) saturate(140%) !important;
+        }
+
+        .gjs-badge__name,
+        .gjs-badge__icon {
+          color: inherit !important;
+        }
+
+        .gjs-badge__icon,
+        .gjs-badge__icon svg {
+          display: none !important;
+        }
+
+        .gjs-com-badge,
+        .gjs-badge {
+          outline: none !important;
+          box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12),
+            inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+        }
+
+        .gjs-com-badge [class*="badge"],
+        .gjs-badge [class*="badge"] {
+          background: transparent !important;
+          border: 0 !important;
+          box-shadow: none !important;
+        }
+
+        .gjs-badge::before,
+        .gjs-badge::after,
+        .gjs-com-badge::before,
+        .gjs-com-badge::after {
+          content: none !important;
+          display: none !important;
+        }
+
+        .gjs-badge__icon {
+          width: 0 !important;
+          height: 0 !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          background: none !important;
+          border: 0 !important;
+          box-shadow: none !important;
+        }
+
+        .gjs-badge > *:not(.gjs-badge__name),
+        .gjs-com-badge > *:not(.gjs-badge__name) {
+          display: none !important;
+        }
+
+        .gjs-badge__name::before,
+        .gjs-badge__name::after {
+          content: none !important;
+          display: none !important;
+        }
+
+        .gjs-com-badge [style*="background"],
+        .gjs-badge [style*="background"] {
+          background: transparent !important;
+        }
+
+        .gjs-com-badge [style*="border-radius"],
+        .gjs-badge [style*="border-radius"] {
+          border-radius: 0 !important;
         }
 
         .gjs-toolbar-icn {
@@ -316,6 +489,7 @@ export default function useGrapesBuilder({ onReady, htmlContent } = {}) {
     });
     editorRef.current = editor;
     let cleanupToolbarFix = () => {};
+    let cleanupToolbarBehaviorFixes = () => {};
 
     const activateLayersPanel = () => {
       openLayersPanel();
@@ -325,6 +499,10 @@ export default function useGrapesBuilder({ onReady, htmlContent } = {}) {
       activateLayersPanel();
       applyCanvasScrollbarStyles(editor);
       cleanupToolbarFix = installToolbarIconFix(editor);
+      cleanupToolbarBehaviorFixes = applyToolbarBehaviorFixes(
+        editor,
+        openStylesPanel
+      );
       setIsReady(true);
       onReady?.(editor);
     };
@@ -333,6 +511,7 @@ export default function useGrapesBuilder({ onReady, htmlContent } = {}) {
     editor.on("load", handleLoad);
     return () => {
       cleanupToolbarFix();
+      cleanupToolbarBehaviorFixes();
       editor.off("component:selected", activateLayersPanel);
       editor.off("load", handleLoad);
       editor.destroy();
