@@ -33,6 +33,7 @@
 *::before,
 *::after {
   box-sizing: border-box;
+  font-family: Arial, sans-serif;
 }
 
 html,
@@ -50,6 +51,7 @@ body {
     var(--page-grad-bottom) 100%
   );
   color: #0f172a;
+  font-family: Arial, sans-serif;
 }
 
 body:has(.imageflow-shell) .topbar {
@@ -261,7 +263,7 @@ body:has(.imageflow-builder):not(:has(#imageflow-sidebar-toggle:checked))
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
-  scrollbar-color: rgba(249, 115, 22, 0.55) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.95) rgba(255, 255, 255, 0.75);
 }
 
 .imageflow-sidebar-tools-scroll::-webkit-scrollbar {
@@ -269,12 +271,12 @@ body:has(.imageflow-builder):not(:has(#imageflow-sidebar-toggle:checked))
 }
 
 .imageflow-sidebar-tools-scroll::-webkit-scrollbar-thumb {
-  background: rgba(249, 115, 22, 0.7);
+  background: rgba(255, 255, 255, 0.95);
   border-radius: 999px;
 }
 
 .imageflow-sidebar-tools-scroll::-webkit-scrollbar-track {
-  background: transparent;
+  background: rgba(255, 255, 255, 0.75);
 }
 
 .imageflow-sidebar-tools-scroll .rail-buttons {
@@ -309,9 +311,11 @@ body:has(.imageflow-builder):not(:has(#imageflow-sidebar-toggle:checked))
 
 .imageflow-sidebar-nodes-title {
   font-size: 9px;
+  font-weight: 400;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: rgba(15, 23, 42, 0.45);
+  text-shadow: 0 0 4px rgba(255, 255, 255, 0.5);
 }
 
 .imageflow-sidebar-nodes-list {
@@ -327,9 +331,12 @@ body:has(.imageflow-builder):not(:has(#imageflow-sidebar-toggle:checked))
 
 .imageflow-rail-node {
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 400;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  text-shadow: 0 0 4px rgba(255, 255, 255, 0.55);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.4);
+  border-radius: 999px;
 }
 
 .imageflow-rail-node-label {
@@ -2832,7 +2839,7 @@ div {
   top: 6px;
   bottom: 6px;
   width: 3px;
-  background: #eca26f;
+  background: #ffffff;
   border-radius: 999px;
   transform: translateX(-50%);
 }
@@ -2843,7 +2850,7 @@ div {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: #eca26f;
+  background: #ffffff;
   transform: translate(-50%, 50%);
   pointer-events: auto;
   cursor: grab;
@@ -2852,16 +2859,26 @@ div {
 
 .builder-param-label {
   font-size: 10px;
-  font-weight: 700;
-  color: #000000;
+  font-weight: 400;
+  color: #0f172a;
   letter-spacing: 0.04em;
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 999px;
+  padding: 2px 6px;
+  line-height: 1.2;
 }
 
 .builder-param-value {
   font-size: 10px;
-  font-weight: 700;
-  color: #000000;
+  font-weight: 400;
+  color: #0f172a;
   letter-spacing: 0.04em;
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 999px;
+  padding: 2px 6px;
+  line-height: 1.2;
 }
 
 .imageflow-previews {
@@ -6298,7 +6315,8 @@ div {
 
 .imageflow-builder .gjs-pn-panel {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.8) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.95) rgba(255, 255, 255, 0.7);
+  color: #0f172a;
 }
 
 .imageflow-builder .gjs-pn-panel::-webkit-scrollbar {
@@ -6306,13 +6324,13 @@ div {
 }
 
 .imageflow-builder .gjs-pn-panel::-webkit-scrollbar-track {
-  background: transparent;
+  background: rgba(255, 255, 255, 0.7);
 }
 
 .imageflow-builder .gjs-pn-panel::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.95);
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.7);
 }
 
 /* GrapesJS form controls */

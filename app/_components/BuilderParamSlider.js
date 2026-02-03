@@ -31,10 +31,10 @@ export default function BuilderParamSlider({
 
   const descriptor = useMemo(() => {
     const val = clamp(internalValue);
-    if (val < 25) return "Obedient";
-    if (val < 50) return "Balanced";
-    if (val < 75) return "Creative";
-    return "Bold";
+    if (val < 25) return "Obey";
+    if (val < 50) return "Stable";
+    if (val < 75) return "Bold";
+    return "Free";
   }, [clamp, internalValue]);
 
   const handlePointer = useCallback(
