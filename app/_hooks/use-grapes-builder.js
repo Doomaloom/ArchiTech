@@ -9,6 +9,45 @@ const STARTER_HTML =
 const STARTER_STYLES =
   "body { font-family: 'Inter', system-ui, -apple-system, sans-serif; color: #0f172a; } .hero { background: radial-gradient(circle at 20% 20%, #eef2ff 0, #eef2ff 30%, #e0f2fe 70%, #e0f2fe 100%); padding: 88px 24px; } .hero__inner { max-width: 960px; margin: 0 auto; text-align: center; } .hero__eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; color: #6366f1; } .hero__title { font-size: 48px; font-weight: 700; margin: 18px 0 12px; } .hero__subtitle { font-size: 18px; line-height: 1.6; color: #334155; max-width: 720px; margin: 0 auto 28px; } .hero__actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; } .button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 18px; border-radius: 999px; font-weight: 600; text-decoration: none; } .button--primary { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; box-shadow: 0 12px 30px rgba(99, 102, 241, 0.25); } .button--ghost { border: 1px solid #cbd5e1; color: #0f172a; background: #fff; } .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; padding: 48px 24px; max-width: 960px; margin: 0 auto; } .feature { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06); } .feature h3 { margin: 0 0 10px; font-size: 18px; } .feature p { margin: 0; color: #475569; line-height: 1.5; }";
 
+const TOOLBAR_ICON_DEFS = [
+  {
+    key: "move",
+    keys: ["move", "drag", "arrows", "position"],
+    svg: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'><path d='M12 2v20M2 12h20'/><path d='M12 2l-3 3m3-3 3 3M12 22l-3-3m3 3 3-3M2 12l3-3m-3 3 3 3M22 12l-3-3m3 3-3 3'/></svg>",
+  },
+  {
+    key: "clone",
+    keys: ["clone", "copy", "duplicate"],
+    svg: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'><rect x='9' y='9' width='11' height='11' rx='2'/><path d='M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1'/></svg>",
+  },
+  {
+    key: "delete",
+    keys: ["delete", "trash", "remove"],
+    svg: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'><path d='M4 7h16'/><path d='M9 7V5h6v2'/><path d='M10 11v7m4-7v7'/><path d='M6.5 7l1 12a1.8 1.8 0 0 0 1.8 1.6h6.4a1.8 1.8 0 0 0 1.8-1.6l1-12'/></svg>",
+  },
+  {
+    key: "edit",
+    keys: ["edit", "pencil"],
+    svg: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'><path d='M5 15l-1 5 5-1 9-9-4-4-9 9z'/><path d='M14 6l4 4'/></svg>",
+  },
+  {
+    key: "parent",
+    keys: ["parent", "up", "arrow"],
+    svg: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'><path d='M12 19V5'/><path d='M5 12l7-7 7 7'/></svg>",
+  },
+  {
+    key: "visibility",
+    keys: ["eye", "visibility", "view", "preview"],
+    svg: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'><path d='M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z'/><circle cx='12' cy='12' r='3'/></svg>",
+  },
+  {
+    key: "select",
+    keys: ["select", "square", "frame", "open"],
+    svg: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'><rect x='6' y='6' width='12' height='12' rx='2.4'/></svg>",
+  },
+];
+const TOOLBAR_ICON_FALLBACK = ["move", "edit", "clone", "delete", "parent", "visibility", "select"];
+
 const ensureGrapesStylesheet = () => {
   const existing = document.getElementById("grapesjs-styles");
   if (existing) {
@@ -65,6 +104,167 @@ const applyCanvasScrollbarStyles = (editor) => {
   doc.head.appendChild(style);
 };
 
+const getToolbarIconData = (label, index) => {
+  const normalized = (label || "").toLowerCase();
+  const match = TOOLBAR_ICON_DEFS.find((iconDef) =>
+    iconDef.keys.some((key) => normalized.includes(key))
+  );
+  if (match) {
+    return match;
+  }
+  const fallbackKey = TOOLBAR_ICON_FALLBACK[index % TOOLBAR_ICON_FALLBACK.length];
+  return TOOLBAR_ICON_DEFS.find((iconDef) => iconDef.key === fallbackKey) || TOOLBAR_ICON_DEFS[0];
+};
+
+const buildSvgMask = (svg) =>
+  `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`;
+
+const applyInlineIconStyles = (icon, dataUrl) => {
+  icon.style.setProperty("display", "inline-block");
+  icon.style.setProperty("width", "18px");
+  icon.style.setProperty("height", "18px");
+  icon.style.setProperty("background-color", "#000000");
+  icon.style.setProperty("mask-image", dataUrl);
+  icon.style.setProperty("mask-repeat", "no-repeat");
+  icon.style.setProperty("mask-position", "center");
+  icon.style.setProperty("mask-size", "contain");
+  icon.style.setProperty("-webkit-mask-image", dataUrl);
+  icon.style.setProperty("-webkit-mask-repeat", "no-repeat");
+  icon.style.setProperty("-webkit-mask-position", "center");
+  icon.style.setProperty("-webkit-mask-size", "contain");
+  icon.style.setProperty("pointer-events", "none");
+};
+
+const ensureToolbarIcons = (doc) => {
+  if (!doc) return;
+  const items = doc.querySelectorAll(".gjs-toolbar-item");
+  items.forEach((item, index) => {
+    let icon = item.querySelector(".gjs-toolbar-icn");
+    if (!icon) {
+      icon = doc.createElement("span");
+      icon.className = "gjs-toolbar-icn";
+      item.appendChild(icon);
+    }
+    const label =
+      item.getAttribute("data-command") ||
+      item.getAttribute("data-title") ||
+      item.getAttribute("title") ||
+      item.getAttribute("aria-label") ||
+      item.textContent ||
+      "";
+    const iconDef = getToolbarIconData(label, index);
+    icon.dataset.gjsIcon = iconDef.key;
+    const maskUrl = buildSvgMask(iconDef.svg);
+    icon.style.setProperty("--gjs-icon", maskUrl);
+    applyInlineIconStyles(icon, maskUrl);
+    item
+      .querySelectorAll("svg")
+      .forEach((svg) => svg.style.setProperty("display", "none", "important"));
+  });
+};
+
+const forceToolbarIconStyles = (doc) => {
+  if (!doc) return;
+  const toolbar = doc.querySelector(".gjs-toolbar");
+  if (toolbar) {
+    toolbar.style.setProperty("color", "#000000", "important");
+  }
+  const items = doc.querySelectorAll(".gjs-toolbar-item");
+  items.forEach((item) => {
+    item.style.setProperty("color", "#000000", "important");
+  });
+  const svgNodes = doc.querySelectorAll(".gjs-toolbar-item svg, .gjs-toolbar-item svg *");
+  svgNodes.forEach((node) => {
+    node.style.setProperty("fill", "#000000", "important");
+    node.style.setProperty("stroke", "#000000", "important");
+    node.style.setProperty("stroke-width", "1.1", "important");
+    node.style.setProperty("filter", "brightness(0) saturate(100%)", "important");
+  });
+  const iconNodes = doc.querySelectorAll(
+    ".gjs-toolbar-item i, .gjs-toolbar-item .fa, .gjs-toolbar-item span, .gjs-toolbar-item [class*='fa-']"
+  );
+  iconNodes.forEach((node) => {
+    node.style.setProperty("color", "#000000", "important");
+    node.style.setProperty("-webkit-text-fill-color", "#000000", "important");
+    node.style.setProperty("filter", "brightness(0) saturate(100%)", "important");
+  });
+};
+
+const installToolbarIconFix = (editor) => {
+  const docs = [];
+  if (typeof document !== "undefined") {
+    docs.push(document);
+  }
+  const canvasDoc = editor?.Canvas?.getDocument?.();
+  if (canvasDoc) {
+    docs.push(canvasDoc);
+  }
+  const observers = [];
+  docs.forEach((doc, index) => {
+    const styleId = `gjs-toolbar-force-black-${index}`;
+    if (!doc.getElementById(styleId)) {
+      const style = doc.createElement("style");
+      style.id = styleId;
+      style.textContent = `
+        .gjs-toolbar, .gjs-toolbar * {
+          color: #000000 !important;
+        }
+
+        .gjs-toolbar-icn {
+          width: 18px;
+          height: 18px;
+          display: inline-block;
+          background-color: #000000 !important;
+          mask-image: var(--gjs-icon);
+          mask-repeat: no-repeat;
+          mask-position: center;
+          mask-size: contain;
+          -webkit-mask-image: var(--gjs-icon);
+          -webkit-mask-repeat: no-repeat;
+          -webkit-mask-position: center;
+          -webkit-mask-size: contain;
+          pointer-events: none;
+        }
+
+        .gjs-toolbar-item svg,
+        .gjs-toolbar-item svg * {
+          fill: #000000 !important;
+          stroke: #000000 !important;
+          stroke-width: 1.1 !important;
+          filter: brightness(0) saturate(100%) !important;
+        }
+
+        .gjs-toolbar-item i,
+        .gjs-toolbar-item .fa,
+        .gjs-toolbar-item span,
+        .gjs-toolbar-item [class*='fa-'] {
+          color: #000000 !important;
+          -webkit-text-fill-color: #000000 !important;
+          filter: brightness(0) saturate(100%) !important;
+        }
+      `;
+      doc.head.appendChild(style);
+    }
+    ensureToolbarIcons(doc);
+    forceToolbarIconStyles(doc);
+    const observer = new MutationObserver(() => {
+      ensureToolbarIcons(doc);
+      forceToolbarIconStyles(doc);
+    });
+    observer.observe(doc.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["style", "class", "fill", "stroke", "color"],
+    });
+    observers.push(observer);
+  });
+
+  return () => {
+    observers.forEach((observer) => observer.disconnect());
+  };
+};
+
 export default function useGrapesBuilder({ onReady, htmlContent } = {}) {
   const containerRef = useRef(null);
   const editorRef = useRef(null);
@@ -115,6 +315,7 @@ export default function useGrapesBuilder({ onReady, htmlContent } = {}) {
       },
     });
     editorRef.current = editor;
+    let cleanupToolbarFix = () => {};
 
     const activateLayersPanel = () => {
       openLayersPanel();
@@ -123,6 +324,7 @@ export default function useGrapesBuilder({ onReady, htmlContent } = {}) {
     const handleLoad = () => {
       activateLayersPanel();
       applyCanvasScrollbarStyles(editor);
+      cleanupToolbarFix = installToolbarIconFix(editor);
       setIsReady(true);
       onReady?.(editor);
     };
@@ -130,6 +332,7 @@ export default function useGrapesBuilder({ onReady, htmlContent } = {}) {
     editor.on("component:selected", activateLayersPanel);
     editor.on("load", handleLoad);
     return () => {
+      cleanupToolbarFix();
       editor.off("component:selected", activateLayersPanel);
       editor.off("load", handleLoad);
       editor.destroy();
