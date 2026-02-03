@@ -72,10 +72,46 @@ const RestartIcon = (
   </svg>
 );
 
+const LayersIcon = (
+  <svg className="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+    <path
+      d="M4 9l8-4 8 4-8 4-8-4z"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M4 15l8 4 8-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const BrushIcon = (
+  <svg className="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+    <path
+      d="M4 7h16M4 12h16M4 17h16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+    />
+    <rect x="7" y="6" width="3" height="2" rx="0.7" fill="none" stroke="currentColor" strokeWidth="1.6" />
+    <rect x="14" y="11" width="3" height="2" rx="0.7" fill="none" stroke="currentColor" strokeWidth="1.6" />
+    <rect x="10" y="16" width="3" height="2" rx="0.7" fill="none" stroke="currentColor" strokeWidth="1.6" />
+  </svg>
+);
+
 export default function BuilderSidebarRail({
   annotations,
   builderTuningValue,
   onBuilderTuningChange,
+  onOpenLayers = () => {},
+  onOpenStyles = () => {},
 }) {
   const { state } = useImageToSite();
   const [slot, setSlot] = useState(null);
@@ -170,6 +206,31 @@ export default function BuilderSidebarRail({
                 >
                   {RestartIcon}
                 </button>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 10,
+                    alignItems: "center",
+                  }}
+                >
+                  <button
+                    className="rail-button"
+                    type="button"
+                    onClick={onOpenLayers}
+                    aria-label="Open layers"
+                  >
+                    {LayersIcon}
+                  </button>
+                  <button
+                    className="rail-button"
+                    type="button"
+                    onClick={onOpenStyles}
+                    aria-label="Open styles"
+                  >
+                    {BrushIcon}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

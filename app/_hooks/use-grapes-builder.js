@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import grapesjs from "grapesjs";
 
 const GRAPES_CSS_URL = "https://unpkg.com/grapesjs/dist/css/grapes.min.css";
@@ -38,11 +38,58 @@ const parseHtmlContent = (html) => {
   };
 };
 
+const applyCanvasScrollbarStyles = (editor) => {
+  const doc = editor?.Canvas?.getDocument?.();
+  if (!doc) return;
+  if (doc.getElementById("gjs-canvas-scrollbar")) return;
+  const style = doc.createElement("style");
+  style.id = "gjs-canvas-scrollbar";
+  style.textContent = `
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255,255,255,0.85) rgba(255, 255, 255, 0.4);
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgb(255, 255, 255);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.85);
+      border-radius: 999px;
+      border: 1px solid rgb(255, 255, 255);
+    }
+  `;
+  doc.head.appendChild(style);
+};
+
 export default function useGrapesBuilder({ onReady, htmlContent } = {}) {
   const containerRef = useRef(null);
   const editorRef = useRef(null);
   const lastHtmlRef = useRef("");
   const [isReady, setIsReady] = useState(false);
+
+  const openLayersPanel = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    ["open-blocks", "open-sm", "open-tm"].forEach((btnId) =>
+      editor.Panels?.getButton?.("views", btnId)?.set?.("active", false)
+    );
+    editor.Panels?.getButton?.("views", "open-layers")?.set?.("active", true);
+    editor.Commands?.run?.("open-layers");
+  }, []);
+
+  const openStylesPanel = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    ["open-blocks", "open-layers", "open-tm"].forEach((btnId) =>
+      editor.Panels?.getButton?.("views", btnId)?.set?.("active", false)
+    );
+    editor.Panels?.getButton?.("views", "open-sm")?.set?.("active", true);
+    editor.Commands?.run?.("open-sm");
+  }, []);
 
   useEffect(() => {
     if (editorRef.current || !containerRef.current) {
@@ -68,12 +115,22 @@ export default function useGrapesBuilder({ onReady, htmlContent } = {}) {
       },
     });
     editorRef.current = editor;
+
+    const activateLayersPanel = () => {
+      openLayersPanel();
+    };
+
     const handleLoad = () => {
+      activateLayersPanel();
+      applyCanvasScrollbarStyles(editor);
       setIsReady(true);
       onReady?.(editor);
     };
+
+    editor.on("component:selected", activateLayersPanel);
     editor.on("load", handleLoad);
     return () => {
+      editor.off("component:selected", activateLayersPanel);
       editor.off("load", handleLoad);
       editor.destroy();
       editorRef.current = null;
@@ -95,5 +152,11 @@ export default function useGrapesBuilder({ onReady, htmlContent } = {}) {
     lastHtmlRef.current = nextHtml;
   }, [htmlContent, isReady]);
 
-  return { containerRef, editor: editorRef.current, isReady };
+  return {
+    containerRef,
+    editor: editorRef.current,
+    isReady,
+    openLayersPanel,
+    openStylesPanel,
+  };
 }

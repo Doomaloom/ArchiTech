@@ -57,7 +57,7 @@ const adjustTextareaSize = (element) => {
 
 export default function BuilderView() {
   const { state, actions } = useImageToSite();
-  const { containerRef, isReady } = useGrapesBuilder({
+  const { containerRef, isReady, openLayersPanel, openStylesPanel } = useGrapesBuilder({
     htmlContent: state.builderHtml,
   });
   const annotations = useBuilderAnnotations();
@@ -124,6 +124,8 @@ export default function BuilderView() {
         annotations={annotations}
         builderTuningValue={state.builderTuningValue}
         onBuilderTuningChange={actions.setBuilderTuningValue}
+        onOpenLayers={openLayersPanel}
+        onOpenStyles={openStylesPanel}
       />
       <div className="imageflow-builder-stage" aria-busy={!isReady}>
         <div className="imageflow-builder-canvas" ref={containerRef} />

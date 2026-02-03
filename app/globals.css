@@ -2788,7 +2788,7 @@ body:has(.imageflow-builder):has(#imageflow-sidebar-toggle:checked)
   top: 6px;
   bottom: 6px;
   width: 3px;
-  background: #f59e0b;
+  background: #eca26f;
   border-radius: 999px;
   transform: translateX(-50%);
 }
@@ -2799,7 +2799,7 @@ body:has(.imageflow-builder):has(#imageflow-sidebar-toggle:checked)
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: #f59e0b;
+  background: #eca26f;
   transform: translate(-50%, 50%);
   pointer-events: auto;
   cursor: grab;
@@ -2809,14 +2809,14 @@ body:has(.imageflow-builder):has(#imageflow-sidebar-toggle:checked)
 .builder-param-label {
   font-size: 10px;
   font-weight: 700;
-  color: #b45309;
+  color: #000000;
   letter-spacing: 0.04em;
 }
 
 .builder-param-value {
   font-size: 10px;
   font-weight: 700;
-  color: #b45309;
+  color: #000000;
   letter-spacing: 0.04em;
 }
 
@@ -6107,6 +6107,14 @@ body:has(.imageflow-builder):has(#imageflow-sidebar-toggle:checked)
   background: transparent;
 }
 
+.builder-annotation-file-input {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* GrapesJS theme overrides (builder) */
 .imageflow-builder {
   --gjs-quaternary-color: black !important;
@@ -6137,6 +6145,80 @@ body:has(.imageflow-builder):has(#imageflow-sidebar-toggle:checked)
 .imageflow-builder .gjs-editor,
 .imageflow-builder .gjs-editor * {
   font-family: var(--gjs-editor-font) !important;
+}
+
+/* GrapesJS layout overrides to remove default headbars and keep panel content */
+.imageflow-builder .gjs-pn-options,
+.imageflow-builder .gjs-pn-commands,
+.imageflow-builder .gjs-pn-devices-c {
+  display: none !important;
+}
+
+.imageflow-builder .gjs-pn-views {
+  height: 0 !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+}
+
+.imageflow-builder .gjs-pn-views .gjs-pn-btn {
+  display: none !important;
+}
+
+.imageflow-builder .gjs-pn-views-container {
+  top: 0 !important;
+  height: 100% !important;
+}
+
+.imageflow-builder .gjs-editor {
+  height: 100% !important;
+  min-height: 100%;
+  background: transparent;
+}
+
+.imageflow-builder .gjs-canvas,
+.imageflow-builder .gjs-cv-canvas,
+.imageflow-builder .gjs-frame-wrapper,
+.imageflow-builder .gjs-frames {
+  height: 100% !important;
+  min-height: 100%;
+}
+
+.imageflow-builder .gjs-editor-cont,
+.imageflow-builder .gjs-cv-canvas,
+.imageflow-builder .gjs-canvas {
+  padding-top: 0 !important;
+  top: 0 !important;
+}
+
+.imageflow-builder-canvas {
+  display: flex;
+}
+
+.imageflow-builder-canvas .gjs-editor {
+  flex: 1;
+}
+
+.imageflow-builder .gjs-pn-panel {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.8) transparent;
+}
+
+.imageflow-builder .gjs-pn-panel::-webkit-scrollbar {
+  width: 6px;
+}
+
+.imageflow-builder .gjs-pn-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.imageflow-builder .gjs-pn-panel::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
 }
 
 /* GrapesJS form controls */
