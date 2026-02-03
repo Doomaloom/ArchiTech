@@ -106,10 +106,57 @@ const BrushIcon = (
   </svg>
 );
 
+const BlocksIcon = (
+  <svg className="button-icon" viewBox="0 0 24 24" aria-hidden="true">
+    <rect
+      x="4"
+      y="4"
+      width="7"
+      height="7"
+      rx="1.4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+    />
+    <rect
+      x="13"
+      y="4"
+      width="7"
+      height="7"
+      rx="1.4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+    />
+    <rect
+      x="4"
+      y="13"
+      width="7"
+      height="7"
+      rx="1.4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+    />
+    <rect
+      x="13"
+      y="13"
+      width="7"
+      height="7"
+      rx="1.4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+    />
+  </svg>
+);
+
 export default function BuilderSidebarRail({
   annotations,
   builderTuningValue,
   onBuilderTuningChange,
+  activePanel = "open-layers",
+  onOpenBlocks = () => {},
   onOpenLayers = () => {},
   onOpenStyles = () => {},
 }) {
@@ -123,6 +170,16 @@ export default function BuilderSidebarRail({
   if (state.viewMode !== "builder" || !slot) {
     return null;
   }
+
+  const panelOptions = [
+    { id: "open-blocks", label: "Blocks", onSelect: onOpenBlocks, icon: BlocksIcon },
+    { id: "open-layers", label: "Layers", onSelect: onOpenLayers, icon: LayersIcon },
+    { id: "open-sm", label: "Styles", onSelect: onOpenStyles, icon: BrushIcon },
+  ];
+  const activeIndex = Math.max(
+    0,
+    panelOptions.findIndex((option) => option.id === activePanel)
+  );
 
   return createPortal(
     <div className="imageflow-sidebar-panel" aria-label="Builder tools">
@@ -207,29 +264,27 @@ export default function BuilderSidebarRail({
                   {RestartIcon}
                 </button>
                 <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 10,
-                    alignItems: "center",
-                  }}
+                  className="builder-panel-toggle"
+                  role="radiogroup"
+                  aria-label="Builder panels"
+                  style={{ "--toggle-index": activeIndex }}
                 >
-                  <button
-                    className="rail-button"
-                    type="button"
-                    onClick={onOpenLayers}
-                    aria-label="Open layers"
-                  >
-                    {LayersIcon}
-                  </button>
-                  <button
-                    className="rail-button"
-                    type="button"
-                    onClick={onOpenStyles}
-                    aria-label="Open styles"
-                  >
-                    {BrushIcon}
-                  </button>
+                  <span className="builder-panel-toggle-indicator" aria-hidden="true" />
+                  {panelOptions.map((option) => (
+                    <button
+                      key={option.id}
+                      className={`builder-panel-toggle-button${
+                        activePanel === option.id ? " is-active" : ""
+                      }`}
+                      type="button"
+                      role="radio"
+                      aria-checked={activePanel === option.id}
+                      aria-label={`Open ${option.label.toLowerCase()}`}
+                      onClick={option.onSelect}
+                    >
+                      {option.icon}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>

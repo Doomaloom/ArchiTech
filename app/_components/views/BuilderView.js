@@ -57,9 +57,14 @@ const adjustTextareaSize = (element) => {
 
 export default function BuilderView() {
   const { state, actions } = useImageToSite();
-  const { containerRef, isReady, openLayersPanel, openStylesPanel } = useGrapesBuilder({
-    htmlContent: state.builderHtml,
-  });
+  const {
+    containerRef,
+    isReady,
+    activePanel,
+    openBlocksPanel,
+    openLayersPanel,
+    openStylesPanel,
+  } = useGrapesBuilder({ htmlContent: state.builderHtml });
   const annotations = useBuilderAnnotations();
   const fileInputRef = useRef(null);
   const [hoveredAnnotationId, setHoveredAnnotationId] = useState(null);
@@ -124,6 +129,8 @@ export default function BuilderView() {
         annotations={annotations}
         builderTuningValue={state.builderTuningValue}
         onBuilderTuningChange={actions.setBuilderTuningValue}
+        activePanel={activePanel}
+        onOpenBlocks={openBlocksPanel}
         onOpenLayers={openLayersPanel}
         onOpenStyles={openStylesPanel}
       />

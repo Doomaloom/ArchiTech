@@ -2,6 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import grapesjs from "grapesjs";
+import blocksBasic from "grapesjs-blocks-basic";
+import flexboxBlocks from "grapesjs-blocks-flexbox";
+import formsPlugin from "grapesjs-plugin-forms";
+import navbarPlugin from "grapesjs-navbar";
+import tabsPlugin from "grapesjs-tabs";
 import { STARTER_HTML, STARTER_STYLES } from "./../_lib/grapes-default-template";
 
 const GRAPES_CSS_URL = "https://unpkg.com/grapesjs/dist/css/grapes.min.css";
@@ -100,6 +105,44 @@ const applyCanvasScrollbarStyles = (editor) => {
   `;
   doc.head.appendChild(style);
 };
+
+const FLEXBOX_BLOCK_MEDIA = `
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.6" />
+    <path d="M8 5v14M16 5v14" fill="none" stroke="currentColor" stroke-width="1.6" />
+  </svg>
+`;
+
+const buildGrapesPlugins = () => [
+  (editor) => {
+    blocksBasic(editor, { flexGrid: true });
+  },
+  (editor) => {
+    flexboxBlocks(editor, {
+      stylePrefix: "gjs-",
+      flexboxBlock: {
+        category: "Layout",
+        label: "Flexbox",
+        media: FLEXBOX_BLOCK_MEDIA,
+      },
+    });
+  },
+  (editor) => {
+    formsPlugin(editor, {
+      category: { id: "forms", label: "Forms" },
+    });
+  },
+  (editor) => {
+    navbarPlugin(editor, {
+      block: { category: "Extra" },
+    });
+  },
+  (editor) => {
+    tabsPlugin(editor, {
+      tabsBlock: { category: "Extra" },
+    });
+  },
+];
 
 const normalizeToolbarLabel = (label) =>
   typeof label === "string" ? label.toLowerCase() : "";
@@ -631,26 +674,32 @@ export default function useGrapesBuilder({ onReady, htmlContent } = {}) {
   const editorRef = useRef(null);
   const lastHtmlRef = useRef("");
   const [isReady, setIsReady] = useState(false);
+  const [activePanel, setActivePanel] = useState("open-layers");
 
-  const openLayersPanel = useCallback(() => {
+  const activatePanel = useCallback((panelId) => {
+    setActivePanel(panelId);
     const editor = editorRef.current;
     if (!editor) return;
-    ["open-blocks", "open-sm", "open-tm"].forEach((btnId) =>
-      editor.Panels?.getButton?.("views", btnId)?.set?.("active", false)
+    ["open-blocks", "open-layers", "open-sm", "open-tm"].forEach((btnId) =>
+      editor.Panels?.getButton?.("views", btnId)?.set?.("active", btnId === panelId)
     );
-    editor.Panels?.getButton?.("views", "open-layers")?.set?.("active", true);
-    editor.Commands?.run?.("open-layers");
-  }, []);
+    editor.Commands?.run?.(panelId);
+  }, [setActivePanel]);
 
-  const openStylesPanel = useCallback(() => {
-    const editor = editorRef.current;
-    if (!editor) return;
-    ["open-blocks", "open-layers", "open-tm"].forEach((btnId) =>
-      editor.Panels?.getButton?.("views", btnId)?.set?.("active", false)
-    );
-    editor.Panels?.getButton?.("views", "open-sm")?.set?.("active", true);
-    editor.Commands?.run?.("open-sm");
-  }, []);
+  const openBlocksPanel = useCallback(
+    () => activatePanel("open-blocks"),
+    [activatePanel]
+  );
+
+  const openLayersPanel = useCallback(
+    () => activatePanel("open-layers"),
+    [activatePanel]
+  );
+
+  const openStylesPanel = useCallback(
+    () => activatePanel("open-sm"),
+    [activatePanel]
+  );
 
   useEffect(() => {
     if (editorRef.current || !containerRef.current) {
@@ -663,10 +712,7 @@ export default function useGrapesBuilder({ onReady, htmlContent } = {}) {
       width: "100%",
       storageManager: false,
       fromElement: false,
-      plugins: ["gjs-blocks-basic"],
-      pluginsOpts: {
-        "gjs-blocks-basic": { flexGrid: true },
-      },
+      plugins: buildGrapesPlugins(),
       components: STARTER_HTML,
       style: STARTER_STYLES,
       canvas: {
@@ -729,6 +775,8 @@ export default function useGrapesBuilder({ onReady, htmlContent } = {}) {
     containerRef,
     editor: editorRef.current,
     isReady,
+    activePanel,
+    openBlocksPanel,
     openLayersPanel,
     openStylesPanel,
   };

@@ -29,13 +29,6 @@ export default function BuilderParamSlider({
     return ((clamp(internalValue) - min) / range) * 100;
   }, [clamp, internalValue, min, max]);
 
-  const descriptor = useMemo(() => {
-    const val = clamp(internalValue);
-    if (val < 25) return "Obey";
-    if (val < 50) return "Stable";
-    if (val < 75) return "Bold";
-    return "Free";
-  }, [clamp, internalValue]);
 
   const handlePointer = useCallback(
     (clientY) => {
@@ -135,7 +128,6 @@ export default function BuilderParamSlider({
           onPointerDown={handlePointerDown}
         />
       </div>
-      <span className="builder-param-label">{descriptor || label}</span>
       <span className="builder-param-value">{Math.round(internalValue)}%</span>
     </div>
   );
