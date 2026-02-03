@@ -1213,6 +1213,14 @@ div {
   background: rgba(255, 255, 255, 0.8);
 }
 
+.imageflow-builder .gjs-color-warn, .imageflow-builder .gjs-color-warn svg, .imageflow-builder .gjs-color-warn path {
+    color: #000000 !important;
+    fill: none !important;
+    stroke: none !important;
+    text-shadow: none;
+    filter: drop-shadow(0 0 8px rgba(255, 216, 77, 0.7));
+}
+
 .page2-body {
   flex: 1;
   min-height: 0;
