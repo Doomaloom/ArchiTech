@@ -2,12 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import grapesjs from "grapesjs";
+import { STARTER_HTML, STARTER_STYLES } from "./../_lib/grapes-default-template";
 
 const GRAPES_CSS_URL = "https://unpkg.com/grapesjs/dist/css/grapes.min.css";
-const STARTER_HTML =
-  '<section class="hero"><div class="hero__inner"><p class="hero__eyebrow">New template</p><h1 class="hero__title">Launch a page in minutes</h1><p class="hero__subtitle">Drag blocks, swap text, and publish a polished landing page without leaving this workspace.</p><div class="hero__actions"><a class="button button--primary" href="#">Get started</a><a class="button button--ghost" href="#">Live demo</a></div></div></section><section class="features"><div class="feature"><h3>Composable blocks</h3><p>Pick from a focused set of layout blocks optimized for quick iteration.</p></div><div class="feature"><h3>Responsive by default</h3><p>Design once and preview across breakpoints with the built-in device toolbar.</p></div><div class="feature"><h3>Code friendly</h3><p>Export clean HTML/CSS when you are ready to push to the code editor.</p></div></section>';
-const STARTER_STYLES =
-  "body { font-family: 'Inter', system-ui, -apple-system, sans-serif; color: #0f172a; } .hero { background: radial-gradient(circle at 20% 20%, #eef2ff 0, #eef2ff 30%, #e0f2fe 70%, #e0f2fe 100%); padding: 88px 24px; } .hero__inner { max-width: 960px; margin: 0 auto; text-align: center; } .hero__eyebrow { text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; color: #6366f1; } .hero__title { font-size: 48px; font-weight: 700; margin: 18px 0 12px; } .hero__subtitle { font-size: 18px; line-height: 1.6; color: #334155; max-width: 720px; margin: 0 auto 28px; } .hero__actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; } .button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 18px; border-radius: 999px; font-weight: 600; text-decoration: none; } .button--primary { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; box-shadow: 0 12px 30px rgba(99, 102, 241, 0.25); } .button--ghost { border: 1px solid #cbd5e1; color: #0f172a; background: #fff; } .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; padding: 48px 24px; max-width: 960px; margin: 0 auto; } .feature { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06); } .feature h3 { margin: 0 0 10px; font-size: 18px; } .feature p { margin: 0; color: #475569; line-height: 1.5; }";
 
 const TOOLBAR_ICON_DEFS = [
   {

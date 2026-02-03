@@ -9,6 +9,10 @@ import useIterationState from "./image-to-site/use-iteration-state";
 import useNodeGraph from "./use-node-graph";
 import usePreviewSettings from "./use-preview-settings";
 import useViewMode from "./use-view-mode";
+import {
+  DEFAULT_PREVIEW_ITEMS,
+  DEFAULT_STRUCTURE_FLOW,
+} from "./../_lib/google-preview-defaults";
 
 const PREVIEW_ZOOM_MIN = 0.6;
 const PREVIEW_ZOOM_MAX = 1;
@@ -109,16 +113,22 @@ export default function useImageToSiteState() {
     setViewMode: viewMode.setViewMode,
     currentViewMode: viewMode.viewMode,
   });
-  const [previewItems, setPreviewItems] = useState(() =>
-    normalizePreviewItems([], previewSettings.state.previewCount)
+  const initialPreviewItems = normalizePreviewItems(
+    DEFAULT_PREVIEW_ITEMS,
+    previewSettings.state.previewCount
   );
-  const [builderHtml, setBuilderHtml] = useState("");
+  const [previewItems, setPreviewItems] = useState(() => initialPreviewItems);
+  const [builderHtml, setBuilderHtml] = useState(
+    () => initialPreviewItems[previewSettings.state.selectedPreviewIndex]?.html || ""
+  );
   const [previewZoom, setPreviewZoom] = useState(PREVIEW_ZOOM_MAX);
   const [previewError, setPreviewError] = useState("");
   const [isGeneratingPreviews, setIsGeneratingPreviews] = useState(false);
   const [modelQuality, setModelQuality] = useState("flash");
   const [creativityValue, setCreativityValue] = useState(40);
-  const [structureFlow, setStructureFlow] = useState(null);
+  const [structureFlow, setStructureFlow] = useState(
+    () => DEFAULT_STRUCTURE_FLOW
+  );
   const [showComponents, setShowComponents] = useState(false);
   const [isGeneratingStructure, setIsGeneratingStructure] = useState(false);
   const [generationError, setGenerationError] = useState("");
