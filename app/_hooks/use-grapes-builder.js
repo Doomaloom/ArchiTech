@@ -191,6 +191,189 @@ const applyToolbarBehaviorFixes = (editor, openStylesPanel) => {
   };
 };
 
+const RTE_TOOLBAR_OFFSET = 2;
+const RTE_TOOLBAR_Z_INDEX = 60;
+const RTE_TOOLBAR_SELECTOR =
+  ".gjs-rte-toolbar.gjs-one-bg.gjs-rte-toolbar-ui";
+
+const getRteToolbarElement = (editor, rte) => {
+  const actionbar = rte?.actionbarEl?.();
+  if (actionbar) {
+    if (actionbar.classList?.contains("gjs-rte-toolbar")) {
+      return actionbar;
+    }
+    const toolbar = actionbar.closest?.(".gjs-rte-toolbar");
+    if (toolbar) {
+      return toolbar;
+    }
+    if (actionbar.parentElement?.classList?.contains("gjs-rte-toolbar")) {
+      return actionbar.parentElement;
+    }
+  }
+  const frameDoc = editor?.Canvas?.getDocument?.();
+  const frameToolbar =
+    frameDoc?.querySelector?.(RTE_TOOLBAR_SELECTOR) ||
+    frameDoc?.querySelector?.(".gjs-rte-toolbar");
+  if (frameToolbar) {
+    return frameToolbar;
+  }
+  if (typeof document !== "undefined") {
+    return (
+      document.querySelector(RTE_TOOLBAR_SELECTOR) ||
+      document.querySelector(".gjs-rte-toolbar")
+    );
+  }
+  return null;
+};
+
+const getRteReferenceRect = (editor, view, toolbar) => {
+  if (!editor || !view?.el || !toolbar) return null;
+  const toolbarDoc = toolbar.ownerDocument;
+  const highlighter =
+    editor.Canvas?.getHighlighter?.(view) || editor.Canvas?.getHighlighter?.();
+  if (highlighter && highlighter.ownerDocument === toolbarDoc) {
+    return highlighter.getBoundingClientRect();
+  }
+
+  const targetRect = view.el.getBoundingClientRect();
+  const frameEl = editor.Canvas?.getFrameEl?.();
+  const frameDoc = editor.Canvas?.getDocument?.();
+  if (!frameEl || !frameDoc || toolbarDoc === frameDoc) {
+    return targetRect;
+  }
+
+  const frameRect = frameEl.getBoundingClientRect();
+  const scale =
+    frameEl.offsetHeight && frameRect.height
+      ? frameRect.height / frameEl.offsetHeight
+      : 1;
+
+  return {
+    top: frameRect.top + targetRect.top * scale,
+    bottom: frameRect.top + targetRect.bottom * scale,
+    left: frameRect.left + targetRect.left * scale,
+    right: frameRect.left + targetRect.right * scale,
+  };
+};
+
+const positionRteToolbarBelow = (editor, view, rte) => {
+  if (!editor || !view?.el || !rte) return;
+  const toolbar = getRteToolbarElement(editor, rte);
+  if (!toolbar) return;
+  const referenceRect = getRteReferenceRect(editor, view, toolbar);
+  if (!referenceRect) return;
+  const offsetParent = toolbar.offsetParent;
+  const parentRect = offsetParent?.getBoundingClientRect?.() || { top: 0 };
+  const nextTop =
+    referenceRect.bottom - parentRect.top + RTE_TOOLBAR_OFFSET;
+  if (!Number.isFinite(nextTop)) return;
+  toolbar.style.setProperty("top", `${Math.round(nextTop)}px`, "important");
+  toolbar.style.setProperty("bottom", "auto", "important");
+  toolbar.style.setProperty(
+    "z-index",
+    String(RTE_TOOLBAR_Z_INDEX),
+    "important"
+  );
+};
+
+const installRteToolbarPositionFix = (editor) => {
+  if (!editor) return () => {};
+  let activeView = null;
+  let activeRte = null;
+  let rafId = null;
+  let observer = null;
+  let observedToolbar = null;
+  let isApplying = false;
+
+  const ensureObserver = () => {
+    const toolbar = getRteToolbarElement(editor, activeRte);
+    if (!toolbar || toolbar === observedToolbar) {
+      return;
+    }
+    if (observer) {
+      observer.disconnect();
+    }
+    observedToolbar = toolbar;
+    observer = new MutationObserver(() => {
+      if (isApplying) return;
+      scheduleUpdate();
+    });
+    observer.observe(toolbar, {
+      attributes: true,
+      attributeFilter: ["style", "class"],
+    });
+  };
+
+  const scheduleUpdate = () => {
+    if (!activeView || !activeRte) return;
+    ensureObserver();
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+    }
+    rafId = requestAnimationFrame(() => {
+      rafId = null;
+      isApplying = true;
+      positionRteToolbarBelow(editor, activeView, activeRte);
+      isApplying = false;
+    });
+  };
+
+  const handleEnable = (view, rte) => {
+    activeView = view;
+    activeRte = rte;
+    scheduleUpdate();
+    setTimeout(() => {
+      scheduleUpdate();
+    }, 0);
+  };
+
+  const handleDisable = () => {
+    activeView = null;
+    activeRte = null;
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+    if (observer) {
+      observer.disconnect();
+      observer = null;
+      observedToolbar = null;
+    }
+  };
+
+  editor.on("rte:enable", handleEnable);
+  editor.on("rte:disable", handleDisable);
+  editor.on("component:input", scheduleUpdate);
+  editor.on("component:resize", scheduleUpdate);
+
+  const frameWindow = editor.Canvas?.getWindow?.();
+  if (frameWindow) {
+    frameWindow.addEventListener("scroll", scheduleUpdate, true);
+  }
+  if (typeof window !== "undefined") {
+    window.addEventListener("resize", scheduleUpdate);
+  }
+
+  return () => {
+    editor.off("rte:enable", handleEnable);
+    editor.off("rte:disable", handleDisable);
+    editor.off("component:input", scheduleUpdate);
+    editor.off("component:resize", scheduleUpdate);
+    if (frameWindow) {
+      frameWindow.removeEventListener("scroll", scheduleUpdate, true);
+    }
+    if (typeof window !== "undefined") {
+      window.removeEventListener("resize", scheduleUpdate);
+    }
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+    }
+    if (observer) {
+      observer.disconnect();
+    }
+  };
+};
+
 const getToolbarIconData = (label, index) => {
   const normalized = (label || "").toLowerCase();
   const match = TOOLBAR_ICON_DEFS.find((iconDef) =>
@@ -495,6 +678,7 @@ export default function useGrapesBuilder({ onReady, htmlContent } = {}) {
     editorRef.current = editor;
     let cleanupToolbarFix = () => {};
     let cleanupToolbarBehaviorFixes = () => {};
+    let cleanupRteToolbarFix = () => {};
 
     const activateLayersPanel = () => {
       openLayersPanel();
@@ -508,6 +692,7 @@ export default function useGrapesBuilder({ onReady, htmlContent } = {}) {
         editor,
         openStylesPanel
       );
+      cleanupRteToolbarFix = installRteToolbarPositionFix(editor);
       setIsReady(true);
       onReady?.(editor);
     };
@@ -517,6 +702,7 @@ export default function useGrapesBuilder({ onReady, htmlContent } = {}) {
     return () => {
       cleanupToolbarFix();
       cleanupToolbarBehaviorFixes();
+      cleanupRteToolbarFix();
       editor.off("component:selected", activateLayersPanel);
       editor.off("load", handleLoad);
       editor.destroy();
