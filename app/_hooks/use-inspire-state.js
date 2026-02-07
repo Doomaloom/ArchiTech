@@ -169,6 +169,9 @@ export default function useInspireState() {
   const [previewItems, setPreviewItems] = useState([]);
   const [previewError, setPreviewError] = useState("");
   const [isGeneratingPreviews, setIsGeneratingPreviews] = useState(false);
+  const [isApplyingMaskEdit, setIsApplyingMaskEdit] = useState(false);
+  const [isFinalizingPreview, setIsFinalizingPreview] = useState(false);
+  const [previewMode, setPreviewMode] = useState("image");
   const [previewCount, setPreviewCount] = useState(3);
   const [modelQuality, setModelQuality] = useState("flash");
   const [creativityValue, setCreativityValue] = useState(45);
@@ -200,6 +203,7 @@ export default function useInspireState() {
     setSelectedNodeId(null);
     setPreviewItems([]);
     setPreviewError("");
+    setWorkspaceMask(null);
   }, []);
 
   const loadStyleIdeas = useCallback(async () => {
@@ -297,6 +301,7 @@ export default function useInspireState() {
         imageUrl: null,
         html: null,
         plan: null,
+        renderError: null,
       }))
     );
 
@@ -310,7 +315,7 @@ export default function useInspireState() {
           count,
           quality: modelQuality,
           creativity: creativityValue,
-          renderMode: "html",
+          previewMode,
           nodeContext,
           brief,
           style: selectedStyle,
@@ -338,11 +343,14 @@ export default function useInspireState() {
               imageUrl: null,
               html: null,
               plan: null,
+              renderError: null,
             };
           }
           return {
             ...preview,
             status: preview.imageUrl || preview.html ? "ready" : "empty",
+            html: preview.html ?? null,
+            renderError: preview.renderError ?? null,
           };
         })
       );
@@ -357,12 +365,155 @@ export default function useInspireState() {
     creativityValue,
     isGeneratingPreviews,
     modelQuality,
+    previewMode,
     previewCount,
     selectedNodeId,
     selectedStyle,
     treeRoot,
     workspaceMask,
     workspaceNote,
+  ]);
+
+  const applyMaskEdit = useCallback(async () => {
+    if (isApplyingMaskEdit) {
+      return;
+    }
+    setPreviewError("");
+    if (previewMode === "html") {
+      setPreviewError("Mask edit is available only for image previews.");
+      return;
+    }
+    if (!selectedPreview?.imageUrl) {
+      setPreviewError("Select a preview image first.");
+      return;
+    }
+    if (!workspaceMask?.dataUrl) {
+      setPreviewError("Draw a mask before applying edits.");
+      return;
+    }
+
+    const nodeContext = buildNodeContextFromTree(treeRoot, selectedNodeId);
+    setIsApplyingMaskEdit(true);
+    try {
+      const response = await fetch("/api/inspire/edits", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          imageDataUrl: selectedPreview.imageUrl,
+          maskDataUrl: workspaceMask.dataUrl,
+          prompt: workspaceNote,
+          plan: selectedPreview.plan,
+          brief,
+          style: selectedStyle,
+          nodeContext: nodeContext?.node ? nodeContext : null,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || "Failed to apply mask edit.");
+      }
+      if (!payload?.imageUrl) {
+        throw new Error("Edited image was not returned.");
+      }
+
+      setPreviewItems((current) =>
+        current.map((preview, index) =>
+          index === selectedPreviewIndex
+            ? {
+                ...preview,
+                imageUrl: payload.imageUrl,
+                html: null,
+                status: "ready",
+                renderError: null,
+              }
+            : preview
+        )
+      );
+    } catch (error) {
+      setPreviewError(error?.message ?? "Failed to apply mask edit.");
+    } finally {
+      setIsApplyingMaskEdit(false);
+    }
+  }, [
+    brief,
+    isApplyingMaskEdit,
+    previewMode,
+    selectedNodeId,
+    selectedPreview,
+    selectedPreviewIndex,
+    selectedStyle,
+    treeRoot,
+    workspaceMask,
+    workspaceNote,
+  ]);
+
+  const finalizeToHtml = useCallback(async () => {
+    if (isFinalizingPreview) {
+      return;
+    }
+    setPreviewError("");
+    if (previewMode === "html") {
+      return;
+    }
+    if (!selectedPreview?.imageUrl) {
+      setPreviewError("Select a preview image first.");
+      return;
+    }
+
+    const nodeContext = buildNodeContextFromTree(treeRoot, selectedNodeId);
+    setIsFinalizingPreview(true);
+    try {
+      const response = await fetch("/api/inspire/finalize", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          imageDataUrl: selectedPreview.imageUrl,
+          quality: modelQuality,
+          plan: selectedPreview.plan,
+          brief,
+          style: selectedStyle,
+          nodeContext: nodeContext?.node ? nodeContext : null,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || "Failed to finalize preview.");
+      }
+      if (!payload?.html) {
+        throw new Error("Finalize response did not include HTML.");
+      }
+
+      setPreviewItems((current) =>
+        current.map((preview, index) =>
+          index === selectedPreviewIndex
+            ? {
+                ...preview,
+                html: payload.html,
+                status: "ready",
+                renderError: null,
+              }
+            : preview
+        )
+      );
+    } catch (error) {
+      setPreviewError(error?.message ?? "Failed to finalize preview.");
+    } finally {
+      setIsFinalizingPreview(false);
+    }
+  }, [
+    brief,
+    isFinalizingPreview,
+    modelQuality,
+    previewMode,
+    selectedNodeId,
+    selectedPreview,
+    selectedPreviewIndex,
+    selectedStyle,
+    treeRoot,
   ]);
 
   const actions = useMemo(
@@ -372,16 +523,21 @@ export default function useInspireState() {
       selectStyle: handleSelectStyle,
       generateTree,
       generatePreviews,
+      applyMaskEdit,
+      finalizeToHtml,
       setSelectedNodeId,
       setPreviewCount,
       setModelQuality,
       setCreativityValue,
+      setPreviewMode,
       setSelectedPreviewIndex,
       setWorkspaceNote,
       setWorkspaceMask,
       setSelectedStyle,
     }),
     [
+      applyMaskEdit,
+      finalizeToHtml,
       generatePreviews,
       generateTree,
       handleSelectStyle,
@@ -389,6 +545,7 @@ export default function useInspireState() {
       setCreativityValue,
       setModelQuality,
       setPreviewCount,
+      setPreviewMode,
       setSelectedNodeId,
       setSelectedPreviewIndex,
       setSelectedStyle,
@@ -412,6 +569,9 @@ export default function useInspireState() {
       previewItems,
       previewError,
       isGeneratingPreviews,
+      isApplyingMaskEdit,
+      isFinalizingPreview,
+      previewMode,
       previewCount,
       modelQuality,
       creativityValue,

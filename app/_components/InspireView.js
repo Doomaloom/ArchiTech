@@ -43,6 +43,11 @@ const STYLE_PRESETS = [
   },
 ];
 
+const PREVIEW_MODE_OPTIONS = [
+  { id: "image", label: "Image previews" },
+  { id: "html", label: "HTML previews" },
+];
+
 const INSPIRE_STEPS = {
   DESCRIPTION: "project-description",
   STYLE: "style",
@@ -342,6 +347,7 @@ export default function InspireView() {
       inspireState.selectedStyle || inspireState.styleIdeas[0] || STYLE_PRESETS[0]
     );
   }, [inspireState.selectedStyle, inspireState.styleIdeas]);
+  const isImagePreviewMode = inspireState.previewMode !== "html";
 
   const layoutClassName = `imageflow-layout inspire-layout is-no-gallery${
     inspireStep === INSPIRE_STEPS.CODE ? " is-code" : ""
@@ -395,8 +401,12 @@ export default function InspireView() {
   };
 
   const handleContinueToIteration = () => {
+    const selectedPreview = inspireDerived.selectedPreview;
     if (!inspireState.previewItems.length) {
       setInspireStep(INSPIRE_STEPS.PREVIEWS);
+      return;
+    }
+    if (!selectedPreview?.html) {
       return;
     }
     const inspireMeta = {
@@ -475,7 +485,7 @@ export default function InspireView() {
                 </div>
                 {!preview.imageUrl && !preview.html && preview.status !== "loading" ? (
                   <span className="inspire-preview-placeholder">
-                    {inspireState.previewError || "No preview yet"}
+                    {preview.renderError || inspireState.previewError || "No preview yet"}
                   </span>
                 ) : null}
               </button>
@@ -562,6 +572,11 @@ export default function InspireView() {
       );
       return (
         <div className="inspire-workspace">
+          {inspireState.previewError ? (
+            <div className="inspire-preview-error" role="status">
+              {inspireState.previewError}
+            </div>
+          ) : null}
           <div className="inspire-workspace-toolbar">
             <div className="inspire-workspace-tools">
               <label className="inspire-workspace-label">
@@ -821,6 +836,22 @@ export default function InspireView() {
             <span>Selected</span>
             <strong>{selectedLabel}</strong>
           </div>
+          <div className="imageflow-panel-switch" role="tablist">
+            {PREVIEW_MODE_OPTIONS.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                className={`imageflow-switch-button${
+                  inspireState.previewMode === option.id ? " is-active" : ""
+                }`}
+                onClick={() => inspireActions.setPreviewMode(option.id)}
+                role="tab"
+                aria-selected={inspireState.previewMode === option.id}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
           <div className="imageflow-info-fields">
             <button
               className="imageflow-generate-button"
@@ -859,6 +890,22 @@ export default function InspireView() {
               Validate the page outline before generating previews.
             </p>
           </div>
+          <div className="imageflow-panel-switch" role="tablist">
+            {PREVIEW_MODE_OPTIONS.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                className={`imageflow-switch-button${
+                  inspireState.previewMode === option.id ? " is-active" : ""
+                }`}
+                onClick={() => inspireActions.setPreviewMode(option.id)}
+                role="tab"
+                aria-selected={inspireState.previewMode === option.id}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
           <div className="imageflow-info-fields">
             <button
               className="imageflow-generate-button"
@@ -873,6 +920,10 @@ export default function InspireView() {
       );
     }
     if (inspireStep === INSPIRE_STEPS.WORKSPACE) {
+      const selectedPreview = inspireDerived.selectedPreview;
+      const hasPreviewImage = Boolean(selectedPreview?.imageUrl);
+      const hasMask = Boolean(inspireState.workspaceMask?.dataUrl);
+      const hasFinalHtml = Boolean(selectedPreview?.html);
       return (
         <aside className="imageflow-info inspire-info">
           <div className="imageflow-info-header">
@@ -898,7 +949,40 @@ export default function InspireView() {
             <button
               className="imageflow-generate-button"
               type="button"
+              onClick={inspireActions.applyMaskEdit}
+              disabled={
+                !isImagePreviewMode ||
+                !hasPreviewImage ||
+                !hasMask ||
+                inspireState.isApplyingMaskEdit
+              }
+            >
+              {inspireState.isApplyingMaskEdit
+                ? "Applying mask edit..."
+                : "Apply mask edit"}
+            </button>
+            {!isImagePreviewMode ? (
+              <div className="inspire-preview-error" role="status">
+                Mask edit is available only for image previews.
+              </div>
+            ) : null}
+            {isImagePreviewMode ? (
+              <button
+                className="imageflow-generate-button"
+                type="button"
+                onClick={inspireActions.finalizeToHtml}
+                disabled={!hasPreviewImage || inspireState.isFinalizingPreview}
+              >
+                {inspireState.isFinalizingPreview
+                  ? "Finalizing..."
+                  : "Finalize -> Generate HTML"}
+              </button>
+            ) : null}
+            <button
+              className="imageflow-generate-button"
+              type="button"
               onClick={handleContinueToIteration}
+              disabled={!hasFinalHtml || inspireState.isFinalizingPreview}
             >
               Continue to iteration
             </button>
