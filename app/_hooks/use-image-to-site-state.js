@@ -2019,6 +2019,29 @@ export default function useImageToSiteState() {
     setViewMode("iterate");
   };
 
+  const hydratePreviews = ({ previews, selectedIndex = 0 }) => {
+    const list = Array.isArray(previews) ? previews : [];
+    if (!list.length) {
+      return;
+    }
+    const normalized = list.map((preview, index) => ({
+      ...preview,
+      id: preview?.id ?? `inspire-preview-${index + 1}`,
+      status: preview?.imageUrl || preview?.html ? "ready" : "empty",
+      imageUrl: preview?.imageUrl ?? null,
+      html: preview?.html ?? null,
+      plan: preview?.plan ?? null,
+    }));
+    setPreviewItems(normalized);
+    setPreviewCount(Math.max(normalized.length, 1));
+    setSelectedPreviewIndex(
+      clampValue(Number(selectedIndex) || 0, 0, normalized.length - 1)
+    );
+    setPreviewError("");
+    resetIterationState();
+    setViewMode("iterate");
+  };
+
   const handlePreviewZoomOut = () => {
     setPreviewZoom((current) =>
       clampValue(
@@ -3269,6 +3292,7 @@ export default function useImageToSiteState() {
       handleDeleteImage,
       handleSelectPreview,
       handleIteratePreview,
+      hydratePreviews,
       handlePreviewZoomOut,
       handlePreviewZoomReset,
       handleGeneratePreviews,

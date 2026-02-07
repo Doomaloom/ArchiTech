@@ -1,0 +1,430 @@
+"use client";
+
+import { useCallback, useMemo, useState } from "react";
+
+const DEFAULT_BRIEF = {
+  title: "",
+  name: "",
+  details: "",
+  audience: "",
+  goals: "",
+};
+
+const clampNumber = (value, min, max) =>
+  Math.min(Math.max(value, min), max);
+
+const normalizeList = (value) => {
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => (entry == null ? "" : entry.toString()).trim())
+      .filter(Boolean);
+  }
+  if (value == null) {
+    return [];
+  }
+  const text = value.toString().trim();
+  return text ? [text] : [];
+};
+
+const normalizeStyleIdea = (style, index) => {
+  const palette = Array.isArray(style?.palette)
+    ? style.palette.map((color) => color?.toString().trim()).filter(Boolean)
+    : [];
+  return {
+    id: style?.id?.toString() || `style-${index + 1}`,
+    title: style?.title?.toString() || `Style ${index + 1}`,
+    summary: style?.summary?.toString() || "",
+    palette,
+    tags: normalizeList(style?.tags),
+    components: normalizeList(style?.components),
+    stylePrompt: style?.stylePrompt?.toString() || "",
+  };
+};
+
+const normalizeTree = (input) => {
+  if (!input || typeof input !== "object") {
+    return null;
+  }
+  if (input.root && typeof input.root === "object") {
+    return input.root;
+  }
+  if (input.tree && typeof input.tree === "object") {
+    return input.tree;
+  }
+  return input;
+};
+
+const getTreeChildren = (node) => {
+  if (!node || typeof node !== "object") {
+    return [];
+  }
+  if (Array.isArray(node.children)) {
+    return node.children;
+  }
+  if (Array.isArray(node.items)) {
+    return node.items;
+  }
+  if (Array.isArray(node.pages)) {
+    return node.pages;
+  }
+  if (Array.isArray(node.nodes)) {
+    return node.nodes;
+  }
+  return [];
+};
+
+const toNodeSnapshot = (node) => {
+  if (!node || typeof node !== "object") {
+    return null;
+  }
+  return {
+    id: node.id?.toString() || "",
+    label: node.label?.toString() || "",
+    description: node.description?.toString() || "",
+    requirements: normalizeList(node.requirements),
+    kind: node.kind?.toString() || "",
+    imageDescriptions: normalizeList(
+      node.imageDescriptions ?? node.imageDescription
+    ),
+    imageAnalysis: node.imageAnalysis ?? null,
+  };
+};
+
+const buildNodeContextFromTree = (root, nodeId) => {
+  if (!root || !nodeId) {
+    return { node: null, parent: null, children: [], path: [] };
+  }
+  let found = null;
+  let foundParent = null;
+  let foundPath = [];
+
+  const walk = (node, parent, path) => {
+    if (!node) {
+      return;
+    }
+    const nextPath = [...path, node];
+    if (node.id?.toString() === nodeId?.toString()) {
+      found = node;
+      foundParent = parent;
+      foundPath = nextPath;
+      return;
+    }
+    const children = getTreeChildren(node);
+    for (const child of children) {
+      walk(child, node, nextPath);
+      if (found) {
+        return;
+      }
+    }
+  };
+
+  walk(root, null, []);
+  if (!found) {
+    return { node: null, parent: null, children: [], path: [] };
+  }
+  const children = getTreeChildren(found).map(toNodeSnapshot).filter(Boolean);
+  return {
+    node: toNodeSnapshot(found),
+    parent: toNodeSnapshot(foundParent),
+    children,
+    path: foundPath.map(toNodeSnapshot).filter(Boolean),
+  };
+};
+
+const flattenTree = (root) => {
+  if (!root) {
+    return [];
+  }
+  const nodes = [];
+  const walk = (node, depth = 0, parentId = null) => {
+    if (!node) {
+      return;
+    }
+    nodes.push({
+      id: node.id?.toString() || `node-${nodes.length + 1}`,
+      label: node.label?.toString() || "Untitled",
+      description: node.description?.toString() || "",
+      requirements: normalizeList(node.requirements),
+      kind: node.kind?.toString() || "",
+      depth,
+      parentId,
+    });
+    const children = getTreeChildren(node);
+    children.forEach((child) => walk(child, depth + 1, node.id));
+  };
+  walk(root, 0, null);
+  return nodes;
+};
+
+export default function useInspireState() {
+  const [brief, setBrief] = useState(DEFAULT_BRIEF);
+  const [styleIdeas, setStyleIdeas] = useState([]);
+  const [selectedStyle, setSelectedStyle] = useState(null);
+  const [isGeneratingStyles, setIsGeneratingStyles] = useState(false);
+  const [styleError, setStyleError] = useState("");
+  const [tree, setTree] = useState(null);
+  const [isGeneratingTree, setIsGeneratingTree] = useState(false);
+  const [treeError, setTreeError] = useState("");
+  const [selectedNodeId, setSelectedNodeId] = useState(null);
+  const [previewItems, setPreviewItems] = useState([]);
+  const [previewError, setPreviewError] = useState("");
+  const [isGeneratingPreviews, setIsGeneratingPreviews] = useState(false);
+  const [previewCount, setPreviewCount] = useState(3);
+  const [modelQuality, setModelQuality] = useState("flash");
+  const [creativityValue, setCreativityValue] = useState(45);
+  const [selectedPreviewIndex, setSelectedPreviewIndex] = useState(0);
+  const [workspaceNote, setWorkspaceNote] = useState("");
+  const [workspaceMask, setWorkspaceMask] = useState(null);
+
+  const treeRoot = useMemo(() => normalizeTree(tree), [tree]);
+  const treeNodes = useMemo(() => flattenTree(treeRoot), [treeRoot]);
+  const selectedNode = useMemo(
+    () => treeNodes.find((node) => node.id === selectedNodeId) || null,
+    [treeNodes, selectedNodeId]
+  );
+  const selectedPreview = previewItems[selectedPreviewIndex] || null;
+
+  const updateBrief = useCallback((field, value) => {
+    setBrief((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  }, []);
+
+  const handleSelectStyle = useCallback((style) => {
+    if (!style) {
+      return;
+    }
+    setSelectedStyle(style);
+    setTree(null);
+    setSelectedNodeId(null);
+    setPreviewItems([]);
+    setPreviewError("");
+  }, []);
+
+  const loadStyleIdeas = useCallback(async () => {
+    if (isGeneratingStyles) {
+      return;
+    }
+    setStyleError("");
+    setIsGeneratingStyles(true);
+    try {
+      const response = await fetch("/api/inspire/styles", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ brief }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || "Failed to generate styles.");
+      }
+      const ideas = Array.isArray(payload?.styles) ? payload.styles : [];
+      const normalized = ideas.map(normalizeStyleIdea);
+      setStyleIdeas(normalized);
+      if (!selectedStyle && normalized.length) {
+        setSelectedStyle(normalized[0]);
+      }
+    } catch (error) {
+      setStyleError(error?.message ?? "Failed to generate styles.");
+    } finally {
+      setIsGeneratingStyles(false);
+    }
+  }, [brief, isGeneratingStyles, selectedStyle]);
+
+  const generateTree = useCallback(async () => {
+    if (isGeneratingTree) {
+      return;
+    }
+    setTreeError("");
+    if (!selectedStyle) {
+      setTreeError("Select a style before generating the tree.");
+      return;
+    }
+    setIsGeneratingTree(true);
+    try {
+      const response = await fetch("/api/inspire/tree", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ brief, style: selectedStyle }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || "Failed to generate tree.");
+      }
+      const nextTree =
+        payload?.tree ?? payload?.structure ?? payload?.root ?? payload;
+      const root = normalizeTree(nextTree);
+      setTree(nextTree);
+      setPreviewItems([]);
+      setPreviewError("");
+      if (root?.id) {
+        const firstChild = getTreeChildren(root)[0];
+        setSelectedNodeId(firstChild?.id || root.id);
+      }
+    } catch (error) {
+      setTreeError(error?.message ?? "Failed to generate tree.");
+    } finally {
+      setIsGeneratingTree(false);
+    }
+  }, [brief, isGeneratingTree, selectedStyle]);
+
+  const generatePreviews = useCallback(async () => {
+    if (isGeneratingPreviews) {
+      return;
+    }
+    setPreviewError("");
+    if (!treeRoot || !selectedNodeId) {
+      setPreviewError("Generate a tree and select a node first.");
+      return;
+    }
+    const nodeContext = buildNodeContextFromTree(treeRoot, selectedNodeId);
+    if (!nodeContext?.node) {
+      setPreviewError("Selected node not found.");
+      return;
+    }
+
+    const count = clampNumber(Number(previewCount) || 1, 1, 6);
+    setIsGeneratingPreviews(true);
+    setSelectedPreviewIndex(0);
+    setPreviewItems(
+      Array.from({ length: count }, (_, index) => ({
+        id: `preview-${index + 1}`,
+        status: "loading",
+        imageUrl: null,
+        html: null,
+        plan: null,
+      }))
+    );
+
+    try {
+      const response = await fetch("/api/inspire/previews", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          count,
+          quality: modelQuality,
+          creativity: creativityValue,
+          renderMode: "html",
+          nodeContext,
+          brief,
+          style: selectedStyle,
+          workspace: {
+            note: workspaceNote,
+            mask: workspaceMask,
+          },
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok && !payload?.previews) {
+        throw new Error(payload?.error || "Failed to generate previews.");
+      }
+      if (!response.ok) {
+        setPreviewError(payload?.error || payload?.message || "");
+      }
+      const previews = Array.isArray(payload?.previews) ? payload.previews : [];
+      setPreviewItems(
+        Array.from({ length: count }, (_, index) => {
+          const preview = previews[index];
+          if (!preview) {
+            return {
+              id: `preview-${index + 1}`,
+              status: "empty",
+              imageUrl: null,
+              html: null,
+              plan: null,
+            };
+          }
+          return {
+            ...preview,
+            status: preview.imageUrl || preview.html ? "ready" : "empty",
+          };
+        })
+      );
+    } catch (error) {
+      setPreviewError(error?.message ?? "Failed to generate previews.");
+      setPreviewItems([]);
+    } finally {
+      setIsGeneratingPreviews(false);
+    }
+  }, [
+    brief,
+    creativityValue,
+    isGeneratingPreviews,
+    modelQuality,
+    previewCount,
+    selectedNodeId,
+    selectedStyle,
+    treeRoot,
+    workspaceMask,
+    workspaceNote,
+  ]);
+
+  const actions = useMemo(
+    () => ({
+      updateBrief,
+      loadStyleIdeas,
+      selectStyle: handleSelectStyle,
+      generateTree,
+      generatePreviews,
+      setSelectedNodeId,
+      setPreviewCount,
+      setModelQuality,
+      setCreativityValue,
+      setSelectedPreviewIndex,
+      setWorkspaceNote,
+      setWorkspaceMask,
+      setSelectedStyle,
+    }),
+    [
+      generatePreviews,
+      generateTree,
+      handleSelectStyle,
+      loadStyleIdeas,
+      setCreativityValue,
+      setModelQuality,
+      setPreviewCount,
+      setSelectedNodeId,
+      setSelectedPreviewIndex,
+      setSelectedStyle,
+      setWorkspaceMask,
+      setWorkspaceNote,
+      updateBrief,
+    ]
+  );
+
+  return {
+    state: {
+      brief,
+      styleIdeas,
+      selectedStyle,
+      isGeneratingStyles,
+      styleError,
+      tree,
+      isGeneratingTree,
+      treeError,
+      selectedNodeId,
+      previewItems,
+      previewError,
+      isGeneratingPreviews,
+      previewCount,
+      modelQuality,
+      creativityValue,
+      selectedPreviewIndex,
+      workspaceNote,
+      workspaceMask,
+    },
+    derived: {
+      treeRoot,
+      treeNodes,
+      selectedNode,
+      selectedPreview,
+    },
+    actions,
+  };
+}

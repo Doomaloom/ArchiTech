@@ -5954,6 +5954,13 @@ body:has(.imageflow-iteration):has(#imageflow-sidebar-toggle:checked)
   width: 100%;
 }
 
+.inspire-previews {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
 .inspire-preview-card {
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.6);
@@ -5978,6 +5985,20 @@ body:has(.imageflow-iteration):has(#imageflow-sidebar-toggle:checked)
   height: 120px;
   position: relative;
   overflow: hidden;
+}
+
+.inspire-preview-media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border: 0;
+  pointer-events: none;
+}
+
+.inspire-preview-card.is-loading {
+  opacity: 0.7;
 }
 
 .inspire-preview-index {
@@ -6020,6 +6041,32 @@ body:has(.imageflow-iteration):has(#imageflow-sidebar-toggle:checked)
   color: #94a3b8;
 }
 
+.inspire-preview-placeholder {
+  display: block;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.inspire-preview-error {
+  font-size: 12px;
+  color: #b91c1c;
+  background: rgba(254, 242, 242, 0.9);
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  padding: 8px 10px;
+  border-radius: 10px;
+}
+
+.inspire-style-error {
+  font-size: 12px;
+  color: #b91c1c;
+  margin-bottom: 8px;
+}
+
+.inspire-style-loading {
+  font-size: 12px;
+  color: #64748b;
+}
+
 .inspire-info-summary {
   display: flex;
   flex-direction: column;
@@ -6058,6 +6105,59 @@ body:has(.imageflow-iteration):has(#imageflow-sidebar-toggle:checked)
   flex-direction: column;
   gap: 16px;
   width: 100%;
+}
+
+.inspire-tree-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.inspire-tree-list li.is-selected .inspire-tree-item {
+  color: #0f172a;
+}
+
+.inspire-tree-list li.is-selected {
+  border-color: rgba(249, 115, 22, 0.4);
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.inspire-tree-error {
+  font-size: 12px;
+  color: #b91c1c;
+  background: rgba(254, 242, 242, 0.9);
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  padding: 8px 10px;
+  border-radius: 10px;
+}
+
+.inspire-workspace-frame {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.inspire-workspace-media {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+.inspire-workspace-empty {
+  font-size: 12px;
+  color: #64748b;
 }
 
 .inspire-tree-header {
