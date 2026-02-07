@@ -305,6 +305,27 @@ export default function useImageToSiteState() {
     viewMode,
   ]);
 
+  const hydratePreviews = useCallback(
+    ({ previews, selectedIndex = 0 } = {}) => {
+      const safePreviews = Array.isArray(previews) ? previews : [];
+      const nextCount = Math.max(safePreviews.length, 1);
+      const clampedSelectedIndex = clampValue(
+        Number.isFinite(selectedIndex) ? Math.trunc(selectedIndex) : 0,
+        0,
+        Math.max(nextCount - 1, 0)
+      );
+      const normalized = normalizePreviewItems(safePreviews, nextCount);
+      const selectedPreview = normalized[clampedSelectedIndex];
+      previewSettings.actions.setPreviewCount(nextCount);
+      previewSettings.actions.setSelectedPreviewIndex(clampedSelectedIndex);
+      setPreviewItems(normalized);
+      setBuilderHtml(selectedPreview?.html || "");
+      setPreviewError("");
+      viewMode.setViewMode("iterate");
+    },
+    [previewSettings.actions, viewMode]
+  );
+
   const previewZoomLabel = useMemo(
     () => `${Math.round(previewZoom * 100)}%`,
     [previewZoom]
@@ -491,6 +512,7 @@ export default function useImageToSiteState() {
       handlePreviewZoomReset,
       handleGeneratePreviews,
       handleGenerateStructure,
+      hydratePreviews,
       handleNodeClick: nodeGraph.actions.handleNodeClick,
       handleOpenCodeFile: codeWorkspace.actions.handleOpenCodeFile,
       handleEditorChange: codeWorkspace.actions.handleEditorChange,

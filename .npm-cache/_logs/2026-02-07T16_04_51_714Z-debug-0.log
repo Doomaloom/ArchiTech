@@ -1,0 +1,599 @@
+0 verbose cli /opt/homebrew/Cellar/node/25.5.0/bin/node /opt/homebrew/bin/npm
+1 info using npm@11.8.0
+2 info using node@v25.5.0
+3 silly config load:file:/opt/homebrew/lib/node_modules/npm/npmrc
+4 silly config load:file:/Users/frankkocun/Documents/ArchiTech/.npmrc
+5 silly config load:file:/Users/frankkocun/.npmrc
+6 silly config load:file:/opt/homebrew/etc/npmrc
+7 verbose title npm install sharp
+8 verbose argv "install" "sharp" "--save" "--package-lock-only" "--offline" "--no-audit" "--no-fund"
+9 verbose logfile logs-max:10 dir:/Users/frankkocun/Documents/ArchiTech/.npm-cache/_logs/2026-02-07T16_04_51_714Z-
+10 verbose logfile /Users/frankkocun/Documents/ArchiTech/.npm-cache/_logs/2026-02-07T16_04_51_714Z-debug-0.log
+11 silly logfile done cleaning log files
+12 silly packumentCache heap:2348810240 maxSize:587202560 maxEntrySize:293601280
+13 http fetch GET https://registry.npmjs.org/npm attempt 1 failed with ENOTFOUND
+14 silly idealTree buildDeps
+15 silly fetch manifest sharp@^0.34.4
+16 silly packumentCache full:https://registry.npmjs.org/sharp cache-miss
+17 silly placeDep ROOT sharp@ OK for: gem@0.1.0 want: ^0.34.4
+18 silly fetch manifest react@^18.3.1
+19 silly packumentCache full:https://registry.npmjs.org/react cache-miss
+20 silly placeDep ROOT react@ REPLACE for: react-reconciler@0.29.2 want: ^18.3.1
+21 warn ERESOLVE overriding peer dependency {
+21 warn ERESOLVE   code: 'ERESOLVE',
+21 warn ERESOLVE   edge: {
+21 warn ERESOLVE     type: 'peer',
+21 warn ERESOLVE     name: 'react',
+21 warn ERESOLVE     spec: '^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0',
+21 warn ERESOLVE     from: {
+21 warn ERESOLVE       name: '@monaco-editor/react',
+21 warn ERESOLVE       version: '4.7.0',
+21 warn ERESOLVE       location: 'node_modules/@monaco-editor/react',
+21 warn ERESOLVE       isWorkspace: false,
+21 warn ERESOLVE       dependents: [Array]
+21 warn ERESOLVE     }
+21 warn ERESOLVE   },
+21 warn ERESOLVE   dep: {
+21 warn ERESOLVE     name: 'react',
+21 warn ERESOLVE     version: undefined,
+21 warn ERESOLVE     errors: [ [NotCachedError] ],
+21 warn ERESOLVE     package: {},
+21 warn ERESOLVE     whileInstalling: {
+21 warn ERESOLVE       name: 'react-reconciler',
+21 warn ERESOLVE       version: '0.29.2',
+21 warn ERESOLVE       path: '/Users/frankkocun/Documents/ArchiTech/node_modules/react-konva/node_modules/react-reconciler'
+21 warn ERESOLVE     },
+21 warn ERESOLVE     location: 'node_modules/react',
+21 warn ERESOLVE     isWorkspace: false,
+21 warn ERESOLVE     dependents: [ [Object] ]
+21 warn ERESOLVE   },
+21 warn ERESOLVE   force: false,
+21 warn ERESOLVE   isMine: false,
+21 warn ERESOLVE   strictPeerDeps: false,
+21 warn ERESOLVE   current: {
+21 warn ERESOLVE     name: 'react',
+21 warn ERESOLVE     version: '18.2.0',
+21 warn ERESOLVE     location: 'node_modules/react',
+21 warn ERESOLVE     isWorkspace: false,
+21 warn ERESOLVE     dependents: [
+21 warn ERESOLVE       [Object], [Object],
+21 warn ERESOLVE       [Object], [Object],
+21 warn ERESOLVE       [Object], [Object],
+21 warn ERESOLVE       [Object], [Object],
+21 warn ERESOLVE       [Object], [Object],
+21 warn ERESOLVE       [Object], [Object],
+21 warn ERESOLVE       [Object], [Object],
+21 warn ERESOLVE       [Object], [Object],
+21 warn ERESOLVE       [Object]
+21 warn ERESOLVE     ]
+21 warn ERESOLVE   }
+21 warn ERESOLVE }
+22 warn ERESOLVE overriding peer dependency {
+22 warn ERESOLVE   code: 'ERESOLVE',
+22 warn ERESOLVE   edge: {
+22 warn ERESOLVE     type: 'peer',
+22 warn ERESOLVE     name: 'react',
+22 warn ERESOLVE     spec: '^18.2.0',
+22 warn ERESOLVE     from: {
+22 warn ERESOLVE       name: 'next',
+22 warn ERESOLVE       version: '14.2.5',
+22 warn ERESOLVE       location: 'node_modules/next',
+22 warn ERESOLVE       isWorkspace: false,
+22 warn ERESOLVE       dependents: [Array]
+22 warn ERESOLVE     }
+22 warn ERESOLVE   },
+22 warn ERESOLVE   dep: {
+22 warn ERESOLVE     name: 'react',
+22 warn ERESOLVE     version: undefined,
+22 warn ERESOLVE     errors: [ [NotCachedError] ],
+22 warn ERESOLVE     package: {},
+22 warn ERESOLVE     whileInstalling: {
+22 warn ERESOLVE       name: 'react-reconciler',
+22 warn ERESOLVE       version: '0.29.2',
+22 warn ERESOLVE       path: '/Users/frankkocun/Documents/ArchiTech/node_modules/react-konva/node_modules/react-reconciler'
+22 warn ERESOLVE     },
+22 warn ERESOLVE     location: 'node_modules/react',
+22 warn ERESOLVE     isWorkspace: false,
+22 warn ERESOLVE     dependents: [ [Object] ]
+22 warn ERESOLVE   },
+22 warn ERESOLVE   force: false,
+22 warn ERESOLVE   isMine: false,
+22 warn ERESOLVE   strictPeerDeps: false,
+22 warn ERESOLVE   current: {
+22 warn ERESOLVE     name: 'react',
+22 warn ERESOLVE     version: '18.2.0',
+22 warn ERESOLVE     location: 'node_modules/react',
+22 warn ERESOLVE     isWorkspace: false,
+22 warn ERESOLVE     dependents: [
+22 warn ERESOLVE       [Object], [Object],
+22 warn ERESOLVE       [Object], [Object],
+22 warn ERESOLVE       [Object], [Object],
+22 warn ERESOLVE       [Object], [Object],
+22 warn ERESOLVE       [Object], [Object],
+22 warn ERESOLVE       [Object], [Object],
+22 warn ERESOLVE       [Object], [Object],
+22 warn ERESOLVE       [Object], [Object],
+22 warn ERESOLVE       [Object]
+22 warn ERESOLVE     ]
+22 warn ERESOLVE   }
+22 warn ERESOLVE }
+23 warn ERESOLVE overriding peer dependency {
+23 warn ERESOLVE   code: 'ERESOLVE',
+23 warn ERESOLVE   edge: {
+23 warn ERESOLVE     type: 'peer',
+23 warn ERESOLVE     name: 'react',
+23 warn ERESOLVE     spec: '^16.9.0 || ^17 || ^18',
+23 warn ERESOLVE     from: {
+23 warn ERESOLVE       name: 'react-archer',
+23 warn ERESOLVE       version: '4.4.0',
+23 warn ERESOLVE       location: 'node_modules/react-archer',
+23 warn ERESOLVE       isWorkspace: false,
+23 warn ERESOLVE       dependents: [Array]
+23 warn ERESOLVE     }
+23 warn ERESOLVE   },
+23 warn ERESOLVE   dep: {
+23 warn ERESOLVE     name: 'react',
+23 warn ERESOLVE     version: undefined,
+23 warn ERESOLVE     errors: [ [NotCachedError] ],
+23 warn ERESOLVE     package: {},
+23 warn ERESOLVE     whileInstalling: {
+23 warn ERESOLVE       name: 'react-reconciler',
+23 warn ERESOLVE       version: '0.29.2',
+23 warn ERESOLVE       path: '/Users/frankkocun/Documents/ArchiTech/node_modules/react-konva/node_modules/react-reconciler'
+23 warn ERESOLVE     },
+23 warn ERESOLVE     location: 'node_modules/react',
+23 warn ERESOLVE     isWorkspace: false,
+23 warn ERESOLVE     dependents: [ [Object] ]
+23 warn ERESOLVE   },
+23 warn ERESOLVE   force: false,
+23 warn ERESOLVE   isMine: false,
+23 warn ERESOLVE   strictPeerDeps: false,
+23 warn ERESOLVE   current: {
+23 warn ERESOLVE     name: 'react',
+23 warn ERESOLVE     version: '18.2.0',
+23 warn ERESOLVE     location: 'node_modules/react',
+23 warn ERESOLVE     isWorkspace: false,
+23 warn ERESOLVE     dependents: [
+23 warn ERESOLVE       [Object], [Object],
+23 warn ERESOLVE       [Object], [Object],
+23 warn ERESOLVE       [Object], [Object],
+23 warn ERESOLVE       [Object], [Object],
+23 warn ERESOLVE       [Object], [Object],
+23 warn ERESOLVE       [Object], [Object],
+23 warn ERESOLVE       [Object], [Object],
+23 warn ERESOLVE       [Object], [Object],
+23 warn ERESOLVE       [Object]
+23 warn ERESOLVE     ]
+23 warn ERESOLVE   }
+23 warn ERESOLVE }
+24 warn ERESOLVE overriding peer dependency {
+24 warn ERESOLVE   code: 'ERESOLVE',
+24 warn ERESOLVE   edge: {
+24 warn ERESOLVE     type: 'peer',
+24 warn ERESOLVE     name: 'react',
+24 warn ERESOLVE     spec: '^18.2.0',
+24 warn ERESOLVE     from: {
+24 warn ERESOLVE       name: 'react-dom',
+24 warn ERESOLVE       version: '18.2.0',
+24 warn ERESOLVE       location: 'node_modules/react-dom',
+24 warn ERESOLVE       isWorkspace: false,
+24 warn ERESOLVE       dependents: [Array]
+24 warn ERESOLVE     }
+24 warn ERESOLVE   },
+24 warn ERESOLVE   dep: {
+24 warn ERESOLVE     name: 'react',
+24 warn ERESOLVE     version: undefined,
+24 warn ERESOLVE     errors: [ [NotCachedError] ],
+24 warn ERESOLVE     package: {},
+24 warn ERESOLVE     whileInstalling: {
+24 warn ERESOLVE       name: 'react-reconciler',
+24 warn ERESOLVE       version: '0.29.2',
+24 warn ERESOLVE       path: '/Users/frankkocun/Documents/ArchiTech/node_modules/react-konva/node_modules/react-reconciler'
+24 warn ERESOLVE     },
+24 warn ERESOLVE     location: 'node_modules/react',
+24 warn ERESOLVE     isWorkspace: false,
+24 warn ERESOLVE     dependents: [ [Object] ]
+24 warn ERESOLVE   },
+24 warn ERESOLVE   force: false,
+24 warn ERESOLVE   isMine: false,
+24 warn ERESOLVE   strictPeerDeps: false,
+24 warn ERESOLVE   current: {
+24 warn ERESOLVE     name: 'react',
+24 warn ERESOLVE     version: '18.2.0',
+24 warn ERESOLVE     location: 'node_modules/react',
+24 warn ERESOLVE     isWorkspace: false,
+24 warn ERESOLVE     dependents: [
+24 warn ERESOLVE       [Object], [Object],
+24 warn ERESOLVE       [Object], [Object],
+24 warn ERESOLVE       [Object], [Object],
+24 warn ERESOLVE       [Object], [Object],
+24 warn ERESOLVE       [Object], [Object],
+24 warn ERESOLVE       [Object], [Object],
+24 warn ERESOLVE       [Object], [Object],
+24 warn ERESOLVE       [Object], [Object],
+24 warn ERESOLVE       [Object]
+24 warn ERESOLVE     ]
+24 warn ERESOLVE   }
+24 warn ERESOLVE }
+25 warn ERESOLVE overriding peer dependency {
+25 warn ERESOLVE   code: 'ERESOLVE',
+25 warn ERESOLVE   edge: {
+25 warn ERESOLVE     type: 'peer',
+25 warn ERESOLVE     name: 'react',
+25 warn ERESOLVE     spec: '^18.2.0',
+25 warn ERESOLVE     from: {
+25 warn ERESOLVE       name: 'react-dom',
+25 warn ERESOLVE       version: '18.2.0',
+25 warn ERESOLVE       location: 'node_modules/react-dom',
+25 warn ERESOLVE       isWorkspace: false,
+25 warn ERESOLVE       dependents: [Array]
+25 warn ERESOLVE     }
+25 warn ERESOLVE   },
+25 warn ERESOLVE   dep: {
+25 warn ERESOLVE     name: 'react',
+25 warn ERESOLVE     version: undefined,
+25 warn ERESOLVE     errors: [ [NotCachedError] ],
+25 warn ERESOLVE     package: {},
+25 warn ERESOLVE     whileInstalling: {
+25 warn ERESOLVE       name: 'react-reconciler',
+25 warn ERESOLVE       version: '0.29.2',
+25 warn ERESOLVE       path: '/Users/frankkocun/Documents/ArchiTech/node_modules/react-konva/node_modules/react-reconciler'
+25 warn ERESOLVE     },
+25 warn ERESOLVE     location: 'node_modules/react',
+25 warn ERESOLVE     isWorkspace: false,
+25 warn ERESOLVE     dependents: [ [Object] ]
+25 warn ERESOLVE   },
+25 warn ERESOLVE   force: false,
+25 warn ERESOLVE   isMine: false,
+25 warn ERESOLVE   strictPeerDeps: false,
+25 warn ERESOLVE   current: {
+25 warn ERESOLVE     name: 'react',
+25 warn ERESOLVE     version: '18.2.0',
+25 warn ERESOLVE     location: 'node_modules/react',
+25 warn ERESOLVE     isWorkspace: false,
+25 warn ERESOLVE     dependents: [
+25 warn ERESOLVE       [Object], [Object],
+25 warn ERESOLVE       [Object], [Object],
+25 warn ERESOLVE       [Object], [Object],
+25 warn ERESOLVE       [Object], [Object],
+25 warn ERESOLVE       [Object], [Object],
+25 warn ERESOLVE       [Object], [Object],
+25 warn ERESOLVE       [Object], [Object],
+25 warn ERESOLVE       [Object], [Object],
+25 warn ERESOLVE       [Object]
+25 warn ERESOLVE     ]
+25 warn ERESOLVE   }
+25 warn ERESOLVE }
+26 warn ERESOLVE overriding peer dependency {
+26 warn ERESOLVE   code: 'ERESOLVE',
+26 warn ERESOLVE   edge: {
+26 warn ERESOLVE     type: 'peer',
+26 warn ERESOLVE     name: 'react',
+26 warn ERESOLVE     spec: '^18.2.0',
+26 warn ERESOLVE     from: {
+26 warn ERESOLVE       name: 'react-dom',
+26 warn ERESOLVE       version: '18.2.0',
+26 warn ERESOLVE       location: 'node_modules/react-dom',
+26 warn ERESOLVE       isWorkspace: false,
+26 warn ERESOLVE       dependents: [Array]
+26 warn ERESOLVE     }
+26 warn ERESOLVE   },
+26 warn ERESOLVE   dep: {
+26 warn ERESOLVE     name: 'react',
+26 warn ERESOLVE     version: undefined,
+26 warn ERESOLVE     errors: [ [NotCachedError] ],
+26 warn ERESOLVE     package: {},
+26 warn ERESOLVE     whileInstalling: {
+26 warn ERESOLVE       name: 'react-reconciler',
+26 warn ERESOLVE       version: '0.29.2',
+26 warn ERESOLVE       path: '/Users/frankkocun/Documents/ArchiTech/node_modules/react-konva/node_modules/react-reconciler'
+26 warn ERESOLVE     },
+26 warn ERESOLVE     location: 'node_modules/react',
+26 warn ERESOLVE     isWorkspace: false,
+26 warn ERESOLVE     dependents: [ [Object] ]
+26 warn ERESOLVE   },
+26 warn ERESOLVE   force: false,
+26 warn ERESOLVE   isMine: false,
+26 warn ERESOLVE   strictPeerDeps: false,
+26 warn ERESOLVE   current: {
+26 warn ERESOLVE     name: 'react',
+26 warn ERESOLVE     version: '18.2.0',
+26 warn ERESOLVE     location: 'node_modules/react',
+26 warn ERESOLVE     isWorkspace: false,
+26 warn ERESOLVE     dependents: [
+26 warn ERESOLVE       [Object], [Object],
+26 warn ERESOLVE       [Object], [Object],
+26 warn ERESOLVE       [Object], [Object],
+26 warn ERESOLVE       [Object], [Object],
+26 warn ERESOLVE       [Object], [Object],
+26 warn ERESOLVE       [Object], [Object],
+26 warn ERESOLVE       [Object], [Object],
+26 warn ERESOLVE       [Object], [Object],
+26 warn ERESOLVE       [Object]
+26 warn ERESOLVE     ]
+26 warn ERESOLVE   }
+26 warn ERESOLVE }
+27 warn ERESOLVE overriding peer dependency {
+27 warn ERESOLVE   code: 'ERESOLVE',
+27 warn ERESOLVE   edge: {
+27 warn ERESOLVE     type: 'peer',
+27 warn ERESOLVE     name: 'react',
+27 warn ERESOLVE     spec: '^18.2.0',
+27 warn ERESOLVE     from: {
+27 warn ERESOLVE       name: 'react-dom',
+27 warn ERESOLVE       version: '18.2.0',
+27 warn ERESOLVE       location: 'node_modules/react-dom',
+27 warn ERESOLVE       isWorkspace: false,
+27 warn ERESOLVE       dependents: [Array]
+27 warn ERESOLVE     }
+27 warn ERESOLVE   },
+27 warn ERESOLVE   dep: {
+27 warn ERESOLVE     name: 'react',
+27 warn ERESOLVE     version: undefined,
+27 warn ERESOLVE     errors: [ [NotCachedError] ],
+27 warn ERESOLVE     package: {},
+27 warn ERESOLVE     whileInstalling: {
+27 warn ERESOLVE       name: 'react-reconciler',
+27 warn ERESOLVE       version: '0.29.2',
+27 warn ERESOLVE       path: '/Users/frankkocun/Documents/ArchiTech/node_modules/react-konva/node_modules/react-reconciler'
+27 warn ERESOLVE     },
+27 warn ERESOLVE     location: 'node_modules/react',
+27 warn ERESOLVE     isWorkspace: false,
+27 warn ERESOLVE     dependents: [ [Object] ]
+27 warn ERESOLVE   },
+27 warn ERESOLVE   force: false,
+27 warn ERESOLVE   isMine: false,
+27 warn ERESOLVE   strictPeerDeps: false,
+27 warn ERESOLVE   current: {
+27 warn ERESOLVE     name: 'react',
+27 warn ERESOLVE     version: '18.2.0',
+27 warn ERESOLVE     location: 'node_modules/react',
+27 warn ERESOLVE     isWorkspace: false,
+27 warn ERESOLVE     dependents: [
+27 warn ERESOLVE       [Object], [Object],
+27 warn ERESOLVE       [Object], [Object],
+27 warn ERESOLVE       [Object], [Object],
+27 warn ERESOLVE       [Object], [Object],
+27 warn ERESOLVE       [Object], [Object],
+27 warn ERESOLVE       [Object], [Object],
+27 warn ERESOLVE       [Object], [Object],
+27 warn ERESOLVE       [Object], [Object],
+27 warn ERESOLVE       [Object]
+27 warn ERESOLVE     ]
+27 warn ERESOLVE   }
+27 warn ERESOLVE }
+28 warn ERESOLVE overriding peer dependency {
+28 warn ERESOLVE   code: 'ERESOLVE',
+28 warn ERESOLVE   edge: {
+28 warn ERESOLVE     type: 'peer',
+28 warn ERESOLVE     name: 'react',
+28 warn ERESOLVE     spec: '^18.2.0',
+28 warn ERESOLVE     from: {
+28 warn ERESOLVE       name: 'react-dom',
+28 warn ERESOLVE       version: '18.2.0',
+28 warn ERESOLVE       location: 'node_modules/react-dom',
+28 warn ERESOLVE       isWorkspace: false,
+28 warn ERESOLVE       dependents: [Array]
+28 warn ERESOLVE     }
+28 warn ERESOLVE   },
+28 warn ERESOLVE   dep: {
+28 warn ERESOLVE     name: 'react',
+28 warn ERESOLVE     version: undefined,
+28 warn ERESOLVE     errors: [ [NotCachedError] ],
+28 warn ERESOLVE     package: {},
+28 warn ERESOLVE     whileInstalling: {
+28 warn ERESOLVE       name: 'react-reconciler',
+28 warn ERESOLVE       version: '0.29.2',
+28 warn ERESOLVE       path: '/Users/frankkocun/Documents/ArchiTech/node_modules/react-konva/node_modules/react-reconciler'
+28 warn ERESOLVE     },
+28 warn ERESOLVE     location: 'node_modules/react',
+28 warn ERESOLVE     isWorkspace: false,
+28 warn ERESOLVE     dependents: [ [Object] ]
+28 warn ERESOLVE   },
+28 warn ERESOLVE   force: false,
+28 warn ERESOLVE   isMine: false,
+28 warn ERESOLVE   strictPeerDeps: false,
+28 warn ERESOLVE   current: {
+28 warn ERESOLVE     name: 'react',
+28 warn ERESOLVE     version: '18.2.0',
+28 warn ERESOLVE     location: 'node_modules/react',
+28 warn ERESOLVE     isWorkspace: false,
+28 warn ERESOLVE     dependents: [
+28 warn ERESOLVE       [Object], [Object],
+28 warn ERESOLVE       [Object], [Object],
+28 warn ERESOLVE       [Object], [Object],
+28 warn ERESOLVE       [Object], [Object],
+28 warn ERESOLVE       [Object], [Object],
+28 warn ERESOLVE       [Object], [Object],
+28 warn ERESOLVE       [Object], [Object],
+28 warn ERESOLVE       [Object], [Object],
+28 warn ERESOLVE       [Object]
+28 warn ERESOLVE     ]
+28 warn ERESOLVE   }
+28 warn ERESOLVE }
+29 warn ERESOLVE overriding peer dependency {
+29 warn ERESOLVE   code: 'ERESOLVE',
+29 warn ERESOLVE   edge: {
+29 warn ERESOLVE     type: 'peer',
+29 warn ERESOLVE     name: 'react',
+29 warn ERESOLVE     spec: '>=18.0.0',
+29 warn ERESOLVE     from: {
+29 warn ERESOLVE       name: 'react-konva',
+29 warn ERESOLVE       version: '18.2.14',
+29 warn ERESOLVE       location: 'node_modules/react-konva',
+29 warn ERESOLVE       isWorkspace: false,
+29 warn ERESOLVE       dependents: [Array]
+29 warn ERESOLVE     }
+29 warn ERESOLVE   },
+29 warn ERESOLVE   dep: {
+29 warn ERESOLVE     name: 'react',
+29 warn ERESOLVE     version: undefined,
+29 warn ERESOLVE     errors: [ [NotCachedError] ],
+29 warn ERESOLVE     package: {},
+29 warn ERESOLVE     whileInstalling: {
+29 warn ERESOLVE       name: 'react-reconciler',
+29 warn ERESOLVE       version: '0.29.2',
+29 warn ERESOLVE       path: '/Users/frankkocun/Documents/ArchiTech/node_modules/react-konva/node_modules/react-reconciler'
+29 warn ERESOLVE     },
+29 warn ERESOLVE     location: 'node_modules/react',
+29 warn ERESOLVE     isWorkspace: false,
+29 warn ERESOLVE     dependents: [ [Object] ]
+29 warn ERESOLVE   },
+29 warn ERESOLVE   force: false,
+29 warn ERESOLVE   isMine: false,
+29 warn ERESOLVE   strictPeerDeps: false,
+29 warn ERESOLVE   current: {
+29 warn ERESOLVE     name: 'react',
+29 warn ERESOLVE     version: '18.2.0',
+29 warn ERESOLVE     location: 'node_modules/react',
+29 warn ERESOLVE     isWorkspace: false,
+29 warn ERESOLVE     dependents: [
+29 warn ERESOLVE       [Object], [Object],
+29 warn ERESOLVE       [Object], [Object],
+29 warn ERESOLVE       [Object], [Object],
+29 warn ERESOLVE       [Object], [Object],
+29 warn ERESOLVE       [Object], [Object],
+29 warn ERESOLVE       [Object], [Object],
+29 warn ERESOLVE       [Object], [Object],
+29 warn ERESOLVE       [Object], [Object],
+29 warn ERESOLVE       [Object]
+29 warn ERESOLVE     ]
+29 warn ERESOLVE   }
+29 warn ERESOLVE }
+30 warn ERESOLVE overriding peer dependency {
+30 warn ERESOLVE   code: 'ERESOLVE',
+30 warn ERESOLVE   edge: {
+30 warn ERESOLVE     type: 'peer',
+30 warn ERESOLVE     name: 'react',
+30 warn ERESOLVE     spec: '>=17',
+30 warn ERESOLVE     from: {
+30 warn ERESOLVE       name: 'reactflow',
+30 warn ERESOLVE       version: '11.11.4',
+30 warn ERESOLVE       location: 'node_modules/reactflow',
+30 warn ERESOLVE       isWorkspace: false,
+30 warn ERESOLVE       dependents: [Array]
+30 warn ERESOLVE     }
+30 warn ERESOLVE   },
+30 warn ERESOLVE   dep: {
+30 warn ERESOLVE     name: 'react',
+30 warn ERESOLVE     version: undefined,
+30 warn ERESOLVE     errors: [ [NotCachedError] ],
+30 warn ERESOLVE     package: {},
+30 warn ERESOLVE     whileInstalling: {
+30 warn ERESOLVE       name: 'react-reconciler',
+30 warn ERESOLVE       version: '0.29.2',
+30 warn ERESOLVE       path: '/Users/frankkocun/Documents/ArchiTech/node_modules/react-konva/node_modules/react-reconciler'
+30 warn ERESOLVE     },
+30 warn ERESOLVE     location: 'node_modules/react',
+30 warn ERESOLVE     isWorkspace: false,
+30 warn ERESOLVE     dependents: [ [Object] ]
+30 warn ERESOLVE   },
+30 warn ERESOLVE   force: false,
+30 warn ERESOLVE   isMine: false,
+30 warn ERESOLVE   strictPeerDeps: false,
+30 warn ERESOLVE   current: {
+30 warn ERESOLVE     name: 'react',
+30 warn ERESOLVE     version: '18.2.0',
+30 warn ERESOLVE     location: 'node_modules/react',
+30 warn ERESOLVE     isWorkspace: false,
+30 warn ERESOLVE     dependents: [
+30 warn ERESOLVE       [Object], [Object],
+30 warn ERESOLVE       [Object], [Object],
+30 warn ERESOLVE       [Object], [Object],
+30 warn ERESOLVE       [Object], [Object],
+30 warn ERESOLVE       [Object], [Object],
+30 warn ERESOLVE       [Object], [Object],
+30 warn ERESOLVE       [Object], [Object],
+30 warn ERESOLVE       [Object], [Object],
+30 warn ERESOLVE       [Object]
+30 warn ERESOLVE     ]
+30 warn ERESOLVE   }
+30 warn ERESOLVE }
+31 warn ERESOLVE overriding peer dependency {
+31 warn ERESOLVE   code: 'ERESOLVE',
+31 warn ERESOLVE   edge: {
+31 warn ERESOLVE     type: 'peer',
+31 warn ERESOLVE     name: 'react',
+31 warn ERESOLVE     spec: '^18.3.1',
+31 warn ERESOLVE     error: 'INVALID',
+31 warn ERESOLVE     from: {
+31 warn ERESOLVE       name: 'react-reconciler',
+31 warn ERESOLVE       version: '0.29.2',
+31 warn ERESOLVE       location: 'node_modules/react-konva/node_modules/react-reconciler',
+31 warn ERESOLVE       isWorkspace: false,
+31 warn ERESOLVE       dependents: [Array]
+31 warn ERESOLVE     }
+31 warn ERESOLVE   },
+31 warn ERESOLVE   dep: {
+31 warn ERESOLVE     name: 'react',
+31 warn ERESOLVE     version: undefined,
+31 warn ERESOLVE     errors: [ [NotCachedError] ],
+31 warn ERESOLVE     package: {},
+31 warn ERESOLVE     whileInstalling: {
+31 warn ERESOLVE       name: 'react-reconciler',
+31 warn ERESOLVE       version: '0.29.2',
+31 warn ERESOLVE       path: '/Users/frankkocun/Documents/ArchiTech/node_modules/react-konva/node_modules/react-reconciler'
+31 warn ERESOLVE     },
+31 warn ERESOLVE     location: 'node_modules/react',
+31 warn ERESOLVE     isWorkspace: false,
+31 warn ERESOLVE     dependents: [ [Object] ]
+31 warn ERESOLVE   },
+31 warn ERESOLVE   force: false,
+31 warn ERESOLVE   isMine: false,
+31 warn ERESOLVE   strictPeerDeps: false,
+31 warn ERESOLVE   current: {
+31 warn ERESOLVE     name: 'react',
+31 warn ERESOLVE     version: undefined,
+31 warn ERESOLVE     errors: [ [NotCachedError] ],
+31 warn ERESOLVE     package: {},
+31 warn ERESOLVE     location: 'node_modules/react',
+31 warn ERESOLVE     isWorkspace: false,
+31 warn ERESOLVE     dependents: [ [Object] ]
+31 warn ERESOLVE   }
+31 warn ERESOLVE }
+32 silly fetch manifest styled-jsx@5.1.1
+33 silly packumentCache full:https://registry.npmjs.org/styled-jsx cache-miss
+34 silly placeDep node_modules/next styled-jsx@ OK for: next@14.2.5 want: 5.1.1
+35 silly fetch manifest its-fine@^1.1.1
+36 silly packumentCache full:https://registry.npmjs.org/its-fine cache-miss
+37 silly placeDep node_modules/react-konva its-fine@ OK for: react-konva@18.2.14 want: ^1.1.1
+38 silly fetch manifest @reactflow/background@11.3.14
+39 silly packumentCache full:https://registry.npmjs.org/@reactflow%2fbackground cache-miss
+40 silly fetch manifest @reactflow/controls@11.2.14
+41 silly packumentCache full:https://registry.npmjs.org/@reactflow%2fcontrols cache-miss
+42 silly fetch manifest @reactflow/core@11.11.4
+43 silly packumentCache full:https://registry.npmjs.org/@reactflow%2fcore cache-miss
+44 silly fetch manifest @reactflow/minimap@11.7.14
+45 silly packumentCache full:https://registry.npmjs.org/@reactflow%2fminimap cache-miss
+46 silly fetch manifest @reactflow/node-resizer@2.2.14
+47 silly packumentCache full:https://registry.npmjs.org/@reactflow%2fnode-resizer cache-miss
+48 silly fetch manifest @reactflow/node-toolbar@1.3.14
+49 silly packumentCache full:https://registry.npmjs.org/@reactflow%2fnode-toolbar cache-miss
+50 silly placeDep node_modules/reactflow @reactflow/background@ OK for: reactflow@11.11.4 want: 11.3.14
+51 silly placeDep node_modules/reactflow @reactflow/controls@ OK for: reactflow@11.11.4 want: 11.2.14
+52 silly placeDep node_modules/reactflow @reactflow/core@ OK for: reactflow@11.11.4 want: 11.11.4
+53 silly placeDep node_modules/reactflow @reactflow/minimap@ OK for: reactflow@11.11.4 want: 11.7.14
+54 silly placeDep node_modules/reactflow @reactflow/node-resizer@ OK for: reactflow@11.11.4 want: 2.2.14
+55 silly placeDep node_modules/reactflow @reactflow/node-toolbar@ OK for: reactflow@11.11.4 want: 1.3.14
+56 verbose stack Error: request to https://registry.npmjs.org/sharp failed: cache mode is 'only-if-cached' but no cached response is available.
+56 verbose stack     at cacheFetch (/opt/homebrew/lib/node_modules/npm/node_modules/make-fetch-happen/lib/cache/index.js:12:13)
+56 verbose stack     at async fetch (/opt/homebrew/lib/node_modules/npm/node_modules/make-fetch-happen/lib/fetch.js:98:7)
+56 verbose stack     at async RegistryFetcher.packument (/opt/homebrew/lib/node_modules/npm/node_modules/pacote/lib/registry.js:90:19)
+56 verbose stack     at async RegistryFetcher.manifest (/opt/homebrew/lib/node_modules/npm/node_modules/pacote/lib/registry.js:128:23)
+56 verbose stack     at async #fetchManifest (/opt/homebrew/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/build-ideal-tree.js:1216:20)
+56 verbose stack     at async #nodeFromEdge (/opt/homebrew/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/build-ideal-tree.js:1054:19)
+56 verbose stack     at async #buildDepStep (/opt/homebrew/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/build-ideal-tree.js:918:11)
+56 verbose stack     at async Arborist.buildIdealTree (/opt/homebrew/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/build-ideal-tree.js:170:7)
+56 verbose stack     at async Arborist.reify (/opt/homebrew/lib/node_modules/npm/node_modules/@npmcli/arborist/lib/arborist/reify.js:110:5)
+56 verbose stack     at async Install.exec (/opt/homebrew/lib/node_modules/npm/lib/commands/install.js:150:5)
+57 error code ENOTCACHED
+58 error request to https://registry.npmjs.org/sharp failed: cache mode is 'only-if-cached' but no cached response is available.
+59 silly unfinished npm timer reify 1770480291955
+60 silly unfinished npm timer reify:loadTrees 1770480291955
+61 verbose cwd /Users/frankkocun/Documents/ArchiTech
+62 verbose os Darwin 25.1.0
+63 verbose node v25.5.0
+64 verbose npm  v11.8.0
+65 verbose exit 1
+66 verbose code 1
+67 error A complete log of this run can be found in: /Users/frankkocun/Documents/ArchiTech/.npm-cache/_logs/2026-02-07T16_04_51_714Z-debug-0.log

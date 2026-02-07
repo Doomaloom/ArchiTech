@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { Circle, Layer, Line, Stage, Text } from "react-konva";
+import dynamic from "next/dynamic";
 import Moveable from "react-moveable";
 import Selecto from "react-selecto";
 import { useImageToSite } from "./../../_context/image-to-site-context";
@@ -13,6 +13,11 @@ import IterationSampleSite from "../IterationSampleSite";
 import IterationTextPanel from "../IterationTextPanel";
 import IterationTransformControls from "../IterationTransformControls";
 import IterationSidebarRail from "../IterationSidebarRail";
+
+const IterationOverlayCanvas = dynamic(
+  () => import("./IterationOverlayCanvas"),
+  { ssr: false, loading: () => null }
+);
 
 const ITERATION_SCOPE = ".imageflow-iteration-site .iteration-preview-root";
 
@@ -357,71 +362,18 @@ export default function IterateView() {
                   cursor: derived.overlayMode ? "crosshair" : "default",
                 }}
               >
-                <Stage
+                <IterationOverlayCanvas
                   width={derived.stageSize.width}
                   height={derived.stageSize.height}
-                  onMouseDown={actions.handleOverlayPointerDown}
-                  onMouseMove={actions.handleOverlayPointerMove}
-                  onMouseUp={actions.handleOverlayPointerEnd}
-                  onMouseLeave={actions.handleOverlayPointerEnd}
-                  onTouchStart={actions.handleOverlayPointerDown}
-                  onTouchMove={actions.handleOverlayPointerMove}
-                  onTouchEnd={actions.handleOverlayPointerEnd}
-                  onTouchCancel={actions.handleOverlayPointerEnd}
-                  listening={Boolean(derived.overlayMode)}
-                >
-                  <Layer>
-                    {state.annotations.map((annotation) => (
-                      <Circle
-                        key={annotation.id}
-                        x={annotation.x}
-                        y={annotation.y}
-                        radius={annotation.radius}
-                        stroke="#f97316"
-                        strokeWidth={2}
-                      />
-                    ))}
-                    {state.annotations
-                      .filter((annotation) => annotation.note)
-                      .map((annotation) => (
-                        <Text
-                          key={`${annotation.id}-text`}
-                          x={annotation.x + annotation.radius + 10}
-                          y={annotation.y - annotation.radius}
-                          text={annotation.note}
-                          fontSize={13}
-                          fill="#0f172a"
-                          padding={6}
-                          width={200}
-                        />
-                      ))}
-                    {state.draftCircle ? (
-                      <Circle
-                        x={state.draftCircle.x}
-                        y={state.draftCircle.y}
-                        radius={state.draftCircle.radius}
-                        stroke="#f97316"
-                        strokeWidth={2}
-                        dash={[6, 4]}
-                      />
-                    ) : null}
-                    {state.pencilPoints.length >= 4 ? (
-                      <Line
-                        points={state.pencilPoints}
-                        stroke="#0f766e"
-                        strokeWidth={2}
-                        lineJoin="round"
-                        lineCap="round"
-                        closed={state.isPencilDrawing}
-                        fill={
-                          state.isPencilDrawing
-                            ? "rgba(15, 118, 110, 0.15)"
-                            : "transparent"
-                        }
-                      />
-                    ) : null}
-                  </Layer>
-                </Stage>
+                  overlayMode={derived.overlayMode}
+                  annotations={state.annotations}
+                  draftCircle={state.draftCircle}
+                  pencilPoints={state.pencilPoints}
+                  isPencilDrawing={state.isPencilDrawing}
+                  onPointerDown={actions.handleOverlayPointerDown}
+                  onPointerMove={actions.handleOverlayPointerMove}
+                  onPointerEnd={actions.handleOverlayPointerEnd}
+                />
               </div>
             </div>
             <IterationTransformControls

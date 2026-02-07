@@ -1,15 +1,15 @@
 "use client";
 
+import InspireView from "./_components/InspireView";
 import ImageToSiteView from "./_components/ImageToSiteView";
-import { ImageToSiteProvider } from "./_context/image-to-site-context";
-import useImageToSiteState from "./_hooks/use-image-to-site-state";
+import { useWorkflow } from "./_context/workflow-context";
 
 export default function ImageToSitePage() {
-  const model = useImageToSiteState();
+  const { workflowMode } = useWorkflow();
 
-  return (
-    <ImageToSiteProvider value={model}>
-      <ImageToSiteView />
-    </ImageToSiteProvider>
-  );
+  if (workflowMode === "inspire") {
+    return <InspireView />;
+  }
+
+  return <ImageToSiteView />;
 }
