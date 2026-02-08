@@ -14,11 +14,13 @@ const SPHERE_COUNT = 6;
 const CAMERA_DISTANCE = 8.4;
 const SPHERE_RADIUS = 0.56;
 const LABEL_Y_OFFSET = 0.92;
-const BASE_AMBIENT = 0.4;
+const BASE_AMBIENT = 0.7;
 const LOCKED_AMBIENT = 0.46;
-const BASE_RIM_STRENGTH = 0.16;
+const BASE_RIM_STRENGTH = 0.56;
 const SELECTED_RIM_STRENGTH = 0.24;
 const LOCKED_RIM_STRENGTH = 0.32;
+const AUTO_ROTATION_SPEED = 0.0025;
+const DEFAULT_SELECTED_SPHERE_INDEX = 1;
 
 const SPHERE_LAYOUT = [
   { x: -1.9, y: 1.05, z: 0 },
@@ -156,10 +158,12 @@ const InspirePaletteSpheres3D = forwardRef(function InspirePaletteSpheres3D(
   const hostRef = useRef(null);
   const sceneApiRef = useRef(null);
   const [renderError, setRenderError] = useState("");
-  const [selectedSphereIndex, setSelectedSphereIndex] = useState(null);
+  const [selectedSphereIndex, setSelectedSphereIndex] = useState(
+    DEFAULT_SELECTED_SPHERE_INDEX
+  );
   const [lockedSphereIndices, setLockedSphereIndices] = useState([]);
   const [labelAnchor, setLabelAnchor] = useState(null);
-  const selectedSphereIndexRef = useRef(null);
+  const selectedSphereIndexRef = useRef(DEFAULT_SELECTED_SPHERE_INDEX);
   const lockedSphereIndicesRef = useRef([]);
 
   const sphereColors = useMemo(() => buildSphereColors(colors), [colors]);
@@ -554,6 +558,9 @@ const InspirePaletteSpheres3D = forwardRef(function InspirePaletteSpheres3D(
         const animate = () => {
           if (isDisposed) {
             return;
+          }
+          if (!interaction.active) {
+            interaction.targetRotationY += AUTO_ROTATION_SPEED;
           }
           interaction.rotationX +=
             (interaction.targetRotationX - interaction.rotationX) * 0.13;

@@ -1,6 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import ImageflowMenuBar from "./ImageflowMenuBar";
 
 const PROJECT_FOLDERS = [
@@ -54,6 +63,31 @@ const PROJECT_FOLDERS = [
   },
 ];
 
+const CONTRIBUTION_TIMELINE_DATA = [
+  { year: "2017", concept: 92, production: 106, quality: 118 },
+  { year: "2018", concept: 101, production: 112, quality: 124 },
+  { year: "2019", concept: 108, production: 120, quality: 116 },
+  { year: "2020", concept: 96, production: 104, quality: 128 },
+  { year: "2021", concept: 110, production: 99, quality: 106 },
+  { year: "2022", concept: 122, production: 114, quality: 120 },
+  { year: "2023", concept: 116, production: 126, quality: 112 },
+  { year: "2024", concept: 134, production: 130, quality: 140 },
+];
+
+const CONTRIBUTOR_ICONS = [
+  { id: "ys", name: "Yassine", initials: "YS" },
+  { id: "dk", name: "Dina", initials: "DK" },
+  { id: "jt", name: "Jules", initials: "JT" },
+  { id: "mk", name: "Mika", initials: "MK" },
+  { id: "al", name: "Alex", initials: "AL" },
+];
+
+const CONTRIBUTION_STATS = [
+  { label: "Commits", value: "146", delta: "+18%" },
+  { label: "Velocity", value: "24.8", delta: "+9%" },
+  { label: "Reviews", value: "39", delta: "+12%" },
+];
+
 const formatUpdatedAt = (isoValue) => {
   const date = new Date(isoValue);
   if (Number.isNaN(date.getTime())) {
@@ -66,16 +100,27 @@ const formatUpdatedAt = (isoValue) => {
   }).format(date);
 };
 
-const toWorkflowLabel = (workflow) =>
-  workflow === "inspire" ? "Inspire" : "Translate";
-
-const toWorkflowClassName = (workflow) =>
-  workflow === "inspire" ? "is-inspire" : "is-translate";
-
 const toFileCountLabel = (count) => `${count} ${count === 1 ? "file" : "files"}`;
 
 const toUpdatedBadgeLabel = (isoValue) =>
   `Updated ${formatUpdatedAt(isoValue)}`;
+
+const renderTimelineTooltip = ({ active, label, payload }) => {
+  if (!active || !payload?.length) {
+    return null;
+  }
+
+  return (
+    <div className="workspace-home-chart-tooltip">
+      <p>{label}</p>
+      {payload.map((entry) => (
+        <span key={entry.dataKey}>
+          {entry.name}: {entry.value}
+        </span>
+      ))}
+    </div>
+  );
+};
 
 export default function WorkspaceHomeDashboard({
   onStartInspire,
@@ -93,7 +138,6 @@ export default function WorkspaceHomeDashboard({
       return [
         project.name,
         project.owner,
-        toWorkflowLabel(project.workflow),
         project.id,
       ].some((field) => field.toLowerCase().includes(query));
     });
@@ -137,7 +181,103 @@ export default function WorkspaceHomeDashboard({
                 </p>
               </button>
             </div>
-            <div className="workspace-home-launch-empty" aria-hidden="true" />
+            <section className="workspace-home-launch-empty" aria-label="Contribution activity">
+              <header className="workspace-home-contrib-header">
+                <p className="workspace-home-contrib-kicker">Weekly pulse</p>
+                <h3>Contribution Timeline</h3>
+                <span className="workspace-home-contrib-header-icons" aria-label="Contributors">
+                  {CONTRIBUTOR_ICONS.map((contributor) => (
+                    <span
+                      key={contributor.id}
+                      className="workspace-home-contrib-header-icon"
+                      title={contributor.name}
+                      aria-label={contributor.name}
+                    >
+                      {contributor.initials}
+                    </span>
+                  ))}
+                </span>
+              </header>
+
+              <div className="workspace-home-contrib-content">
+                <div className="workspace-home-contrib-chart-column">
+                  <div className="workspace-home-time-graph" role="img" aria-label="Contribution timeline area chart">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart
+                        data={CONTRIBUTION_TIMELINE_DATA}
+                        margin={{ top: 18, right: 14, left: 0, bottom: 16 }}
+                      >
+                        <defs>
+                          <linearGradient id="glassConceptFill" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="rgba(255,255,255,0.36)" />
+                            <stop offset="100%" stopColor="rgba(255,255,255,0.08)" />
+                          </linearGradient>
+                          <linearGradient id="glassProductionFill" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="rgba(255,255,255,0.28)" />
+                            <stop offset="100%" stopColor="rgba(255,255,255,0.06)" />
+                          </linearGradient>
+                          <linearGradient id="glassQualityFill" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="rgba(255,255,255,0.22)" />
+                            <stop offset="100%" stopColor="rgba(255,255,255,0.05)" />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid stroke="rgba(255,255,255,0.22)" strokeDasharray="2 6" vertical={false} />
+                        <XAxis
+                          dataKey="year"
+                          tick={{ fill: "rgba(15,23,42,0.56)", fontSize: 11 }}
+                          tickLine={false}
+                          axisLine={{ stroke: "rgba(255,255,255,0.34)" }}
+                        />
+                        <YAxis
+                          tick={{ fill: "rgba(15,23,42,0.56)", fontSize: 11 }}
+                          tickLine={false}
+                          axisLine={false}
+                          width={34}
+                        />
+                        <Tooltip
+                          content={renderTimelineTooltip}
+                          cursor={{ stroke: "rgba(255,255,255,0.45)", strokeWidth: 1 }}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="concept"
+                          name="Concept"
+                          stroke="rgba(255,255,255,0.84)"
+                          strokeWidth={1.8}
+                          fill="url(#glassConceptFill)"
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="production"
+                          name="Production"
+                          stroke="rgba(255,255,255,0.68)"
+                          strokeWidth={1.7}
+                          fill="url(#glassProductionFill)"
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="quality"
+                          name="Quality"
+                          stroke="rgba(255,255,255,0.54)"
+                          strokeWidth={1.6}
+                          fill="url(#glassQualityFill)"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                <div className="workspace-home-contrib-stats" role="list">
+                  {CONTRIBUTION_STATS.map((stat) => (
+                    <div key={stat.label} className="workspace-home-contrib-stat" role="listitem">
+                      <span className="workspace-home-contrib-stat-label">{stat.label}</span>
+                      <strong className="workspace-home-contrib-stat-value">{stat.value}</strong>
+                      <span className="workspace-home-contrib-stat-delta">{stat.delta}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
           </div>
 
           <div className="workspace-home-files">
@@ -166,19 +306,7 @@ export default function WorkspaceHomeDashboard({
                 >
                   <span className="workspace-home-list-top">
                     <span className="workspace-home-project-cell">
-                      <strong>{project.name}</strong>
-                    </span>
-                    <span className="workspace-home-list-badges">
-                      <span
-                        className={`workspace-home-workflow-pill ${toWorkflowClassName(
-                          project.workflow
-                        )}`}
-                      >
-                        {toWorkflowLabel(project.workflow)}
-                      </span>
-                      <span className="workspace-home-date-pill">
-                        {toUpdatedBadgeLabel(project.updatedAt)}
-                      </span>
+                      <span>{project.name}</span>
                     </span>
                   </span>
                   <span className="workspace-home-list-bottom">
@@ -190,9 +318,12 @@ export default function WorkspaceHomeDashboard({
                       <span className="workspace-home-list-text">
                         {toFileCountLabel(project.files)}
                       </span>
-                    </span>
-                    <span className="workspace-home-list-actions">
-                      <span className="workspace-home-open-button">Open</span>
+                      <span className="workspace-home-list-dot" aria-hidden="true">
+                        &middot;
+                      </span>
+                      <span className="workspace-home-list-text">
+                        {toUpdatedBadgeLabel(project.updatedAt)}
+                      </span>
                     </span>
                   </span>
                 </button>
