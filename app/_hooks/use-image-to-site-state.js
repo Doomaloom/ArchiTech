@@ -17,6 +17,15 @@ import {
 const PREVIEW_ZOOM_MIN = 0.6;
 const PREVIEW_ZOOM_MAX = 1;
 const PREVIEW_ZOOM_STEP = 0.1;
+const VALID_VIEW_MODES = new Set([
+  "start",
+  "nodes",
+  "preview",
+  "selected",
+  "iterate",
+  "builder",
+  "code",
+]);
 
 const clampValue = (value, min, max) => Math.min(Math.max(value, min), max);
 
@@ -326,6 +335,55 @@ export default function useImageToSiteState() {
     [previewSettings.actions, viewMode]
   );
 
+  const hydrateWorkspace = useCallback(
+    (snapshot = {}) => {
+      if (!snapshot || typeof snapshot !== "object") {
+        return;
+      }
+
+      const nextPreviewCount = clampValue(
+        Number(snapshot.previewCount) || 3,
+        1,
+        6
+      );
+      const normalized = normalizePreviewItems(
+        snapshot.previewItems,
+        nextPreviewCount
+      );
+      const nextSelectedPreviewIndex = clampValue(
+        Number(snapshot.selectedPreviewIndex) || 0,
+        0,
+        Math.max(nextPreviewCount - 1, 0)
+      );
+      const viewModeFromSnapshot = snapshot.viewMode?.toString();
+      const nextViewMode = VALID_VIEW_MODES.has(viewModeFromSnapshot)
+        ? viewModeFromSnapshot
+        : "start";
+
+      details.actions.setTitle(snapshot.title?.toString() || "");
+      details.actions.setName(snapshot.name?.toString() || "");
+      details.actions.setDetails(snapshot.details?.toString() || "");
+      setStructureFlow(snapshot.structureFlow ?? DEFAULT_STRUCTURE_FLOW);
+      setShowComponents(Boolean(snapshot.showComponents));
+      setModelQuality(snapshot.modelQuality === "pro" ? "pro" : "flash");
+      setCreativityValue(
+        clampValue(Number(snapshot.creativityValue) || 40, 0, 100)
+      );
+      previewSettings.actions.setPreviewCount(nextPreviewCount);
+      previewSettings.actions.setSelectedPreviewIndex(nextSelectedPreviewIndex);
+      setPreviewItems(normalized);
+      setBuilderHtml(
+        snapshot.builderHtml?.toString() ||
+          normalized[nextSelectedPreviewIndex]?.html ||
+          ""
+      );
+      setPreviewError("");
+      setGenerationError("");
+      viewMode.setViewMode(nextViewMode);
+    },
+    [details.actions, previewSettings.actions, viewMode]
+  );
+
   const previewZoomLabel = useMemo(
     () => `${Math.round(previewZoom * 100)}%`,
     [previewZoom]
@@ -513,6 +571,7 @@ export default function useImageToSiteState() {
       handleGeneratePreviews,
       handleGenerateStructure,
       hydratePreviews,
+      hydrateWorkspace,
       handleNodeClick: nodeGraph.actions.handleNodeClick,
       handleOpenCodeFile: codeWorkspace.actions.handleOpenCodeFile,
       handleEditorChange: codeWorkspace.actions.handleEditorChange,
