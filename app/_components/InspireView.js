@@ -463,17 +463,17 @@ export default function InspireView() {
   useEffect(() => {
     if (
       inspireStep === INSPIRE_STEPS.TREE &&
-      !inspireState.tree &&
       !inspireState.isGeneratingTree &&
+      !inspireState.hasRequestedTree &&
       inspireState.selectedStyle
     ) {
       inspireActions.generateTree();
     }
   }, [
     inspireActions,
+    inspireState.hasRequestedTree,
     inspireState.isGeneratingTree,
     inspireState.selectedStyle,
-    inspireState.tree,
     inspireStep,
   ]);
 
@@ -702,17 +702,13 @@ export default function InspireView() {
               <div>
                 <span className="inspire-tree-kicker">Project tree</span>
                 <h2>Structure outline</h2>
-                <p>Generating structure from stage 1 and 2 inputs.</p>
+                <p>Preparing the node workspace with offline structure.</p>
               </div>
             </div>
             <div className="inspire-tree-layout">
               <ul className="inspire-tree-list">
                 <li>
-                  <span>
-                    {inspireState.isGeneratingTree
-                      ? "Generating tree..."
-                      : "Generate the tree to start."}
-                  </span>
+                  <span>Node graph initializes instantly once structure is ready.</span>
                 </li>
               </ul>
             </div>
@@ -872,7 +868,7 @@ export default function InspireView() {
           ? `Preview ${inspireState.selectedPreviewIndex + 1}`
           : "No preview selected");
       return (
-        <aside className="imageflow-info inspire-info">
+        <aside className="imageflow-info inspire-info inspire-preview-info">
           <div className="imageflow-info-header">
             <p className="imageflow-info-kicker">Inspire</p>
             <h1 className="imageflow-info-title">Select a preview</h1>
@@ -880,16 +876,19 @@ export default function InspireView() {
               Choose the layout that best matches the direction.
             </p>
           </div>
-          <div className="inspire-info-summary">
+          <div className="inspire-info-summary inspire-preview-selection">
             <span>Selected</span>
             <strong>{selectedLabel}</strong>
           </div>
-          <div className="imageflow-panel-switch" role="tablist">
+          <div
+            className="imageflow-panel-switch inspire-preview-mode-switch"
+            role="tablist"
+          >
             {PREVIEW_MODE_OPTIONS.map((option) => (
               <button
                 key={option.id}
                 type="button"
-                className={`imageflow-switch-button${
+                className={`imageflow-switch-button inspire-preview-mode-button${
                   inspireState.previewMode === option.id ? " is-active" : ""
                 }`}
                 onClick={() => inspireActions.setPreviewMode(option.id)}
@@ -900,9 +899,9 @@ export default function InspireView() {
               </button>
             ))}
           </div>
-          <div className="imageflow-info-fields">
+          <div className="imageflow-info-fields inspire-preview-actions">
             <button
-              className="imageflow-generate-button"
+              className="imageflow-generate-button inspire-preview-action is-primary"
               type="button"
               onClick={() =>
                 inspireActions.generatePreviews({
@@ -919,7 +918,7 @@ export default function InspireView() {
                 : "Generate previews"}
             </button>
             <button
-              className="imageflow-generate-button"
+              className="imageflow-generate-button inspire-preview-action is-ghost"
               type="button"
               onClick={handleContinueToWorkspace}
               disabled={
@@ -950,10 +949,9 @@ export default function InspireView() {
                 type="button"
                 onClick={inspireActions.generateTree}
                 disabled={inspireState.isGeneratingTree}
+                aria-busy={inspireState.isGeneratingTree}
               >
-                {inspireState.isGeneratingTree
-                  ? "Generating tree..."
-                  : "Regenerate tree"}
+                Regenerate tree
               </button>
               {inspireState.treeError ? (
                 <p className="imageflow-error">{inspireState.treeError}</p>
@@ -1017,8 +1015,9 @@ export default function InspireView() {
               type="button"
               onClick={inspireActions.generateTree}
               disabled={inspireState.isGeneratingTree}
+              aria-busy={inspireState.isGeneratingTree}
             >
-              {inspireState.isGeneratingTree ? "Generating tree..." : "Regenerate tree"}
+              Regenerate tree
             </button>
           </div>
         </aside>
@@ -1029,8 +1028,11 @@ export default function InspireView() {
       const hasPreviewImage = Boolean(selectedPreview?.imageUrl);
       const hasMask = Boolean(inspireState.workspaceMask?.dataUrl);
       const hasFinalHtml = Boolean(selectedPreview?.html);
+      const isApplyReady = isImagePreviewMode && hasPreviewImage && hasMask;
+      const isConvertReady = isImagePreviewMode && hasPreviewImage;
+      const isEditorReady = hasFinalHtml;
       return (
-        <aside className="imageflow-info inspire-info">
+        <aside className="imageflow-info inspire-info inspire-workspace-info">
           <div className="imageflow-info-header">
             <p className="imageflow-info-kicker">Inspire workspace</p>
             <h1 className="imageflow-info-title">Mark changes</h1>
@@ -1038,7 +1040,7 @@ export default function InspireView() {
               Paint over areas you want to revise and leave a focused note.
             </p>
           </div>
-          <div className="imageflow-info-fields">
+          <div className="imageflow-info-fields inspire-workspace-fields">
             <label className="imageflow-field">
               <span className="imageflow-field-label">Comment</span>
               <textarea
@@ -1052,7 +1054,7 @@ export default function InspireView() {
               />
             </label>
             <button
-              className="imageflow-generate-button"
+              className="imageflow-generate-button inspire-workspace-action"
               type="button"
               onClick={inspireActions.applyMaskEdit}
               disabled={
@@ -1062,9 +1064,12 @@ export default function InspireView() {
                 inspireState.isApplyingMaskEdit
               }
             >
-              {inspireState.isApplyingMaskEdit
-                ? "Applying mask edit..."
-                : "Apply changes to image"}
+              <span>
+                {inspireState.isApplyingMaskEdit
+                  ? "Applying mask edit..."
+                  : "Apply changes to image"}
+              </span>
+              <span className="inspire-workspace-action-step">Step 1</span>
             </button>
             {!isImagePreviewMode ? (
               <div className="inspire-preview-error" role="status">
@@ -1073,27 +1078,54 @@ export default function InspireView() {
             ) : null}
             {isImagePreviewMode ? (
               <button
-                className="imageflow-generate-button"
+                className="imageflow-generate-button inspire-workspace-action"
                 type="button"
                 onClick={inspireActions.finalizeToHtml}
                 disabled={!hasPreviewImage || inspireState.isFinalizingPreview}
               >
-                {inspireState.isFinalizingPreview
-                  ? "Finalizing..."
-                  : "Convert to HTML"}
+                <span>
+                  {inspireState.isFinalizingPreview
+                    ? "Finalizing..."
+                    : "Convert to HTML"}
+                </span>
+                <span className="inspire-workspace-action-step">Step 2</span>
               </button>
             ) : null}
             <button
-              className="imageflow-generate-button"
+              className="imageflow-generate-button inspire-workspace-action"
               type="button"
               onClick={handleContinueToIteration}
               disabled={!hasFinalHtml || inspireState.isFinalizingPreview}
             >
-              Open in editor
+              <span>Open in editor</span>
+              <span className="inspire-workspace-action-step">Step 3</span>
             </button>
-            <p className="inspire-workspace-hint">
-              Flow: Apply changes -&gt; Convert to HTML -&gt; Open in editor.
-            </p>
+            <div className="inspire-workspace-flow" role="note">
+              <span className="inspire-workspace-flow-title">Workflow</span>
+              <div className="inspire-workspace-flow-track">
+                <span
+                  className={`inspire-workspace-flow-chip${
+                    isApplyReady ? " is-ready" : ""
+                  }`}
+                >
+                  1 Apply changes
+                </span>
+                <span
+                  className={`inspire-workspace-flow-chip${
+                    isConvertReady ? " is-ready" : ""
+                  }`}
+                >
+                  2 Convert to HTML
+                </span>
+                <span
+                  className={`inspire-workspace-flow-chip${
+                    isEditorReady ? " is-ready" : ""
+                  }`}
+                >
+                  3 Open in editor
+                </span>
+              </div>
+            </div>
           </div>
         </aside>
       );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { DEFAULT_STRUCTURE_FLOW } from "../_lib/google-preview-defaults";
 
 const DEFAULT_BRIEF = {
@@ -205,16 +205,47 @@ const flattenTree = (root) => {
   return nodes;
 };
 
+const normalizeTreePayload = (payload) => {
+  const root = normalizeTree(payload);
+  if (!root) {
+    return null;
+  }
+  const rootWithIds = normalizeTreeIds(root);
+  if (payload && typeof payload === "object") {
+    if (payload.root && typeof payload.root === "object") {
+      return { ...payload, root: rootWithIds };
+    }
+    if (payload.tree && typeof payload.tree === "object") {
+      return { ...payload, tree: rootWithIds };
+    }
+  }
+  return rootWithIds;
+};
+
+const createOfflineTree = () => normalizeTreeIds(cloneFallbackTree());
+
+const resolveDefaultSelectedNodeId = (root) => {
+  if (!root || typeof root !== "object") {
+    return null;
+  }
+  const firstChild = getTreeChildren(root)[0];
+  return firstChild?.id?.toString() || root.id?.toString() || null;
+};
+
 export default function useInspireState() {
+  const initialOfflineTreeRef = useRef(createOfflineTree());
   const [brief, setBrief] = useState(DEFAULT_BRIEF);
   const [styleIdeas, setStyleIdeas] = useState([]);
   const [selectedStyle, setSelectedStyle] = useState(null);
   const [isGeneratingStyles, setIsGeneratingStyles] = useState(false);
   const [styleError, setStyleError] = useState("");
-  const [tree, setTree] = useState(null);
+  const [tree, setTree] = useState(() => initialOfflineTreeRef.current);
   const [isGeneratingTree, setIsGeneratingTree] = useState(false);
+  const [hasRequestedTree, setHasRequestedTree] = useState(false);
   const [treeError, setTreeError] = useState("");
-  const [selectedNodeId, setSelectedNodeId] = useState(null);
+  const [selectedNodeId, setSelectedNodeId] = useState(() =>
+    resolveDefaultSelectedNodeId(initialOfflineTreeRef.current)
+  );
   const [previewItems, setPreviewItems] = useState([]);
   const [previewError, setPreviewError] = useState("");
   const [isGeneratingPreviews, setIsGeneratingPreviews] = useState(false);
@@ -251,13 +282,15 @@ export default function useInspireState() {
     if (!style) {
       return;
     }
+    const offlineTree = createOfflineTree();
     setSelectedStyle(style);
-    setTree(null);
-    setSelectedNodeId(null);
+    setTree(offlineTree);
+    handleSetSelectedNodeId(resolveDefaultSelectedNodeId(offlineTree));
+    setHasRequestedTree(false);
     setPreviewItems([]);
     setPreviewError("");
     setWorkspaceMask(null);
-  }, []);
+  }, [handleSetSelectedNodeId]);
 
   const loadStyleIdeas = useCallback(async () => {
     if (isGeneratingStyles) {
@@ -299,6 +332,7 @@ export default function useInspireState() {
       setTreeError("Select a style before generating the tree.");
       return;
     }
+    setHasRequestedTree(true);
     setIsGeneratingTree(true);
     try {
       const response = await fetch("/api/structure", {
@@ -321,30 +355,24 @@ export default function useInspireState() {
       }
       const modelTree =
         payload?.tree ?? payload?.structure ?? payload?.root ?? payload;
-      const normalizedTree = modelTree;
+      const normalizedTree = normalizeTreePayload(modelTree);
       const root = normalizeTree(normalizedTree);
       if (!root) {
         throw new Error("Model tree response was empty or invalid.");
       }
-      const rootWithIds = normalizeTreeIds(root);
-      const nextTree =
-        normalizedTree?.root && typeof normalizedTree === "object"
-          ? { ...normalizedTree, root: rootWithIds }
-          : rootWithIds;
-      setTree(nextTree);
+      setTree(normalizedTree);
       setPreviewItems([]);
       setPreviewError("");
-      if (rootWithIds?.id) {
-        const firstChild = getTreeChildren(rootWithIds)[0];
-        handleSetSelectedNodeId(firstChild?.id || rootWithIds.id);
+      const defaultNodeId = resolveDefaultSelectedNodeId(root);
+      if (defaultNodeId) {
+        handleSetSelectedNodeId(defaultNodeId);
       }
     } catch (error) {
-      const fallbackRoot = normalizeTreeIds(cloneFallbackTree());
+      const fallbackRoot = createOfflineTree();
       setTree(fallbackRoot);
       setPreviewItems([]);
       setPreviewError("");
-      const firstFallbackChild = getTreeChildren(fallbackRoot)[0];
-      handleSetSelectedNodeId(firstFallbackChild?.id || fallbackRoot?.id || null);
+      handleSetSelectedNodeId(resolveDefaultSelectedNodeId(fallbackRoot));
       const reason = error?.message ?? "AI structure generation unavailable.";
       setTreeError(`Loaded fallback Google structure. ${reason}`);
     } finally {
@@ -628,8 +656,17 @@ export default function useInspireState() {
       setSelectedStyle(null);
     }
 
-    setTree(snapshot.tree ?? null);
-    setSelectedNodeId(snapshot.selectedNodeId?.toString() || null);
+    const hydratedTree = normalizeTreePayload(snapshot.tree) || createOfflineTree();
+    const hydratedRoot = normalizeTree(hydratedTree);
+    const fallbackNodeId = resolveDefaultSelectedNodeId(hydratedRoot);
+    const snapshotNodeId = snapshot.selectedNodeId?.toString() || null;
+    const hasSnapshotNode =
+      snapshotNodeId &&
+      hydratedRoot &&
+      Boolean(buildNodeContextFromTree(hydratedRoot, snapshotNodeId)?.node);
+    setTree(hydratedTree);
+    setSelectedNodeId(hasSnapshotNode ? snapshotNodeId : fallbackNodeId);
+    setHasRequestedTree(false);
 
     const nextPreviewCount = clampNumber(Number(snapshot.previewCount) || 3, 1, 6);
     setPreviewCount(nextPreviewCount);
@@ -717,6 +754,7 @@ export default function useInspireState() {
       styleError,
       tree,
       isGeneratingTree,
+      hasRequestedTree,
       treeError,
       selectedNodeId,
       previewItems,

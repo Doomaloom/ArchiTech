@@ -14,6 +14,7 @@
     "@spaceymonk/react-radial-menu": "^2.1.0",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.95.3",
+    "@tanstack/react-table": "^8.21.3",
     "grapesjs": "^0.22.14",
     "grapesjs-blocks-basic": "^1.0.2",
     "grapesjs-blocks-flexbox": "^1.0.1",

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 const VERSION_INTERVAL_MS = 20000;
 const AUTOSAVE_DEBOUNCE_MS = 1500;
+const VALID_WORKFLOW_MODES = new Set(["home", "image-to-site", "inspire"]);
 
 const prunePreviewItem = (preview) => {
   if (!preview || typeof preview !== "object") {
@@ -157,7 +158,9 @@ export default function useProjectAutosave({
           const controls = controlsRef.current;
           isHydratingRef.current = true;
           controls.setWorkflowMode(
-            dbSnapshot.workflowMode === "inspire" ? "inspire" : "image-to-site"
+            VALID_WORKFLOW_MODES.has(dbSnapshot.workflowMode)
+              ? dbSnapshot.workflowMode
+              : "image-to-site"
           );
           if (typeof dbSnapshot.inspireStep === "string") {
             controls.setInspireStep(dbSnapshot.inspireStep);

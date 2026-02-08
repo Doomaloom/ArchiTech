@@ -1,6 +1,5 @@
 "use client";
 
-import { useImageToSite } from "../_context/image-to-site-context";
 import { useWorkflow } from "../_context/workflow-context";
 
 const ICONS = {
@@ -239,14 +238,9 @@ const BUTTON_SETS = {
 export default function SidebarRail() {
   const { workflowMode, inspireStep, setWorkflowMode, setInspireStep } =
     useWorkflow();
-  const { actions: imageToSiteActions } = useImageToSite();
   const buttonSets = BUTTON_SETS;
   const handleHomeClick = () => {
-    if (workflowMode === "inspire") {
-      setInspireStep("project-description");
-      return;
-    }
-    imageToSiteActions.setViewMode("start");
+    setWorkflowMode("home");
   };
 
   return (
@@ -257,48 +251,53 @@ export default function SidebarRail() {
     >
       <div className="sidebar-header">
         <button
-          className="rail-button"
+          className={`rail-button${workflowMode === "home" ? " is-active" : ""}`}
           type="button"
           onClick={handleHomeClick}
           aria-label="Home"
+          aria-pressed={workflowMode === "home"}
         >
           {ICONS.home}
         </button>
       </div>
       <div className="sidebar-body">
-        <div className="sidebar-nav">
-          <div className="rail-buttons" data-workflow-group="image-to-site">
-            {buttonSets["image-to-site"].map((button) => (
-              <button
-                key={button.id}
-                className="rail-button"
-                type="button"
-                aria-label={button.label}
-                data-imageflow-step={button.step}
-              >
-                {ICONS[button.icon]}
-              </button>
-            ))}
+        {workflowMode === "home" ? null : (
+          <div className="sidebar-nav">
+            <div className="rail-buttons" data-workflow-group="image-to-site">
+              {buttonSets["image-to-site"].map((button) => (
+                <button
+                  key={button.id}
+                  className="rail-button"
+                  type="button"
+                  aria-label={button.label}
+                  data-imageflow-step={button.step}
+                >
+                  {ICONS[button.icon]}
+                </button>
+              ))}
+            </div>
+            <div className="rail-buttons" data-workflow-group="inspire">
+              {buttonSets.inspire.map((button) => (
+                <button
+                  key={button.id}
+                  className={`rail-button${
+                    inspireStep === button.step ? " is-active" : ""
+                  }`}
+                  type="button"
+                  onClick={() => setInspireStep(button.step)}
+                  aria-label={button.label}
+                  aria-pressed={inspireStep === button.step}
+                  data-workflow-step={button.step}
+                >
+                  {ICONS[button.icon]}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="rail-buttons" data-workflow-group="inspire">
-            {buttonSets.inspire.map((button) => (
-              <button
-                key={button.id}
-                className={`rail-button${
-                  inspireStep === button.step ? " is-active" : ""
-                }`}
-                type="button"
-                onClick={() => setInspireStep(button.step)}
-                aria-label={button.label}
-                aria-pressed={inspireStep === button.step}
-                data-workflow-step={button.step}
-              >
-                {ICONS[button.icon]}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="sidebar-page-slot" id="sidebar-page-slot" />
+        )}
+        {workflowMode === "home" ? null : (
+          <div className="sidebar-page-slot" id="sidebar-page-slot" />
+        )}
         <div className="sidebar-footer">
           <div className="workflow-toggle-block">
             <button
