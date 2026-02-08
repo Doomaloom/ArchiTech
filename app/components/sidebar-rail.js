@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useWorkflow } from "../_context/workflow-context";
 
 const ICONS = {
@@ -132,36 +131,6 @@ const ICONS = {
       />
     </svg>
   ),
-  code: (
-    <svg className="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        d="M9 7l-4 5 4 5M15 7l4 5-4 5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  ),
-  settings: (
-    <svg className="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        d="M12 8.3a3.7 3.7 0 100 7.4 3.7 3.7 0 000-7.4z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.6"
-      />
-      <path
-        d="M19.4 12a7.4 7.4 0 00-.1-1.1l2-1.5-2-3.4-2.3.8a7.6 7.6 0 00-1.9-1.1l-.3-2.4H9.2l-.3 2.4a7.6 7.6 0 00-1.9 1.1l-2.3-.8-2 3.4 2 1.5a7.4 7.4 0 000 2.2l-2 1.5 2 3.4 2.3-.8a7.6 7.6 0 001.9 1.1l.3 2.4h5.6l.3-2.4a7.6 7.6 0 001.9-1.1l2.3.8 2-3.4-2-1.5c.1-.4.1-.7.1-1.1z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  ),
   document: (
     <svg className="button-icon" viewBox="0 0 24 24" aria-hidden="true">
       <rect
@@ -230,8 +199,6 @@ const IMAGE_TO_SITE_BUTTONS = [
     icon: "builder",
     step: "builder",
   },
-  { id: "code", label: "Code editor", icon: "code", step: "code" },
-  { id: "settings", label: "Settings", icon: "settings" },
 ];
 
 const INSPIRE_BUTTONS = [
@@ -261,8 +228,6 @@ const INSPIRE_BUTTONS = [
     icon: "builder",
     step: "builder",
   },
-  { id: "code", label: "Code editor", icon: "code", step: "code" },
-  { id: "settings", label: "Settings", icon: "settings", step: "settings" },
 ];
 
 const BUTTON_SETS = {
@@ -281,11 +246,7 @@ export default function SidebarRail() {
       aria-label="Sidebar rail"
       data-workflow-mode={workflowMode}
     >
-      <div className="sidebar-header">
-        <Link className="rail-button" href="/" aria-label="Home">
-          {ICONS.home}
-        </Link>
-      </div>
+      <div className="sidebar-header" />
       <div className="sidebar-body">
         <div className="sidebar-nav">
           <div className="rail-buttons" data-workflow-group="image-to-site">
@@ -322,9 +283,8 @@ export default function SidebarRail() {
         <div className="sidebar-page-slot" id="sidebar-page-slot" />
         <div className="sidebar-footer">
           <div className="workflow-toggle-block">
-            <span className="workflow-toggle-label">Workflow</span>
             <button
-              className="workflow-toggle-circle"
+              className="rail-button workflow-toggle-circle"
               type="button"
               onClick={() =>
                 setWorkflowMode(
@@ -338,41 +298,7 @@ export default function SidebarRail() {
                   : "Switch to Image-to-Site workflow"
               }
             >
-              {workflowMode === "image-to-site" ? ICONS.image : ICONS.sparkle}
-            </button>
-          </div>
-          <div className="rail-buttons rail-buttons-bottom sidebar-footer-actions">
-            <button className="rail-button" type="button" aria-label="Help">
-              <svg className="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-                <path
-                  d="M9.3 9a3 3 0 115.4 1.8c-.8.7-1.7 1.2-1.7 2.6"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                />
-                <circle cx="12" cy="17.5" r="1" fill="currentColor" />
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="9"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.4"
-                />
-              </svg>
-            </button>
-            <button className="rail-button" type="button" aria-label="Theme">
-              <svg className="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-                <path
-                  d="M14.5 4.5a7 7 0 106.3 9.6 7.6 7.6 0 01-6.3-9.6z"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+              {workflowMode === "image-to-site" ? ICONS.sparkle : ICONS.image}
             </button>
           </div>
           <div className="imageflow-sidebar-toggle-block">

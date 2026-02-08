@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import InspirePaletteSpheres3D from "./InspirePaletteSpheres3D";
 
 const FALLBACK_PALETTE = [
@@ -14,22 +14,207 @@ const FALLBACK_PALETTE = [
   "#eab308",
 ];
 
-const PLACEHOLDER_LABELS = [
-  "Color rhythm",
-  "Accent hierarchy",
-  "Background tones",
-  "CTA contrast",
+const COLOR_OPTION_ITEMS = [
+  { id: "balanced", label: "Keep balanced" },
+  { id: "cooler", label: "Make it cooler" },
+  { id: "warmer", label: "Make it warmer" },
+  { id: "muted", label: "Make it softer" },
+];
+
+const FONT_SAMPLE_ROWS = [
+  { id: "times", fontFamily: '"Times New Roman", Times, serif' },
+  { id: "georgia", fontFamily: 'Georgia, "Palatino Linotype", serif' },
+  { id: "trebuchet", fontFamily: '"Trebuchet MS", "Segoe UI", sans-serif' },
+  { id: "gill", fontFamily: '"Gill Sans", "Gill Sans MT", Calibri, sans-serif' },
+  { id: "lucida", fontFamily: '"Lucida Sans", "Lucida Grande", sans-serif' },
+  { id: "franklin", fontFamily: '"Franklin Gothic Medium", "Arial Narrow", Arial, sans-serif' },
+  { id: "copperplate", fontFamily: "Copperplate, 'Copperplate Gothic Light', fantasy" },
+  { id: "brush", fontFamily: '"Brush Script MT", "Comic Sans MS", cursive' },
+  { id: "courier", fontFamily: '"Courier New", Courier, monospace' },
+  { id: "verdana", fontFamily: "Verdana, Geneva, sans-serif" },
+  { id: "tahoma", fontFamily: "Tahoma, Geneva, sans-serif" },
+  { id: "impact", fontFamily: 'Impact, "Arial Black", sans-serif' },
 ];
 
 const MIN_LIBRARY_COUNT = 4;
 const MAX_LIBRARY_COUNT = 12;
 
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+const normalizeHexColor = (value) => {
+  const cleaned = String(value || "")
+    .trim()
+    .replace(/^#/, "");
+  if (/^[a-fA-F0-9]{6}$/.test(cleaned)) {
+    return cleaned.toLowerCase();
+  }
+  if (/^[a-fA-F0-9]{3}$/.test(cleaned)) {
+    return cleaned
+      .toLowerCase()
+      .split("")
+      .map((channel) => `${channel}${channel}`)
+      .join("");
+  }
+  return "64748b";
+};
+
+const hexToRgb = (value) => {
+  const normalized = normalizeHexColor(value);
+  return {
+    red: parseInt(normalized.slice(0, 2), 16),
+    green: parseInt(normalized.slice(2, 4), 16),
+    blue: parseInt(normalized.slice(4, 6), 16),
+  };
+};
+
+const toHexChannel = (value) => {
+  return clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
+};
+
+const rgbToHex = ({ red, green, blue }) => {
+  return `#${toHexChannel(red)}${toHexChannel(green)}${toHexChannel(blue)}`;
+};
+
+const lerp = (start, end, t) => start + (end - start) * t;
+
+const mixRgb = (left, right, t) => {
+  return {
+    red: lerp(left.red, right.red, t),
+    green: lerp(left.green, right.green, t),
+    blue: lerp(left.blue, right.blue, t),
+  };
+};
+
+const createToneVariant = (rgb, shift) => {
+  if (shift >= 0) {
+    return {
+      red: lerp(rgb.red, 255, shift),
+      green: lerp(rgb.green, 255, shift),
+      blue: lerp(rgb.blue, 255, shift),
+    };
+  }
+  const factor = 1 + shift;
+  return {
+    red: rgb.red * factor,
+    green: rgb.green * factor,
+    blue: rgb.blue * factor,
+  };
+};
+
+const rgbToHsl = ({ red, green, blue }) => {
+  const r = clamp(red, 0, 255) / 255;
+  const g = clamp(green, 0, 255) / 255;
+  const b = clamp(blue, 0, 255) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const delta = max - min;
+  let hue = 0;
+  const lightness = (max + min) / 2;
+  let saturation = 0;
+
+  if (delta !== 0) {
+    saturation =
+      lightness > 0.5
+        ? delta / (2 - max - min)
+        : delta / (max + min || 1);
+
+    if (max === r) {
+      hue = ((g - b) / delta + (g < b ? 6 : 0)) / 6;
+    } else if (max === g) {
+      hue = ((b - r) / delta + 2) / 6;
+    } else {
+      hue = ((r - g) / delta + 4) / 6;
+    }
+  }
+
+  return { hue, saturation, lightness };
+};
+
+const hslToRgb = ({ hue, saturation, lightness }) => {
+  if (saturation === 0) {
+    const gray = lightness * 255;
+    return { red: gray, green: gray, blue: gray };
+  }
+
+  const hueToRgb = (p, q, t) => {
+    let value = t;
+    if (value < 0) value += 1;
+    if (value > 1) value -= 1;
+    if (value < 1 / 6) return p + (q - p) * 6 * value;
+    if (value < 1 / 2) return q;
+    if (value < 2 / 3) return p + (q - p) * (2 / 3 - value) * 6;
+    return p;
+  };
+
+  const q =
+    lightness < 0.5
+      ? lightness * (1 + saturation)
+      : lightness + saturation - lightness * saturation;
+  const p = 2 * lightness - q;
+
+  return {
+    red: hueToRgb(p, q, hue + 1 / 3) * 255,
+    green: hueToRgb(p, q, hue) * 255,
+    blue: hueToRgb(p, q, hue - 1 / 3) * 255,
+  };
+};
+
+const normalizeHue = (value) => {
+  if (value < 0) return value + 1;
+  if (value > 1) return value - 1;
+  return value;
+};
+
+const transformColorByOption = (color, optionId) => {
+  if (optionId === "balanced") {
+    return color;
+  }
+  const hsl = rgbToHsl(hexToRgb(color));
+  const next = { ...hsl };
+
+  if (optionId === "cooler") {
+    next.hue = normalizeHue(hsl.hue + 0.055);
+    next.saturation = clamp(hsl.saturation + 0.06, 0, 1);
+  } else if (optionId === "warmer") {
+    next.hue = normalizeHue(hsl.hue - 0.045);
+    next.saturation = clamp(hsl.saturation + 0.04, 0, 1);
+  } else if (optionId === "muted") {
+    next.saturation = clamp(hsl.saturation - 0.2, 0, 1);
+    next.lightness = clamp(hsl.lightness + 0.05, 0, 1);
+  }
+
+  return rgbToHex(hslToRgb(next));
+};
+
 const buildLibraryColors = (source, count) => {
   if (!source.length) {
     return FALLBACK_PALETTE.slice(0, count);
   }
+
+  const normalizedStops = source.map(normalizeHexColor).map((color) => `#${color}`);
+  if (normalizedStops.length >= count) {
+    return normalizedStops.slice(0, count);
+  }
+
+  if (normalizedStops.length === 1) {
+    const base = hexToRgb(normalizedStops[0]);
+    return Array.from({ length: count }, (_, index) => {
+      const ratio = count === 1 ? 0.5 : index / (count - 1);
+      const shift = (ratio - 0.5) * 0.56;
+      return rgbToHex(createToneVariant(base, shift));
+    });
+  }
+
+  const stopColors = normalizedStops.map(hexToRgb);
+  const maxStopIndex = stopColors.length - 1;
   return Array.from({ length: count }, (_, index) => {
-    return source[index % source.length];
+    const ratio = count === 1 ? 0 : index / (count - 1);
+    const scaledIndex = ratio * maxStopIndex;
+    const leftIndex = Math.floor(scaledIndex);
+    const rightIndex = Math.min(maxStopIndex, leftIndex + 1);
+    const localRatio = scaledIndex - leftIndex;
+    const mixed = mixRgb(stopColors[leftIndex], stopColors[rightIndex], localRatio);
+    return rgbToHex(mixed);
   });
 };
 
@@ -43,10 +228,26 @@ export default function InspireStyleEditor({
   const palette = selectedStyle?.palette ?? [];
   const displayPalette = palette.length ? palette : FALLBACK_PALETTE;
   const [libraryCount, setLibraryCount] = useState(6);
+  const [activeColorOption, setActiveColorOption] = useState("balanced");
+  const paletteRef = useRef(null);
+  const [paletteSelection, setPaletteSelection] = useState({
+    hasSelection: false,
+    isLocked: false,
+  });
+
+  const transformedPalette = useMemo(() => {
+    return displayPalette.map((color) =>
+      transformColorByOption(color, activeColorOption)
+    );
+  }, [activeColorOption, displayPalette]);
 
   const libraryColors = useMemo(() => {
-    return buildLibraryColors(displayPalette, libraryCount);
-  }, [displayPalette, libraryCount]);
+    return buildLibraryColors(transformedPalette, libraryCount);
+  }, [transformedPalette, libraryCount]);
+
+  const handleTogglePaletteLock = useCallback(() => {
+    paletteRef.current?.toggleSelectedSphereLock?.();
+  }, []);
 
   return (
     <div className="inspire-style">
@@ -59,8 +260,10 @@ export default function InspireStyleEditor({
               aria-label="Selected color library in 3D"
             >
               <InspirePaletteSpheres3D
+                ref={paletteRef}
                 title={selectedStyle?.title || "Style palette"}
                 colors={libraryColors}
+                onSelectionStateChange={setPaletteSelection}
               />
             </div>
           </div>
@@ -75,8 +278,10 @@ export default function InspireStyleEditor({
                     <button
                       className="inspire-style-icon"
                       type="button"
+                      onClick={handleTogglePaletteLock}
+                      disabled={!paletteSelection.hasSelection}
                       aria-label="Lock palette"
-                      aria-pressed="false"
+                      aria-pressed={paletteSelection.isLocked}
                     >
                       <svg
                         viewBox="0 0 24 24"
@@ -146,14 +351,35 @@ export default function InspireStyleEditor({
               </div>
             </div>
             <div className="inspire-style-placeholders">
-              {PLACEHOLDER_LABELS.map((label) => (
-                <div key={label} className="inspire-style-placeholder">
-                  {label}
-                </div>
+              {COLOR_OPTION_ITEMS.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  className={`inspire-style-placeholder${
+                    activeColorOption === option.id ? " is-selected" : ""
+                  }`}
+                  onClick={() => setActiveColorOption(option.id)}
+                  aria-pressed={activeColorOption === option.id}
+                >
+                  {option.label}
+                </button>
               ))}
             </div>
           </div>
-          <div className="inspire-style-panel is-empty" aria-hidden="true" />
+          <div className="inspire-style-panel is-empty inspire-style-type-showcase">
+            <div className="inspire-style-type-header">Type Preview</div>
+            <div className="inspire-style-type-rows">
+              {FONT_SAMPLE_ROWS.map((row) => (
+                <p
+                  key={row.id}
+                  className="inspire-style-type-row"
+                  style={{ fontFamily: row.fontFamily }}
+                >
+                  Quick brown fox jumps over the lazy dog
+                </p>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
       <div className="inspire-style-bottom">

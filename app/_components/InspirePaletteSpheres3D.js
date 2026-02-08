@@ -1,16 +1,32 @@
 "use client";
 
-import { useEffect, useMemo, useState, useRef } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 const SPHERE_COUNT = 6;
+const CAMERA_DISTANCE = 8.4;
+const SPHERE_RADIUS = 0.56;
+const LABEL_Y_OFFSET = 0.92;
+const BASE_AMBIENT = 0.4;
+const LOCKED_AMBIENT = 0.46;
+const BASE_RIM_STRENGTH = 0.16;
+const SELECTED_RIM_STRENGTH = 0.24;
+const LOCKED_RIM_STRENGTH = 0.32;
 
 const SPHERE_LAYOUT = [
-  { x: -1.9, y: 1.05, z: 0.42 },
-  { x: 0, y: 1.05, z: 0.27 },
-  { x: 1.9, y: 1.05, z: 0.12 },
-  { x: -1.9, y: -1.05, z: -0.02 },
-  { x: 0, y: -1.05, z: -0.16 },
-  { x: 1.9, y: -1.05, z: -0.31 },
+  { x: -1.9, y: 1.05, z: 0 },
+  { x: 0, y: 1.05, z: 0 },
+  { x: 1.9, y: 1.05, z: 0 },
+  { x: -1.9, y: -1.05, z: 0 },
+  { x: 0, y: -1.05, z: 0 },
+  { x: 1.9, y: -1.05, z: 0 },
 ];
 
 const VERTEX_SHADER = `
@@ -110,11 +126,96 @@ const readHostSize = (host) => {
   };
 };
 
-export default function InspirePaletteSpheres3D({ title, colors }) {
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+const normalizeSphereIndex = (value) => {
+  if (!Number.isInteger(value)) {
+    return null;
+  }
+  if (value < 0 || value >= SPHERE_COUNT) {
+    return null;
+  }
+  return value;
+};
+
+const formatHexColorValue = (color) => {
+  return `#${normalizeHexColor(color).toUpperCase()}`;
+};
+
+const InspirePaletteSpheres3D = forwardRef(function InspirePaletteSpheres3D(
+  { title, colors, onSelectionStateChange },
+  ref
+) {
   const hostRef = useRef(null);
+  const sceneApiRef = useRef(null);
   const [renderError, setRenderError] = useState("");
+  const [selectedSphereIndex, setSelectedSphereIndex] = useState(null);
+  const [lockedSphereIndices, setLockedSphereIndices] = useState([]);
+  const [labelAnchor, setLabelAnchor] = useState(null);
+  const selectedSphereIndexRef = useRef(null);
+  const lockedSphereIndicesRef = useRef([]);
+
   const sphereColors = useMemo(() => buildSphereColors(colors), [colors]);
   const colorSignature = sphereColors.join("|");
+
+  const selectedColor = useMemo(() => {
+    if (selectedSphereIndex === null) {
+      return null;
+    }
+    return sphereColors[selectedSphereIndex] ?? null;
+  }, [selectedSphereIndex, sphereColors]);
+
+  const hexColorValue = useMemo(() => {
+    if (!selectedColor) {
+      return "";
+    }
+    return formatHexColorValue(selectedColor);
+  }, [selectedColor]);
+
+  const isSelectedSphereLocked = useMemo(() => {
+    return (
+      selectedSphereIndex !== null && lockedSphereIndices.includes(selectedSphereIndex)
+    );
+  }, [lockedSphereIndices, selectedSphereIndex]);
+
+  const toggleSelectedSphereLock = useCallback(() => {
+    if (selectedSphereIndex === null) {
+      return;
+    }
+    setLockedSphereIndices((current) => {
+      if (current.includes(selectedSphereIndex)) {
+        return current.filter((index) => index !== selectedSphereIndex);
+      }
+      return [...current, selectedSphereIndex].sort((left, right) => left - right);
+    });
+  }, [selectedSphereIndex]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      toggleSelectedSphereLock,
+      hasSelectedSphere: selectedSphereIndex !== null,
+      isSelectedSphereLocked,
+    }),
+    [isSelectedSphereLocked, selectedSphereIndex, toggleSelectedSphereLock]
+  );
+
+  useEffect(() => {
+    onSelectionStateChange?.({
+      hasSelection: selectedSphereIndex !== null,
+      isLocked: isSelectedSphereLocked,
+    });
+  }, [isSelectedSphereLocked, onSelectionStateChange, selectedSphereIndex]);
+
+  useEffect(() => {
+    selectedSphereIndexRef.current = selectedSphereIndex;
+    sceneApiRef.current?.setSelection(selectedSphereIndex);
+  }, [selectedSphereIndex]);
+
+  useEffect(() => {
+    lockedSphereIndicesRef.current = lockedSphereIndices;
+    sceneApiRef.current?.setLocks(lockedSphereIndices);
+  }, [lockedSphereIndices]);
 
   useEffect(() => {
     let isDisposed = false;
@@ -122,6 +223,7 @@ export default function InspirePaletteSpheres3D({ title, colors }) {
     let teardownScene = () => {};
 
     setRenderError("");
+    setLabelAnchor(null);
 
     const mountScene = async () => {
       const host = hostRef.current;
@@ -130,8 +232,16 @@ export default function InspirePaletteSpheres3D({ title, colors }) {
       }
 
       try {
-        const { Camera, Mesh, Program, Renderer, Sphere, Transform, Vec3 } =
-          await import("ogl");
+        const {
+          Camera,
+          Mesh,
+          Program,
+          Raycast,
+          Renderer,
+          Sphere,
+          Transform,
+          Vec3,
+        } = await import("ogl");
         if (isDisposed || !hostRef.current) {
           return;
         }
@@ -144,19 +254,18 @@ export default function InspirePaletteSpheres3D({ title, colors }) {
         const { gl } = renderer;
         gl.clearColor(0, 0, 0, 0);
         gl.canvas.className = "inspire-style-library-canvas";
+        gl.canvas.style.touchAction = "none";
         host.appendChild(gl.canvas);
 
         const camera = new Camera(gl, { fov: 33, near: 0.1, far: 100 });
-        camera.position.set(0, 0.1, 7.4);
+        camera.position.set(0, 0, CAMERA_DISTANCE);
 
         const scene = new Transform();
         const sphereGroup = new Transform();
         sphereGroup.setParent(scene);
-        sphereGroup.rotation.x = -0.44;
-        sphereGroup.rotation.y = 0.5;
 
         const geometry = new Sphere(gl, {
-          radius: 0.56,
+          radius: SPHERE_RADIUS,
           widthSegments: 42,
           heightSegments: 30,
         });
@@ -172,28 +281,22 @@ export default function InspirePaletteSpheres3D({ title, colors }) {
               uColor: { value: new Vec3(red, green, blue) },
               uLightDirection: { value: lightDirection },
               uSpecColor: { value: new Vec3(0.92, 0.94, 0.98) },
-              uAmbient: { value: 0.4 },
-              uRimStrength: { value: 0.16 },
+              uAmbient: { value: BASE_AMBIENT },
+              uRimStrength: { value: BASE_RIM_STRENGTH },
             },
           });
 
           const sphere = new Mesh(gl, { geometry, program });
           sphere.position.set(position.x, position.y, position.z);
+          sphere.paletteIndex = index;
           sphere.setParent(sphereGroup);
           return sphere;
         });
 
-        const resize = () => {
-          if (!hostRef.current) {
-            return;
-          }
-          const { width, height } = readHostSize(hostRef.current);
-          renderer.setSize(width, height);
-          camera.perspective({ aspect: width / height });
-        };
-
-        resize();
-        window.addEventListener("resize", resize);
+        const raycast = new Raycast();
+        const lockedSet = new Set();
+        let currentSelection = null;
+        let size = readHostSize(host);
 
         const interaction = {
           active: false,
@@ -201,38 +304,147 @@ export default function InspirePaletteSpheres3D({ title, colors }) {
           pointerId: null,
           lastX: 0,
           lastY: 0,
-          rotationX: -0.44,
-          rotationY: 0.5,
-          targetRotationX: -0.44,
-          targetRotationY: 0.5,
+          dragDistance: 0,
+          rotationX: 0,
+          rotationY: 0,
+          targetRotationX: 0,
+          targetRotationY: 0,
           panX: 0,
           panY: 0,
           targetPanX: 0,
           targetPanY: 0,
-          distance: 7.4,
-          targetDistance: 7.4,
+          distance: CAMERA_DISTANCE,
+          targetDistance: CAMERA_DISTANCE,
         };
 
-        const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+        const updateLabelAnchor = () => {
+          if (isDisposed || currentSelection === null) {
+            setLabelAnchor(null);
+            return;
+          }
 
-        const setPointer = (event) => {
-          interaction.active = true;
-          interaction.pointerId = event.pointerId;
-          interaction.lastX = event.clientX;
-          interaction.lastY = event.clientY;
-          interaction.panMode = event.button === 2 || event.shiftKey;
+          const sphere = spheres[currentSelection];
+          if (!sphere) {
+            setLabelAnchor(null);
+            return;
+          }
+
+          const labelPoint = new Vec3();
+          sphere.worldMatrix.getTranslation(labelPoint);
+          labelPoint.y += LABEL_Y_OFFSET;
+          camera.project(labelPoint);
+
+          const x = clamp((labelPoint.x * 0.5 + 0.5) * size.width, 16, size.width - 16);
+          const y = clamp(
+            (-labelPoint.y * 0.5 + 0.5) * size.height,
+            16,
+            size.height - 16
+          );
+          setLabelAnchor({ x, y });
+        };
+
+        const renderScene = () => {
+          if (isDisposed) {
+            return;
+          }
+          sphereGroup.rotation.x = interaction.rotationX;
+          sphereGroup.rotation.y = interaction.rotationY;
+          sphereGroup.position.x = interaction.panX;
+          sphereGroup.position.y = interaction.panY;
+          camera.position.z = interaction.distance;
+          scene.updateMatrixWorld();
+          camera.updateMatrixWorld();
+          renderer.render({ scene, camera });
+          updateLabelAnchor();
+        };
+
+        const applySphereVisualState = () => {
+          spheres.forEach((sphere, index) => {
+            const isSelected = index === currentSelection;
+            const isLocked = lockedSet.has(index);
+            const scale = isSelected ? 1.08 : 1;
+            sphere.scale.set(scale, scale, scale);
+            sphere.program.uniforms.uAmbient.value = isLocked
+              ? LOCKED_AMBIENT
+              : BASE_AMBIENT;
+            sphere.program.uniforms.uRimStrength.value = isLocked
+              ? LOCKED_RIM_STRENGTH
+              : isSelected
+              ? SELECTED_RIM_STRENGTH
+              : BASE_RIM_STRENGTH;
+            sphere.program.uniforms.uSpecColor.value.set(
+              isLocked ? 1 : 0.92,
+              isLocked ? 0.86 : 0.94,
+              isLocked ? 0.62 : 0.98
+            );
+          });
+        };
+
+        const setSelection = (index) => {
+          currentSelection = normalizeSphereIndex(index);
+          applySphereVisualState();
+        };
+
+        const setLocks = (indices) => {
+          lockedSet.clear();
+          (indices ?? []).forEach((index) => {
+            const normalizedIndex = normalizeSphereIndex(index);
+            if (normalizedIndex !== null) {
+              lockedSet.add(normalizedIndex);
+            }
+          });
+          applySphereVisualState();
+        };
+
+        const getHoveredSphereIndex = (event) => {
+          const rect = gl.canvas.getBoundingClientRect();
+          if (!rect.width || !rect.height) {
+            return null;
+          }
+          scene.updateMatrixWorld();
+          camera.updateMatrixWorld();
+          const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+          const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+          raycast.castMouse(camera, [x, y]);
+          const hits = raycast.intersectMeshes(spheres, {
+            cullFace: false,
+            includeUV: false,
+            includeNormal: false,
+          });
+          if (!hits.length) {
+            return null;
+          }
+          return normalizeSphereIndex(hits[0]?.paletteIndex);
+        };
+
+        const resize = () => {
+          if (!hostRef.current) {
+            return;
+          }
+          size = readHostSize(hostRef.current);
+          renderer.setSize(size.width, size.height);
+          camera.perspective({ aspect: size.width / size.height });
+          renderScene();
         };
 
         const onPointerDown = (event) => {
           if (event.button !== 0 && event.button !== 2) {
             return;
           }
-          setPointer(event);
+          event.preventDefault();
+          interaction.active = true;
+          interaction.pointerId = event.pointerId;
+          interaction.lastX = event.clientX;
+          interaction.lastY = event.clientY;
+          interaction.dragDistance = 0;
+          interaction.panMode = event.button === 2 || event.shiftKey;
           gl.canvas.setPointerCapture(event.pointerId);
         };
 
         const onPointerMove = (event) => {
           if (!interaction.active || interaction.pointerId !== event.pointerId) {
+            const hoveredIndex = getHoveredSphereIndex(event);
+            gl.canvas.style.cursor = hoveredIndex === null ? "default" : "pointer";
             return;
           }
 
@@ -240,53 +452,73 @@ export default function InspirePaletteSpheres3D({ title, colors }) {
           const deltaY = event.clientY - interaction.lastY;
           interaction.lastX = event.clientX;
           interaction.lastY = event.clientY;
+          interaction.dragDistance += Math.abs(deltaX) + Math.abs(deltaY);
 
           if (interaction.panMode) {
-            interaction.targetPanX += deltaX * 0.006;
-            interaction.targetPanY -= deltaY * 0.006;
-            interaction.targetPanX = clamp(interaction.targetPanX, -1.8, 1.8);
-            interaction.targetPanY = clamp(interaction.targetPanY, -1.4, 1.4);
+            interaction.targetPanX = clamp(
+              interaction.targetPanX + deltaX * 0.006,
+              -1.8,
+              1.8
+            );
+            interaction.targetPanY = clamp(
+              interaction.targetPanY - deltaY * 0.006,
+              -1.4,
+              1.4
+            );
             return;
           }
 
           interaction.targetRotationY += deltaX * 0.008;
-          interaction.targetRotationX -= deltaY * 0.006;
-          interaction.targetRotationX = clamp(interaction.targetRotationX, -1.15, 0.2);
+          interaction.targetRotationX = clamp(
+            interaction.targetRotationX - deltaY * 0.006,
+            -1.15,
+            0.95
+          );
         };
 
         const clearPointer = (event) => {
           if (interaction.pointerId !== event.pointerId) {
             return;
           }
+          const shouldSelect = interaction.dragDistance < 6;
           interaction.active = false;
           interaction.pointerId = null;
           interaction.panMode = false;
+          interaction.dragDistance = 0;
+          if (!shouldSelect) {
+            return;
+          }
+          const selectedIndex = getHoveredSphereIndex(event);
+          setSelectedSphereIndex(selectedIndex);
         };
 
         const onWheel = (event) => {
           event.preventDefault();
-          interaction.targetDistance += event.deltaY * 0.01;
-          interaction.targetDistance = clamp(interaction.targetDistance, 5.4, 11.5);
+          interaction.targetDistance = clamp(
+            interaction.targetDistance + event.deltaY * 0.01,
+            6.2,
+            12.2
+          );
         };
 
         const onContextMenu = (event) => {
           event.preventDefault();
         };
 
-        gl.canvas.addEventListener("pointerdown", onPointerDown);
-        gl.canvas.addEventListener("pointermove", onPointerMove);
-        gl.canvas.addEventListener("pointerup", clearPointer);
-        gl.canvas.addEventListener("pointercancel", clearPointer);
-        gl.canvas.addEventListener("wheel", onWheel, { passive: false });
-        gl.canvas.addEventListener("contextmenu", onContextMenu);
+        const onPointerLeave = () => {
+          gl.canvas.style.cursor = "default";
+        };
 
-        const start = performance.now();
-        const animate = (time) => {
+        sceneApiRef.current = { setSelection, setLocks };
+
+        resize();
+        setSelection(selectedSphereIndexRef.current);
+        setLocks(lockedSphereIndicesRef.current);
+
+        const animate = () => {
           if (isDisposed) {
             return;
           }
-
-          const elapsed = (time - start) * 0.001;
           interaction.rotationX +=
             (interaction.targetRotationX - interaction.rotationX) * 0.13;
           interaction.rotationY +=
@@ -295,27 +527,20 @@ export default function InspirePaletteSpheres3D({ title, colors }) {
           interaction.panY += (interaction.targetPanY - interaction.panY) * 0.13;
           interaction.distance +=
             (interaction.targetDistance - interaction.distance) * 0.16;
-
-          sphereGroup.rotation.y =
-            interaction.rotationY + Math.sin(elapsed * 0.24) * 0.03;
-          sphereGroup.rotation.x =
-            interaction.rotationX + Math.cos(elapsed * 0.2) * 0.012;
-          sphereGroup.position.x = interaction.panX;
-          sphereGroup.position.y = interaction.panY;
-          camera.position.z = interaction.distance;
-
-          spheres.forEach((sphere, index) => {
-            const base = SPHERE_LAYOUT[index];
-            sphere.position.z =
-              base.z + Math.sin(elapsed * 0.85 + index * 0.5) * 0.032;
-            sphere.rotation.y = elapsed * 0.44 + index * 0.12;
-          });
-
-          renderer.render({ scene, camera });
+          renderScene();
           frameId = window.requestAnimationFrame(animate);
         };
 
         frameId = window.requestAnimationFrame(animate);
+
+        window.addEventListener("resize", resize);
+        gl.canvas.addEventListener("pointerdown", onPointerDown);
+        gl.canvas.addEventListener("pointermove", onPointerMove);
+        gl.canvas.addEventListener("pointerup", clearPointer);
+        gl.canvas.addEventListener("pointercancel", clearPointer);
+        gl.canvas.addEventListener("pointerleave", onPointerLeave);
+        gl.canvas.addEventListener("wheel", onWheel, { passive: false });
+        gl.canvas.addEventListener("contextmenu", onContextMenu);
 
         teardownScene = () => {
           if (frameId) {
@@ -326,11 +551,17 @@ export default function InspirePaletteSpheres3D({ title, colors }) {
           gl.canvas.removeEventListener("pointermove", onPointerMove);
           gl.canvas.removeEventListener("pointerup", clearPointer);
           gl.canvas.removeEventListener("pointercancel", clearPointer);
+          gl.canvas.removeEventListener("pointerleave", onPointerLeave);
           gl.canvas.removeEventListener("wheel", onWheel);
           gl.canvas.removeEventListener("contextmenu", onContextMenu);
+          gl.canvas.style.cursor = "default";
           spheres.forEach((sphere) => {
             sphere.setParent(null);
           });
+
+          if (sceneApiRef.current?.setSelection === setSelection) {
+            sceneApiRef.current = null;
+          }
 
           if (host.contains(gl.canvas)) {
             host.removeChild(gl.canvas);
@@ -342,7 +573,9 @@ export default function InspirePaletteSpheres3D({ title, colors }) {
           }
         };
       } catch (_error) {
-        setRenderError("3D preview is unavailable on this device.");
+        if (!isDisposed) {
+          setRenderError("3D preview is unavailable on this device.");
+        }
       }
     };
 
@@ -365,10 +598,27 @@ export default function InspirePaletteSpheres3D({ title, colors }) {
           className="inspire-style-library-canvas-host"
           aria-hidden="true"
         />
+        <div className="inspire-style-library-overlay">
+          {selectedSphereIndex !== null && labelAnchor ? (
+            <div
+              className={`inspire-style-library-rgb-label${
+                isSelectedSphereLocked ? " is-locked" : ""
+              }`}
+              style={{
+                left: `${labelAnchor.x}px`,
+                top: `${labelAnchor.y}px`,
+              }}
+            >
+              <span className="inspire-style-library-rgb-value">{hexColorValue}</span>
+            </div>
+          ) : null}
+        </div>
         {renderError ? (
           <div className="inspire-style-library-fallback-note">{renderError}</div>
         ) : null}
       </div>
     </div>
   );
-}
+});
+
+export default InspirePaletteSpheres3D;
