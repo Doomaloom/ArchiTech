@@ -15,6 +15,7 @@ import { useImageToSite } from "./../_context/image-to-site-context";
 import { useWorkflow } from "./../_context/workflow-context";
 import CodeEditorView from "./views/CodeEditorView";
 import BuilderView from "./views/BuilderView";
+import InspireRadialSelector from "./InspireRadialSelector";
 
 const STYLE_PRESETS = [
   {
@@ -265,6 +266,7 @@ export default function InspireView() {
   const [brushSize, setBrushSize] = useState(18);
   const [clearTick, setClearTick] = useState(0);
   const brushRef = useRef(null);
+  const isDescriptionStep = inspireStep === INSPIRE_STEPS.DESCRIPTION;
 
   useEffect(() => {
     if (inspireStep === INSPIRE_STEPS.BUILDER && imageState.viewMode !== "builder") {
@@ -357,7 +359,7 @@ export default function InspireView() {
       : inspireStep === INSPIRE_STEPS.CODE
       ? " is-code"
       : ""
-  }`;
+  }${isDescriptionStep ? " is-preview-only" : ""}`;
 
   const treePages = useMemo(() => {
     return inspireDerived.treeNodes.filter((node) => node.depth === 1);
@@ -375,13 +377,6 @@ export default function InspireView() {
       plan: null,
     }));
   }, [inspireState.previewCount, inspireState.previewItems]);
-
-  const handleContinueToStyle = () => {
-    setInspireStep(INSPIRE_STEPS.STYLE);
-    if (!inspireState.styleIdeas.length) {
-      inspireActions.loadStyleIdeas();
-    }
-  };
 
   const handleContinueToTree = () => {
     setInspireStep(INSPIRE_STEPS.TREE);
@@ -429,6 +424,9 @@ export default function InspireView() {
   };
 
   const renderMainPanel = () => {
+    if (inspireStep === INSPIRE_STEPS.DESCRIPTION) {
+      return <InspireRadialSelector />;
+    }
     if (inspireStep === INSPIRE_STEPS.BUILDER) {
       return <BuilderView />;
     }
@@ -763,39 +761,13 @@ export default function InspireView() {
         </div>
       );
     }
-    return (
-      <div className="inspire-brief">
-        <div className="inspire-brief-card">
-          <span className="inspire-brief-kicker">Project canvas</span>
-          <h2>{inspireState.brief.title || "Describe the product vision"}</h2>
-          <p>
-            {inspireState.brief.details ||
-              "Capture the mood, the experience, and the core promise in a few lines."}
-          </p>
-          <div className="inspire-brief-pills">
-            <span>{inspireState.brief.audience || "Target audience"}</span>
-            <span>{inspireState.brief.goals || "Primary goal"}</span>
-          </div>
-        </div>
-        <div className="inspire-brief-grid">
-          <div>
-            <span>Vision</span>
-            <p>Bold, premium storytelling with gentle gradients.</p>
-          </div>
-          <div>
-            <span>Experience</span>
-            <p>Flow through story beats, previews, and precise CTAs.</p>
-          </div>
-          <div>
-            <span>Signals</span>
-            <p>Highlight trust, performance, and modern craft.</p>
-          </div>
-        </div>
-      </div>
-    );
+    return null;
   };
 
   const renderInfoPanel = () => {
+    if (inspireStep === INSPIRE_STEPS.DESCRIPTION) {
+      return null;
+    }
     if (inspireStep === INSPIRE_STEPS.BUILDER) {
       return null;
     }
@@ -1058,86 +1030,7 @@ export default function InspireView() {
         </aside>
       );
     }
-    return (
-      <aside className="imageflow-info inspire-info">
-        <div className="imageflow-info-header">
-          <p className="imageflow-info-kicker">Inspire</p>
-          <h1 className="imageflow-info-title">Project description</h1>
-          <p className="imageflow-info-subtitle">
-            Define the look, feel, and functionality to guide the entire flow.
-          </p>
-        </div>
-        <div className="imageflow-info-fields">
-          <label className="imageflow-field">
-            <span className="imageflow-field-label">Project title</span>
-            <input
-              className="imageflow-input-field"
-              type="text"
-              placeholder="Launch campaign"
-              value={inspireState.brief.title}
-              onChange={(event) =>
-                inspireActions.updateBrief("title", event.target.value)
-              }
-            />
-          </label>
-          <label className="imageflow-field">
-            <span className="imageflow-field-label">Product name</span>
-            <input
-              className="imageflow-input-field"
-              type="text"
-              placeholder="Atlas Studio"
-              value={inspireState.brief.name}
-              onChange={(event) =>
-                inspireActions.updateBrief("name", event.target.value)
-              }
-            />
-          </label>
-          <label className="imageflow-field">
-            <span className="imageflow-field-label">Description</span>
-            <textarea
-              className="imageflow-textarea"
-              rows={4}
-              placeholder="Describe the experience, tone, and visual direction."
-              value={inspireState.brief.details}
-              onChange={(event) =>
-                inspireActions.updateBrief("details", event.target.value)
-              }
-            />
-          </label>
-          <label className="imageflow-field">
-            <span className="imageflow-field-label">Audience</span>
-            <input
-              className="imageflow-input-field"
-              type="text"
-              placeholder="Founders, product teams, creators"
-              value={inspireState.brief.audience}
-              onChange={(event) =>
-                inspireActions.updateBrief("audience", event.target.value)
-              }
-            />
-          </label>
-          <label className="imageflow-field">
-            <span className="imageflow-field-label">Goals</span>
-            <input
-              className="imageflow-input-field"
-              type="text"
-              placeholder="Highlight benefits and drive conversions"
-              value={inspireState.brief.goals}
-              onChange={(event) =>
-                inspireActions.updateBrief("goals", event.target.value)
-              }
-            />
-          </label>
-        </div>
-        <button
-          className="imageflow-generate-button"
-          type="button"
-          onClick={handleContinueToStyle}
-        >
-          Continue to style
-        </button>
-      </aside>
-    );
+    return null;
   };
 
   const renderGalleryPanel = () => null;
@@ -1148,7 +1041,9 @@ export default function InspireView() {
       : inspireStep === INSPIRE_STEPS.CODE
       ? " is-code"
       : ""
-  }${inspireStep === INSPIRE_STEPS.PREVIEWS ? " is-preview" : ""}`;
+  }${inspireStep === INSPIRE_STEPS.PREVIEWS ? " is-preview" : ""}${
+    isDescriptionStep ? " is-full" : ""
+  }`;
 
   return (
     <div className="imageflow-shell inspire-shell">
