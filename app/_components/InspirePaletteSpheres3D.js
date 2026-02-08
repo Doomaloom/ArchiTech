@@ -143,7 +143,7 @@ const formatHexColorValue = (color) => {
 };
 
 const InspirePaletteSpheres3D = forwardRef(function InspirePaletteSpheres3D(
-  { title, colors, onSelectionStateChange },
+  { title, colors, onSelectionStateChange, onColorChange },
   ref
 ) {
   const hostRef = useRef(null);
@@ -156,7 +156,7 @@ const InspirePaletteSpheres3D = forwardRef(function InspirePaletteSpheres3D(
   const lockedSphereIndicesRef = useRef([]);
 
   const sphereColors = useMemo(() => buildSphereColors(colors), [colors]);
-  const colorSignature = sphereColors.join("|");
+  const sphereColorsRef = useRef(sphereColors);
 
   const selectedColor = useMemo(() => {
     if (selectedSphereIndex === null) {
@@ -213,9 +213,29 @@ const InspirePaletteSpheres3D = forwardRef(function InspirePaletteSpheres3D(
   }, [selectedSphereIndex]);
 
   useEffect(() => {
+    sphereColorsRef.current = sphereColors;
+    sceneApiRef.current?.setColors(sphereColors);
+  }, [sphereColors]);
+
+  useEffect(() => {
     lockedSphereIndicesRef.current = lockedSphereIndices;
     sceneApiRef.current?.setLocks(lockedSphereIndices);
   }, [lockedSphereIndices]);
+
+  const handleColorInputChange = useCallback(
+    (event) => {
+      const paletteIndex = selectedSphereIndexRef.current;
+      if (paletteIndex === null) {
+        return;
+      }
+      const colorValue = formatHexColorValue(event.target.value);
+      onColorChange?.({
+        index: paletteIndex,
+        color: colorValue,
+      });
+    },
+    [onColorChange]
+  );
 
   useEffect(() => {
     let isDisposed = false;
@@ -273,7 +293,7 @@ const InspirePaletteSpheres3D = forwardRef(function InspirePaletteSpheres3D(
         const lightDirection = new Vec3(0.62, 0.84, 1);
 
         const spheres = SPHERE_LAYOUT.map((position, index) => {
-          const [red, green, blue] = hexToRgb(sphereColors[index]);
+          const [red, green, blue] = hexToRgb(sphereColorsRef.current[index]);
           const program = new Program(gl, {
             vertex: VERTEX_SHADER,
             fragment: FRAGMENT_SHADER,
@@ -396,6 +416,14 @@ const InspirePaletteSpheres3D = forwardRef(function InspirePaletteSpheres3D(
           applySphereVisualState();
         };
 
+        const setColors = (nextColors) => {
+          const normalizedColors = buildSphereColors(nextColors);
+          spheres.forEach((sphere, index) => {
+            const [red, green, blue] = hexToRgb(normalizedColors[index]);
+            sphere.program.uniforms.uColor.value.set(red, green, blue);
+          });
+        };
+
         const getHoveredSphereIndex = (event) => {
           const rect = gl.canvas.getBoundingClientRect();
           if (!rect.width || !rect.height) {
@@ -509,11 +537,12 @@ const InspirePaletteSpheres3D = forwardRef(function InspirePaletteSpheres3D(
           gl.canvas.style.cursor = "default";
         };
 
-        sceneApiRef.current = { setSelection, setLocks };
+        sceneApiRef.current = { setSelection, setLocks, setColors };
 
         resize();
         setSelection(selectedSphereIndexRef.current);
         setLocks(lockedSphereIndicesRef.current);
+        setColors(sphereColorsRef.current);
 
         const animate = () => {
           if (isDisposed) {
@@ -559,7 +588,10 @@ const InspirePaletteSpheres3D = forwardRef(function InspirePaletteSpheres3D(
             sphere.setParent(null);
           });
 
-          if (sceneApiRef.current?.setSelection === setSelection) {
+          if (
+            sceneApiRef.current?.setSelection === setSelection &&
+            sceneApiRef.current?.setColors === setColors
+          ) {
             sceneApiRef.current = null;
           }
 
@@ -585,7 +617,7 @@ const InspirePaletteSpheres3D = forwardRef(function InspirePaletteSpheres3D(
       isDisposed = true;
       teardownScene();
     };
-  }, [colorSignature]);
+  }, []);
 
   return (
     <div
@@ -610,6 +642,14 @@ const InspirePaletteSpheres3D = forwardRef(function InspirePaletteSpheres3D(
               }}
             >
               <span className="inspire-style-library-rgb-value">{hexColorValue}</span>
+              <input
+                className="inspire-style-library-rgb-picker"
+                type="color"
+                value={hexColorValue}
+                aria-label="Pick color for selected sphere"
+                onInput={handleColorInputChange}
+                onChange={handleColorInputChange}
+              />
             </div>
           ) : null}
         </div>

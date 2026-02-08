@@ -474,6 +474,7 @@ export default function useImageToSiteState() {
       setPreviewZoom,
       setModelQuality,
       setCreativityValue,
+      setStructureFlow,
       setShowComponents,
       setTitle: details.actions.setTitle,
       setName: details.actions.setName,

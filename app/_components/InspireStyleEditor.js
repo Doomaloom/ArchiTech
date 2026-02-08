@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import InspirePaletteSpheres3D from "./InspirePaletteSpheres3D";
 
 const FALLBACK_PALETTE = [
@@ -255,6 +255,7 @@ export default function InspireStyleEditor({
     hasSelection: false,
     isLocked: false,
   });
+  const [libraryColorOverrides, setLibraryColorOverrides] = useState({});
 
   const transformedPalette = useMemo(() => {
     return displayPalette.map((color) =>
@@ -262,17 +263,36 @@ export default function InspireStyleEditor({
     );
   }, [activeColorOption, displayPalette]);
 
-  const libraryColors = useMemo(() => {
+  const generatedLibraryColors = useMemo(() => {
     return buildLibraryColors(transformedPalette, libraryCount);
   }, [transformedPalette, libraryCount]);
+  const libraryColors = useMemo(() => {
+    return generatedLibraryColors.map(
+      (color, index) => libraryColorOverrides[index] ?? color
+    );
+  }, [generatedLibraryColors, libraryColorOverrides]);
   const selectedFont = useMemo(() => {
     return (
       FONT_OPTIONS.find((option) => option.id === selectedFontId) ?? FONT_OPTIONS[0]
     );
   }, [selectedFontId]);
 
+  useEffect(() => {
+    setLibraryColorOverrides({});
+  }, [selectedStyle?.id]);
+
   const handleTogglePaletteLock = useCallback(() => {
     paletteRef.current?.toggleSelectedSphereLock?.();
+  }, []);
+
+  const handleLibraryColorChange = useCallback(({ index, color }) => {
+    if (!Number.isInteger(index) || index < 0) {
+      return;
+    }
+    setLibraryColorOverrides((current) => ({
+      ...current,
+      [index]: `#${normalizeHexColor(color)}`,
+    }));
   }, []);
 
   return (
@@ -290,6 +310,7 @@ export default function InspireStyleEditor({
                 title={selectedStyle?.title || "Style palette"}
                 colors={libraryColors}
                 onSelectionStateChange={setPaletteSelection}
+                onColorChange={handleLibraryColorChange}
               />
             </div>
           </div>
