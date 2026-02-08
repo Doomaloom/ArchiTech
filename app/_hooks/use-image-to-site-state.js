@@ -8,6 +8,7 @@ import useGallery from "./use-gallery";
 import useIterationState from "./image-to-site/use-iteration-state";
 import useNodeGraph from "./use-node-graph";
 import usePreviewSettings from "./use-preview-settings";
+import useStructureTreeActions from "./use-structure-tree-actions";
 import useViewMode from "./use-view-mode";
 import {
   DEFAULT_PREVIEW_ITEMS,
@@ -141,6 +142,11 @@ export default function useImageToSiteState() {
   const [showComponents, setShowComponents] = useState(false);
   const [isGeneratingStructure, setIsGeneratingStructure] = useState(false);
   const [generationError, setGenerationError] = useState("");
+  const structureTreeActions = useStructureTreeActions({
+    structureFlow,
+    setStructureFlow,
+  });
+
   const codeWorkspace = useCodeWorkspace();
   const agentChat = useAgentChat();
   const gallery = useGallery({
@@ -152,6 +158,37 @@ export default function useImageToSiteState() {
     structureFlow,
     showComponents,
   });
+
+  const handleAddStructureNode = useCallback(
+    (parentId) => {
+      const nextId = structureTreeActions.addNode(parentId);
+      if (nextId) {
+        nodeGraph.actions.setSelectedNodeId(nextId);
+      }
+    },
+    [nodeGraph.actions, structureTreeActions]
+  );
+
+  const handleDeleteStructureNode = useCallback(
+    (nodeId) => {
+      const fallbackId = structureTreeActions.deleteNode(nodeId);
+      if (fallbackId) {
+        nodeGraph.actions.setSelectedNodeId(fallbackId);
+      }
+    },
+    [nodeGraph.actions, structureTreeActions]
+  );
+
+  const handleRerouteStructureNode = useCallback(
+    (nodeId, nextParentId) => {
+      const moved = structureTreeActions.rerouteNode(nodeId, nextParentId);
+      if (moved) {
+        nodeGraph.actions.setSelectedNodeId(nodeId?.toString() || null);
+      }
+      return moved;
+    },
+    [nodeGraph.actions, structureTreeActions]
+  );
   const iteration = useIterationState({
     isIterationMode: viewMode.isIterationMode,
     selectedPreviewIndex: previewSettings.state.selectedPreviewIndex,
@@ -574,6 +611,10 @@ export default function useImageToSiteState() {
       hydratePreviews,
       hydrateWorkspace,
       handleNodeClick: nodeGraph.actions.handleNodeClick,
+      setSelectedNodeId: nodeGraph.actions.setSelectedNodeId,
+      addStructureNode: handleAddStructureNode,
+      deleteStructureNode: handleDeleteStructureNode,
+      rerouteStructureNode: handleRerouteStructureNode,
       handleOpenCodeFile: codeWorkspace.actions.handleOpenCodeFile,
       handleEditorChange: codeWorkspace.actions.handleEditorChange,
       handleToggleFolder: codeWorkspace.actions.handleToggleFolder,

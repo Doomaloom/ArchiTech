@@ -289,13 +289,13 @@ const InspireBrushCanvas = forwardRef(function InspireBrushCanvas(
     setCursorVisible(true);
     event.preventDefault();
     isDrawingRef.current = true;
-    context.strokeStyle = "rgba(249, 115, 22, 0.55)";
+    context.strokeStyle = "rgba(59, 130, 246, 0.3)";
     context.lineWidth = brushSize;
     context.lineCap = "round";
     context.lineJoin = "round";
     context.globalCompositeOperation = "source-over";
     context.shadowBlur = 6;
-    context.shadowColor = "rgba(249, 115, 22, 0.35)";
+    context.shadowColor = "rgba(59, 130, 246, 0.2)";
     context.beginPath();
     context.moveTo(point.x, point.y);
     updateBounds(point);
@@ -406,6 +406,7 @@ export default function InspireView() {
   const [clearTick, setClearTick] = useState(0);
   const brushRef = useRef(null);
   const syncedTreeRef = useRef(null);
+  const syncingFromImageRef = useRef(false);
   const isDescriptionStep = inspireStep === INSPIRE_STEPS.DESCRIPTION;
   const isStyleStep = inspireStep === INSPIRE_STEPS.STYLE;
   const isTreeStep = inspireStep === INSPIRE_STEPS.TREE;
@@ -488,6 +489,11 @@ export default function InspireView() {
     if (inspireStep !== INSPIRE_STEPS.TREE || !inspireDerived.treeRoot) {
       return;
     }
+    if (syncingFromImageRef.current) {
+      syncedTreeRef.current = inspireDerived.treeRoot;
+      syncingFromImageRef.current = false;
+      return;
+    }
     if (syncedTreeRef.current !== inspireDerived.treeRoot) {
       imageActions.setStructureFlow(inspireDerived.treeRoot);
       syncedTreeRef.current = inspireDerived.treeRoot;
@@ -517,6 +523,23 @@ export default function InspireView() {
     imageState.selectedNodeId,
     inspireActions.setSelectedNodeId,
     inspireState.selectedNodeId,
+    inspireStep,
+  ]);
+
+  useEffect(() => {
+    if (
+      inspireStep !== INSPIRE_STEPS.TREE ||
+      !imageState.structureFlow ||
+      imageState.structureFlow === syncedTreeRef.current
+    ) {
+      return;
+    }
+    syncingFromImageRef.current = true;
+    inspireActions.setTree(imageState.structureFlow);
+    syncedTreeRef.current = imageState.structureFlow;
+  }, [
+    imageState.structureFlow,
+    inspireActions,
     inspireStep,
   ]);
 
@@ -651,10 +674,8 @@ export default function InspireView() {
                   ? "Generating"
                   : preview.renderError
                   ? "Issue"
-                  : preview.imageUrl
-                  ? "Image"
-                  : preview.html
-                  ? "HTML"
+                  : preview.imageUrl || preview.html
+                  ? "Ready"
                   : "Pending";
               return (
                 <button
@@ -752,7 +773,7 @@ export default function InspireView() {
                 <input
                   type="range"
                   min="6"
-                  max="40"
+                  max="80"
                   value={brushSize}
                   onChange={(event) => setBrushSize(Number(event.target.value))}
                 />
@@ -1261,3 +1282,4 @@ export default function InspireView() {
     </div>
   );
 }
+

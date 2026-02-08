@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useEdgesState, useNodesState } from "reactflow";
 
 import { DEMO_EDGES, DEMO_PAGES } from "../_lib/demo-data";
@@ -75,16 +75,26 @@ const buildFlow = ({ structureFlow, showComponents }) => {
     }
     levels.get(item.depth).push(item);
   });
-  const spacingX = 260;
-  const spacingY = 140;
+  const spacingX = showComponents ? 232 : 254;
+  const spacingY = showComponents ? 112 : 126;
   const nodes = included.map((item) => {
     const column = levels.get(item.depth) || [];
     const rowIndex = column.findIndex((entry) => entry.id === item.id);
+    const nodeKind = item.node?.kind?.toString() || (item.depth === 0 ? "root" : "page");
+    const childCount = resolveChildren(item.node).length;
     return {
       id: item.id,
       position: { x: item.depth * spacingX, y: rowIndex * spacingY },
-      data: { label: item.label },
-      type: "default",
+      data: {
+        nodeId: item.id,
+        parentId: item.parentId,
+        label: item.label,
+        kind: nodeKind,
+        depth: item.depth,
+        childCount,
+      },
+      className: "imageflow-tree-node",
+      type: "translateNode",
     };
   });
   const edges = included
@@ -97,7 +107,30 @@ const buildFlow = ({ structureFlow, showComponents }) => {
   return { nodes, edges, included };
 };
 
-export default function useNodeGraph({ activeIndex, structureFlow, showComponents } = {}) {
+const setSelectionOnNodes = (currentNodes, selectedNodeId) => {
+  if (!Array.isArray(currentNodes) || !currentNodes.length) {
+    return currentNodes;
+  }
+  let changed = false;
+  const nextNodes = currentNodes.map((node) => {
+    const shouldBeSelected = node.id === selectedNodeId;
+    if (Boolean(node.selected) === shouldBeSelected) {
+      return node;
+    }
+    changed = true;
+    return {
+      ...node,
+      selected: shouldBeSelected,
+    };
+  });
+  return changed ? nextNodes : currentNodes;
+};
+
+export default function useNodeGraph({
+  activeIndex,
+  structureFlow,
+  showComponents,
+} = {}) {
   const [selectedNodeId, setSelectedNodeId] = useState(
     DEMO_PAGES[0]?.id ?? null
   );
@@ -105,15 +138,36 @@ export default function useNodeGraph({ activeIndex, structureFlow, showComponent
     DEMO_PAGES.map((page) => ({
       id: page.id,
       position: page.position,
-      data: { label: page.label },
-      type: "default",
+      data: {
+        nodeId: page.id,
+        parentId: null,
+        label: page.label,
+        kind: "page",
+        depth: Math.max(0, Math.round((page.position?.x || 0) / 260)),
+        childCount: 0,
+      },
+      className: "imageflow-tree-node",
+      type: "translateNode",
     }))
   );
   const [edges, setEdges, onEdgesChange] = useEdgesState(DEMO_EDGES);
+  const handleNodesChange = useCallback(
+    (changes) => {
+      if (!Array.isArray(changes) || !changes.length) {
+        return;
+      }
+      const filteredChanges = changes.filter((change) => change?.type !== "select");
+      if (!filteredChanges.length) {
+        return;
+      }
+      onNodesChange(filteredChanges);
+    },
+    [onNodesChange]
+  );
 
   const flow = useMemo(
     () => buildFlow({ structureFlow, showComponents }),
-    [structureFlow, showComponents]
+    [showComponents, structureFlow]
   );
 
   useEffect(() => {
@@ -136,21 +190,11 @@ export default function useNodeGraph({ activeIndex, structureFlow, showComponent
     if (selectedId) {
       setSelectedNodeId(selectedId);
     }
-    setNodes((current) =>
-      current.map((node) => ({
-        ...node,
-        selected: node.id === selectedId,
-      }))
-    );
+    setNodes((current) => setSelectionOnNodes(current, selectedId));
   }, [activeIndex, flow, setNodes]);
 
   useEffect(() => {
-    setNodes((current) =>
-      current.map((node) => ({
-        ...node,
-        selected: node.id === selectedNodeId,
-      }))
-    );
+    setNodes((current) => setSelectionOnNodes(current, selectedNodeId));
   }, [selectedNodeId, setNodes]);
 
   const selectedNodeLabel = useMemo(() => {
@@ -177,9 +221,10 @@ export default function useNodeGraph({ activeIndex, structureFlow, showComponent
       selectedNodeLabel,
     },
     actions: {
-      onNodesChange,
+      onNodesChange: handleNodesChange,
       onEdgesChange,
       handleNodeClick,
+      setSelectedNodeId,
     },
   };
 }

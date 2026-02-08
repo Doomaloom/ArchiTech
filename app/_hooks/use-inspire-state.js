@@ -704,6 +704,25 @@ export default function useInspireState() {
     setIsFinalizingPreview(false);
   }, []);
 
+  const setTreeFromExternal = useCallback((nextTree) => {
+    const normalizedTree = normalizeTreePayload(nextTree);
+    const root = normalizeTree(normalizedTree);
+    if (!root) {
+      return;
+    }
+    const fallbackNodeId = resolveDefaultSelectedNodeId(root);
+    setTree(normalizedTree);
+    setSelectedNodeId((current) => {
+      if (!current) {
+        return fallbackNodeId;
+      }
+      const hasCurrent = Boolean(buildNodeContextFromTree(root, current)?.node);
+      return hasCurrent ? current : fallbackNodeId;
+    });
+    setPreviewItems([]);
+    setPreviewError("");
+  }, []);
+
   const actions = useMemo(
     () => ({
       updateBrief,
@@ -722,6 +741,7 @@ export default function useInspireState() {
       setWorkspaceNote,
       setWorkspaceMask,
       setSelectedStyle,
+      setTree: setTreeFromExternal,
       hydrateWorkspace,
     }),
     [
@@ -738,6 +758,7 @@ export default function useInspireState() {
       setPreviewMode,
       setSelectedPreviewIndex,
       setSelectedStyle,
+      setTreeFromExternal,
       setWorkspaceMask,
       setWorkspaceNote,
       hydrateWorkspace,

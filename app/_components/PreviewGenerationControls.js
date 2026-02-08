@@ -11,12 +11,13 @@ export default function PreviewGenerationControls({
   generateLabel = "Generate previews",
   generatingLabel = "Generating previews...",
   errorMessage = "",
+  className = "",
 }) {
   const qualityLabel = quality === "pro" ? "Pro" : "Flash";
   const qualityIndex = quality === "pro" ? 1 : 0;
 
   return (
-    <div className="imageflow-info-fields">
+    <div className={`imageflow-info-fields ${className}`.trim()}>
       <div className="imageflow-slider-row">
         <label className="imageflow-field">
           <span className="imageflow-field-label">
