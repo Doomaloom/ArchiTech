@@ -3604,11 +3604,7 @@ div {
   max-width: 236px;
   border-radius: 14px;
   border: 1px solid rgba(15, 23, 42, 0.14);
-  background: linear-gradient(
-    150deg,
-    rgba(255, 255, 255, 0.94) 0%,
-    rgba(248, 250, 252, 0.86) 100%
-  );
+  background: #ffffffbf;
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.07);
   padding: 10px 12px;
   display: flex;
@@ -3725,6 +3721,7 @@ div {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  margin-bottom: 20px;
 }
 
 .imageflow-slider {
@@ -6346,7 +6343,8 @@ div {
 }
 
 .translate-nodes-controls {
-  margin-top: auto;
+  
+    margin-top: 20px;
 }
 
 .translate-nodes-info .imageflow-generate-button {
@@ -6378,7 +6376,7 @@ div {
 .translate-node-summary-item {
   border-radius: 12px;
   border: 1px solid rgba(148, 163, 184, 0.24);
-  background: #ffffff;
+  background: #ffffffa8;
   padding: 8px 10px;
   display: flex;
   flex-direction: column;
@@ -6405,7 +6403,7 @@ div {
   margin: 0;
   border-radius: 12px;
   border: 1px solid rgba(148, 163, 184, 0.24);
-  background: #ffffff;
+  background: #ffffffa8;
   color: #475569;
   font-size: 11px;
   line-height: 1.45;
@@ -6465,7 +6463,7 @@ div {
   justify-content: center;
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.36);
-  background: #ffffff;
+  background: #ffffff4d;
   color: #64748b;
   font-size: 11px;
   letter-spacing: 0.04em;
@@ -10559,4 +10557,19 @@ body:has(.inspire-shell)
 .translate-info-panel .translate-conversion-generate-action:hover:not(:disabled) {
   background: #ea580c !important;
   border: none !important;
+}
+
+/* Lower only the translate nodes info panel opacity to match other panels. */
+.imageflow-info.translate-info-panel.translate-glass-info.translate-nodes-info, .imageflow-info.translate-info-panel.translate-glass-info.translate-conversion-info {
+  background: rgba(248, 250, 252, 0.3);
+}
+
+/* Lower input opacity on translate pages 1 (conversion) and 2 (nodes). */
+.translate-info-panel.translate-conversion-info .imageflow-input-field,
+.translate-info-panel.translate-conversion-info .imageflow-textarea {
+  background: #ffffff36 !important;
+}
+
+.translate-info-panel.translate-nodes-info .imageflow-slider {
+  opacity: 0.68;
 }
