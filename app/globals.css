@@ -580,7 +580,10 @@ body:has(.imageflow-builder):not(:has(#imageflow-sidebar-toggle:checked))
 
 .workflow-mode-toggle-button.is-translate {
   color: #c2410c;
-     background: linear-gradient(#fb923c52 0%, #f9731647 100%);
+}
+
+body:has(.workspace-home-shell) .workflow-mode-toggle-button.is-translate {
+  background: linear-gradient(#fb923c52 0%, #f9731647 100%);
 }
 
 .workflow-mode-toggle-button.is-inspire {
@@ -886,8 +889,8 @@ body:has(.imageflow-builder):has(#imageflow-sidebar-toggle:checked)
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-right: -14px;
-  padding-right: 14px;
+  margin-right: -11px;
+  padding-right: 8px;
   scrollbar-gutter: stable;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.7) transparent;
