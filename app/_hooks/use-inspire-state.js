@@ -352,16 +352,17 @@ export default function useInspireState() {
     }
   }, [brief, handleSetSelectedNodeId, isGeneratingTree, selectedStyle]);
 
-  const generatePreviews = useCallback(async () => {
+  const generatePreviews = useCallback(async ({ nodeId } = {}) => {
     if (isGeneratingPreviews) {
       return;
     }
     setPreviewError("");
-    if (!treeRoot || !selectedNodeId) {
+    const activeNodeId = nodeId?.toString() || selectedNodeId;
+    if (!treeRoot || !activeNodeId) {
       setPreviewError("Generate a tree and select a node first.");
       return;
     }
-    const nodeContext = buildNodeContextFromTree(treeRoot, selectedNodeId);
+    const nodeContext = buildNodeContextFromTree(treeRoot, activeNodeId);
     if (!nodeContext?.node) {
       setPreviewError("Selected node not found.");
       return;
