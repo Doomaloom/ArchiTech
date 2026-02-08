@@ -39,6 +39,19 @@ export default function useProjectAutosave({
   const isHydratingRef = useRef(true);
   const lastSignatureRef = useRef("");
   const lastVersionAtRef = useRef(0);
+  const controlsRef = useRef({
+    setWorkflowMode,
+    setInspireStep,
+    imageHydrate: imageActions.hydrateWorkspace,
+    inspireHydrate: inspireActions.hydrateWorkspace,
+  });
+
+  controlsRef.current = {
+    setWorkflowMode,
+    setInspireStep,
+    imageHydrate: imageActions.hydrateWorkspace,
+    inspireHydrate: inspireActions.hydrateWorkspace,
+  };
 
   const snapshot = useMemo(
     () => ({
@@ -141,13 +154,16 @@ export default function useProjectAutosave({
 
         const dbSnapshot = payload?.snapshot;
         if (dbSnapshot && typeof dbSnapshot === "object") {
+          const controls = controlsRef.current;
           isHydratingRef.current = true;
-          setWorkflowMode(dbSnapshot.workflowMode === "inspire" ? "inspire" : "image-to-site");
+          controls.setWorkflowMode(
+            dbSnapshot.workflowMode === "inspire" ? "inspire" : "image-to-site"
+          );
           if (typeof dbSnapshot.inspireStep === "string") {
-            setInspireStep(dbSnapshot.inspireStep);
+            controls.setInspireStep(dbSnapshot.inspireStep);
           }
-          imageActions.hydrateWorkspace(dbSnapshot.imageToSite ?? {});
-          inspireActions.hydrateWorkspace(dbSnapshot.inspire ?? {});
+          controls.imageHydrate(dbSnapshot.imageToSite ?? {});
+          controls.inspireHydrate(dbSnapshot.inspire ?? {});
           lastSignatureRef.current = JSON.stringify(dbSnapshot);
         }
 
@@ -177,7 +193,7 @@ export default function useProjectAutosave({
     return () => {
       isCancelled = true;
     };
-  }, [imageActions, inspireActions, setInspireStep, setWorkflowMode]);
+  }, []);
 
   useEffect(() => {
     if (status.isHydrating || isHydratingRef.current) {
