@@ -30,7 +30,9 @@ export default function DropzonePanel() {
         <BuilderView />
       ) : (
         <>
-          {derived.isIterationMode ? null : <MediaControls />}
+          {derived.isIterationMode ? null : (
+            <MediaControls showZoomControl={!derived.isPreviewMode} />
+          )}
           {state.viewMode === "nodes" ? (
             <NodesView />
           ) : state.viewMode === "preview" ? (

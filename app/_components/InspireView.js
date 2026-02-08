@@ -50,8 +50,8 @@ const STYLE_PRESETS = [
 ];
 
 const PREVIEW_MODE_OPTIONS = [
-  { id: "image", label: "Image previews" },
-  { id: "html", label: "HTML previews" },
+  { id: "image", label: "Image" },
+  { id: "html", label: "HTML" },
 ];
 
 const INSPIRE_STEPS = {
@@ -643,53 +643,69 @@ export default function InspireView() {
             className="inspire-previews-grid"
             aria-busy={inspireState.isGeneratingPreviews}
           >
-            {previewCards.map((preview, index) => (
-              <button
-                key={preview.id}
-                type="button"
-                className={`inspire-preview-card${
-                  inspireState.selectedPreviewIndex === index ? " is-selected" : ""
-                }${preview.status === "loading" ? " is-loading" : ""}`}
-                onClick={() => inspireActions.setSelectedPreviewIndex(index)}
-              >
-                <div className="inspire-preview-thumb">
-                  <span className="inspire-preview-index">0{index + 1}</span>
-                  {preview.imageUrl ? (
-                    <img
-                      className="inspire-preview-media"
-                      src={preview.imageUrl}
-                      alt={`Preview ${index + 1}`}
-                      loading="lazy"
-                    />
-                  ) : preview.html ? (
-                    <iframe
-                      className="inspire-preview-media"
-                      title={`Preview ${index + 1} HTML`}
-                      sandbox=""
-                      loading="lazy"
-                      srcDoc={preview.html}
-                    />
-                  ) : (
-                    <div className="inspire-preview-shapes">
-                      <span />
-                      <span />
-                      <span />
-                    </div>
-                  )}
-                </div>
-                <div className="inspire-preview-meta">
-                  <span>{preview.plan?.title || `Preview ${index + 1}`}</span>
-                  <span className="inspire-preview-tag">
-                    {preview.plan?.title ? "Concept" : "Preview"}
-                  </span>
-                </div>
-                {!preview.imageUrl && !preview.html && preview.status !== "loading" ? (
-                  <span className="inspire-preview-placeholder">
-                    {preview.renderError || inspireState.previewError || "No preview yet"}
-                  </span>
-                ) : null}
-              </button>
-            ))}
+            {previewCards.map((preview, index) => {
+              const optionIndex = String(index + 1).padStart(2, "0");
+              const previewTitle = preview.plan?.title || `Option ${optionIndex}`;
+              const previewState =
+                preview.status === "loading"
+                  ? "Generating"
+                  : preview.renderError
+                  ? "Issue"
+                  : preview.imageUrl
+                  ? "Image"
+                  : preview.html
+                  ? "HTML"
+                  : "Pending";
+              return (
+                <button
+                  key={preview.id}
+                  type="button"
+                  className={`inspire-preview-card${
+                    inspireState.selectedPreviewIndex === index ? " is-selected" : ""
+                  }${preview.status === "loading" ? " is-loading" : ""}`}
+                  onClick={() => inspireActions.setSelectedPreviewIndex(index)}
+                >
+                  <div className="inspire-preview-thumb">
+                    <span className="inspire-preview-index">{optionIndex}</span>
+                    {preview.imageUrl ? (
+                      <img
+                        className="inspire-preview-media"
+                        src={preview.imageUrl}
+                        alt={`Preview ${index + 1}`}
+                        loading="lazy"
+                      />
+                    ) : preview.html ? (
+                      <iframe
+                        className="inspire-preview-media"
+                        title={`Preview ${index + 1} HTML`}
+                        sandbox=""
+                        loading="lazy"
+                        srcDoc={preview.html}
+                      />
+                    ) : (
+                      <div className="inspire-preview-shapes">
+                        <span />
+                        <span />
+                        <span />
+                      </div>
+                    )}
+                  </div>
+                  <div className="inspire-preview-meta">
+                    <span className="inspire-preview-title">{previewTitle}</span>
+                    <span className="inspire-preview-tag">{previewState}</span>
+                  </div>
+                  {!preview.imageUrl &&
+                  !preview.html &&
+                  preview.status !== "loading" ? (
+                    <span className="inspire-preview-placeholder">
+                      {preview.renderError ||
+                        inspireState.previewError ||
+                        "Not generated yet"}
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
           </div>
         </div>
       );
@@ -862,22 +878,62 @@ export default function InspireView() {
       );
     }
     if (inspireStep === INSPIRE_STEPS.PREVIEWS) {
+      const selectedPreview = inspireDerived.selectedPreview;
+      const selectedPreviewNumber = inspireState.previewItems.length
+        ? String(inspireState.selectedPreviewIndex + 1).padStart(2, "0")
+        : null;
       const selectedLabel =
-        inspireDerived.selectedPreview?.plan?.title ||
+        selectedPreview?.plan?.title ||
         (inspireState.previewItems.length
-          ? `Preview ${inspireState.selectedPreviewIndex + 1}`
-          : "No preview selected");
+          ? `Option ${selectedPreviewNumber}`
+          : "No option selected");
+      const readyPreviewCount = inspireState.previewItems.reduce(
+        (total, preview) =>
+          preview?.imageUrl || preview?.html ? total + 1 : total,
+        0
+      );
+      const selectedState =
+        selectedPreview?.status === "loading"
+          ? "Generating"
+          : selectedPreview?.renderError
+          ? "Issue"
+          : selectedPreview?.imageUrl || selectedPreview?.html
+          ? "Ready"
+          : "Pending";
       return (
-        <aside className="imageflow-info inspire-info inspire-preview-info">
+        <aside className="imageflow-info inspire-info inspire-preview-info inspire-glass-info">
           <div className="imageflow-info-header">
             <p className="imageflow-info-kicker">Inspire</p>
             <h1 className="imageflow-info-title">Select a preview</h1>
             <p className="imageflow-info-subtitle">
-              Choose the layout that best matches the direction.
+              Pick the strongest direction and move it into workspace editing.
             </p>
           </div>
+          <div className="inspire-preview-metrics" aria-label="Preview summary">
+            <div className="inspire-preview-metric">
+              <span>Ready</span>
+              <strong>
+                {readyPreviewCount}/{previewCards.length}
+              </strong>
+            </div>
+            <div className="inspire-preview-metric">
+              <span>Selected</span>
+              <strong>{selectedPreviewNumber ? `#${selectedPreviewNumber}` : "--"}</strong>
+            </div>
+            <div className="inspire-preview-metric">
+              <span>Mode</span>
+              <strong>{isImagePreviewMode ? "Image" : "HTML"}</strong>
+            </div>
+          </div>
           <div className="inspire-info-summary inspire-preview-selection">
-            <span>Selected</span>
+            <div className="inspire-preview-selection-head">
+              <span>Active option</span>
+              <span
+                className={`inspire-preview-selection-state is-${selectedState.toLowerCase()}`}
+              >
+                {selectedState}
+              </span>
+            </div>
             <strong>{selectedLabel}</strong>
           </div>
           <div
@@ -912,10 +968,10 @@ export default function InspireView() {
               disabled={inspireState.isGeneratingPreviews}
             >
               {inspireState.isGeneratingPreviews
-                ? "Generating previews..."
+                ? "Generating..."
                 : inspireState.previewItems.length
-                ? "Regenerate previews"
-                : "Generate previews"}
+                ? "Regenerate"
+                : "Generate"}
             </button>
             <button
               className="imageflow-generate-button inspire-preview-action is-ghost"
@@ -926,7 +982,7 @@ export default function InspireView() {
                 !inspireState.previewItems.length
               }
             >
-              Continue to workspace
+              Open workspace
             </button>
           </div>
         </aside>
@@ -935,7 +991,7 @@ export default function InspireView() {
     if (inspireStep === INSPIRE_STEPS.TREE) {
       if (!inspireDerived.treeRoot) {
         return (
-          <aside className="imageflow-info inspire-info">
+          <aside className="imageflow-info inspire-info inspire-tree-info inspire-glass-info">
             <div className="imageflow-info-header">
               <p className="imageflow-info-kicker">Structure</p>
               <h1 className="imageflow-info-title">Review the tree</h1>
@@ -967,7 +1023,7 @@ export default function InspireView() {
       const activeNodeId =
         imageState.selectedNodeId || inspireState.selectedNodeId || null;
       return (
-        <aside className="imageflow-info inspire-info">
+        <aside className="imageflow-info inspire-info inspire-tree-info inspire-glass-info">
           <div className="imageflow-info-header">
             <p className="imageflow-info-kicker">Structure</p>
             <h1 className="imageflow-info-title">Generate previews</h1>

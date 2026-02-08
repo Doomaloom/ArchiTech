@@ -1,6 +1,6 @@
 import { useImageToSite } from "./../_context/image-to-site-context";
 
-export default function MediaControls() {
+export default function MediaControls({ showZoomControl = true }) {
   const { actions } = useImageToSite();
 
   return (
@@ -22,29 +22,31 @@ export default function MediaControls() {
           />
         </svg>
       </button>
-      <button
-        className="imageflow-control-button"
-        type="button"
-        aria-label="Zoom image"
-      >
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <circle
-            cx="11"
-            cy="11"
-            r="6.5"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.6"
-          />
-          <path
-            d="M11 8v6M8 11h6M16.5 16.5L20 20"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-          />
-        </svg>
-      </button>
+      {showZoomControl ? (
+        <button
+          className="imageflow-control-button"
+          type="button"
+          aria-label="Zoom image"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle
+              cx="11"
+              cy="11"
+              r="6.5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+            />
+            <path
+              d="M11 8v6M8 11h6M16.5 16.5L20 20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+            />
+          </svg>
+        </button>
+      ) : null}
       <button
         className="imageflow-control-button"
         type="button"
