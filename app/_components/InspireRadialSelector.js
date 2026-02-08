@@ -54,79 +54,473 @@ const IconCompass = () => (
   </svg>
 );
 
+const IconHealth = () => (
+  <svg {...iconProps}>
+    <path d="M12 20s-7-4.2-7-9.5A4.5 4.5 0 0112 7a4.5 4.5 0 017 3.5C19 15.8 12 20 12 20z" />
+    <path d="M10 11h4M12 9v4" />
+  </svg>
+);
+
+const IconEducation = () => (
+  <svg {...iconProps}>
+    <path d="M3 9l9-4 9 4-9 4-9-4z" />
+    <path d="M7 11.5v3.2c0 1.6 2.2 2.8 5 2.8s5-1.2 5-2.8v-3.2" />
+    <path d="M20 9.5v4" />
+  </svg>
+);
+
+const IconTech = () => (
+  <svg {...iconProps}>
+    <rect x="7" y="7" width="10" height="10" rx="1.5" />
+    <path d="M10 10h4v4h-4z" />
+    <path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3" />
+  </svg>
+);
+
+const IconCart = () => (
+  <svg {...iconProps}>
+    <circle cx="9" cy="19" r="1.2" />
+    <circle cx="17" cy="19" r="1.2" />
+    <path d="M3 5h2l2.2 9h9.8l2-7H6.2" />
+  </svg>
+);
+
+const IconFinance = () => (
+  <svg {...iconProps}>
+    <path d="M3 10h18" />
+    <path d="M5 10v7M9 10v7M15 10v7M19 10v7" />
+    <path d="M2 8l10-5 10 5" />
+    <path d="M3 17h18" />
+  </svg>
+);
+
+const IconTravel = () => (
+  <svg {...iconProps}>
+    <path d="M12 21s6-5.1 6-10a6 6 0 10-12 0c0 4.9 6 10 6 10z" />
+    <circle cx="12" cy="11" r="2.2" />
+  </svg>
+);
+
+const IconRealEstate = () => (
+  <svg {...iconProps}>
+    <path d="M4 11l8-6 8 6v9H4z" />
+    <path d="M10 20v-5h4v5" />
+  </svg>
+);
+
+const IconPeople = () => (
+  <svg {...iconProps}>
+    <path d="M8.5 11a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" />
+    <path d="M15.5 10a2 2 0 100-4 2 2 0 000 4z" />
+    <path d="M4.5 18a4 4 0 018 0" />
+    <path d="M13.5 18a3 3 0 016 0" />
+  </svg>
+);
+
+const IconFood = () => (
+  <svg {...iconProps}>
+    <path d="M7 3v5M9 3v5M11 3v5M9 8v13" />
+    <path d="M15 3v18M15 3c2.2 0 3.5 1.5 3.5 3.6S17.2 10 15 10" />
+  </svg>
+);
+
+const IconMedia = () => (
+  <svg {...iconProps}>
+    <path d="M3 10v4l8 2V8l-8 2z" />
+    <path d="M11 8l7-3v14l-7-3" />
+    <path d="M6.5 15.5v3.5" />
+  </svg>
+);
+
+const makeOption = (id, label, icon) => ({ id, label, icon });
+
 const DEFAULT_OPTIONS = [
-  { id: "clarity", label: "Clarity", icon: <IconTarget /> },
-  { id: "momentum", label: "Momentum", icon: <IconBolt /> },
-  { id: "trust", label: "Trust", icon: <IconShield /> },
-  { id: "delight", label: "Delight", icon: <IconSpark /> },
-  { id: "conversion", label: "Conversion", icon: <IconOrbit /> },
-  { id: "story", label: "Story", icon: <IconCompass /> },
+  makeOption("health", "Health", <IconHealth />),
+  makeOption("education", "Education", <IconEducation />),
+  makeOption("tech", "Tech", <IconTech />),
+  makeOption("ecommerce", "E-commerce", <IconCart />),
+  makeOption("finance", "Finance", <IconFinance />),
+  makeOption("nonprofit", "Nonprofit", <IconPeople />),
 ];
 
-const DEFAULT_QUESTIONS = [
-  {
-    id: "first-impression",
-    prompt: "What should the first impression emphasize?",
-    helper: "Pick the primary lens for the opening screen.",
-    options: [
-      { id: "clarity", label: "Clarity", icon: <IconTarget /> },
-      { id: "energy", label: "Energy", icon: <IconBolt /> },
-      { id: "trust", label: "Trust", icon: <IconShield /> },
-      { id: "delight", label: "Delight", icon: <IconSpark /> },
-      { id: "direction", label: "Direction", icon: <IconCompass /> },
+const CATEGORY_QUESTION_ID = "site-category";
+
+const CATEGORY_OPTIONS = [
+  makeOption("health", "Health", <IconHealth />),
+  makeOption("education", "Education", <IconEducation />),
+  makeOption("tech", "Tech", <IconTech />),
+  makeOption("ecommerce", "E-commerce", <IconCart />),
+  makeOption("finance", "Finance", <IconFinance />),
+  makeOption("travel", "Travel", <IconTravel />),
+  makeOption("real-estate", "Real Estate", <IconRealEstate />),
+  makeOption("nonprofit", "Nonprofit", <IconPeople />),
+  makeOption("food", "Food", <IconFood />),
+  makeOption("media", "Media", <IconMedia />),
+];
+
+const CATEGORY_QUESTION_BANK = {
+  health: {
+    audience: [
+      makeOption("patients", "Patients", <IconHealth />),
+      makeOption("families", "Families", <IconPeople />),
+      makeOption("clinics", "Clinics", <IconShield />),
+      makeOption("caregivers", "Caregivers", <IconCompass />),
+      makeOption("insurers", "Insurers", <IconFinance />),
+    ],
+    value: [
+      makeOption("book-care-fast", "Book care quickly", <IconBolt />),
+      makeOption("symptom-guidance", "Understand symptoms", <IconTarget />),
+      makeOption("virtual-consult", "Start virtual consults", <IconOrbit />),
+      makeOption("wellness-plan", "Create wellness plans", <IconCompass />),
+      makeOption("mental-support", "Access mental support", <IconSpark />),
+    ],
+    section: [
+      makeOption("provider-finder", "Provider finder", <IconTarget />),
+      makeOption("services-grid", "Services overview", <IconHealth />),
+      makeOption("trust-credentials", "Credentials and reviews", <IconShield />),
+      makeOption("insurance-pricing", "Insurance and pricing", <IconFinance />),
+      makeOption("care-faq", "Care FAQ", <IconCompass />),
+    ],
+    conversion: [
+      makeOption("book-appointment", "Book appointment", <IconTarget />),
+      makeOption("start-intake", "Start intake form", <IconShield />),
+      makeOption("call-clinic", "Call clinic", <IconBolt />),
+      makeOption("join-program", "Join wellness program", <IconSpark />),
+      makeOption("download-guide", "Download care guide", <IconCompass />),
     ],
   },
-  {
-    id: "tone",
-    prompt: "Which tone should lead the story?",
-    helper: "Set the emotional temperature of the narrative.",
-    options: [
-      { id: "bold", label: "Bold", icon: <IconBolt /> },
-      { id: "calm", label: "Calm", icon: <IconOrbit /> },
-      { id: "crafted", label: "Crafted", icon: <IconShield /> },
-      { id: "playful", label: "Playful", icon: <IconSpark /> },
-      { id: "precise", label: "Precise", icon: <IconTarget /> },
+  education: {
+    audience: [
+      makeOption("students", "Students", <IconEducation />),
+      makeOption("parents", "Parents", <IconPeople />),
+      makeOption("teachers", "Teachers", <IconShield />),
+      makeOption("schools", "Schools", <IconCompass />),
+      makeOption("career-switchers", "Career switchers", <IconBolt />),
+    ],
+    value: [
+      makeOption("guided-learning", "Structured learning paths", <IconCompass />),
+      makeOption("exam-prep", "Exam preparation", <IconTarget />),
+      makeOption("tutoring", "Personal tutoring", <IconPeople />),
+      makeOption("skill-certification", "Skill certification", <IconShield />),
+      makeOption("quick-lessons", "Quick lesson access", <IconBolt />),
+    ],
+    section: [
+      makeOption("course-catalog", "Course catalog", <IconEducation />),
+      makeOption("curriculum-roadmap", "Curriculum roadmap", <IconCompass />),
+      makeOption("instructor-profiles", "Instructor profiles", <IconPeople />),
+      makeOption("student-outcomes", "Student outcomes", <IconTarget />),
+      makeOption("tuition-aid", "Tuition and aid", <IconFinance />),
+    ],
+    conversion: [
+      makeOption("enroll-now", "Enroll now", <IconTarget />),
+      makeOption("book-demo-class", "Book demo class", <IconBolt />),
+      makeOption("start-free-lesson", "Start free lesson", <IconSpark />),
+      makeOption("request-syllabus", "Request syllabus", <IconCompass />),
+      makeOption("join-waitlist", "Join waitlist", <IconShield />),
     ],
   },
-  {
-    id: "hero-focus",
-    prompt: "What should the hero section spotlight?",
-    helper: "Choose the core story block to anchor the layout.",
-    options: [
-      { id: "product", label: "Product", icon: <IconOrbit /> },
-      { id: "mission", label: "Mission", icon: <IconCompass /> },
-      { id: "outcome", label: "Outcome", icon: <IconTarget /> },
-      { id: "community", label: "Community", icon: <IconSpark /> },
-      { id: "offer", label: "Offer", icon: <IconBolt /> },
+  tech: {
+    audience: [
+      makeOption("founders", "Founders", <IconCompass />),
+      makeOption("product-teams", "Product teams", <IconPeople />),
+      makeOption("developers", "Developers", <IconTech />),
+      makeOption("operations", "Ops teams", <IconShield />),
+      makeOption("enterprise-it", "Enterprise IT", <IconFinance />),
+    ],
+    value: [
+      makeOption("launch-faster", "Ship faster", <IconBolt />),
+      makeOption("automate-workflows", "Automate workflows", <IconOrbit />),
+      makeOption("improve-security", "Improve security", <IconShield />),
+      makeOption("reduce-cost", "Reduce costs", <IconFinance />),
+      makeOption("track-metrics", "Track key metrics", <IconTarget />),
+    ],
+    section: [
+      makeOption("feature-showcase", "Feature highlights", <IconTech />),
+      makeOption("product-demo", "Interactive demo", <IconOrbit />),
+      makeOption("integrations", "Integrations", <IconCompass />),
+      makeOption("api-docs", "API docs", <IconShield />),
+      makeOption("case-studies", "Case studies", <IconTarget />),
+    ],
+    conversion: [
+      makeOption("start-trial", "Start free trial", <IconTarget />),
+      makeOption("request-demo", "Request demo", <IconBolt />),
+      makeOption("contact-sales", "Contact sales", <IconPeople />),
+      makeOption("create-workspace", "Create workspace", <IconOrbit />),
+      makeOption("view-docs", "View developer docs", <IconShield />),
     ],
   },
-  {
-    id: "cta-feel",
-    prompt: "How should CTAs feel?",
-    helper: "Define the ask that anchors conversions.",
-    options: [
-      { id: "direct", label: "Direct", icon: <IconTarget /> },
-      { id: "inviting", label: "Inviting", icon: <IconSpark /> },
-      { id: "exclusive", label: "Exclusive", icon: <IconShield /> },
-      { id: "guided", label: "Guided", icon: <IconCompass /> },
+  ecommerce: {
+    audience: [
+      makeOption("new-shoppers", "First-time shoppers", <IconCart />),
+      makeOption("repeat-customers", "Returning customers", <IconPeople />),
+      makeOption("deal-hunters", "Deal hunters", <IconBolt />),
+      makeOption("b2b-buyers", "B2B buyers", <IconFinance />),
+      makeOption("gift-buyers", "Gift buyers", <IconSpark />),
+    ],
+    value: [
+      makeOption("discover-products", "Discover products", <IconCompass />),
+      makeOption("compare-options", "Compare options", <IconTarget />),
+      makeOption("fast-checkout", "Checkout quickly", <IconBolt />),
+      makeOption("delivery-tracking", "Track deliveries", <IconShield />),
+      makeOption("personalized-recs", "Get recommendations", <IconSpark />),
+    ],
+    section: [
+      makeOption("category-grid", "Category grid", <IconCart />),
+      makeOption("featured-collections", "Featured collections", <IconSpark />),
+      makeOption("top-reviews", "Top reviews", <IconShield />),
+      makeOption("bundles-offers", "Bundles and offers", <IconBolt />),
+      makeOption("shipping-policy", "Shipping and returns", <IconCompass />),
+    ],
+    conversion: [
+      makeOption("add-to-cart", "Add to cart", <IconCart />),
+      makeOption("start-checkout", "Start checkout", <IconTarget />),
+      makeOption("save-wishlist", "Save to wishlist", <IconSpark />),
+      makeOption("join-loyalty", "Join loyalty program", <IconPeople />),
+      makeOption("restock-alert", "Subscribe to restock alerts", <IconShield />),
     ],
   },
-  {
-    id: "layout-energy",
-    prompt: "What layout energy fits best?",
-    helper: "Set the structural rhythm of the page.",
-    options: [
-      { id: "grid", label: "Grid", icon: <IconTarget /> },
-      { id: "flow", label: "Flow", icon: <IconOrbit /> },
-      { id: "minimal", label: "Minimal", icon: <IconShield /> },
-      { id: "editorial", label: "Editorial", icon: <IconCompass /> },
-      { id: "experimental", label: "Experimental", icon: <IconBolt /> },
+  finance: {
+    audience: [
+      makeOption("consumers", "Everyday consumers", <IconPeople />),
+      makeOption("smb-owners", "Small business owners", <IconCompass />),
+      makeOption("investors", "Investors", <IconTarget />),
+      makeOption("advisors", "Financial advisors", <IconShield />),
+      makeOption("accountants", "Accountants", <IconFinance />),
     ],
+    value: [
+      makeOption("manage-budget", "Manage budgets", <IconTarget />),
+      makeOption("compare-products", "Compare financial products", <IconCompass />),
+      makeOption("grow-portfolio", "Grow portfolio", <IconBolt />),
+      makeOption("improve-cashflow", "Improve cashflow", <IconOrbit />),
+      makeOption("plan-taxes", "Plan taxes", <IconShield />),
+    ],
+    section: [
+      makeOption("calculators", "Calculators", <IconTarget />),
+      makeOption("plan-comparison", "Plan comparison", <IconCompass />),
+      makeOption("compliance-trust", "Compliance and trust", <IconShield />),
+      makeOption("market-insights", "Market insights", <IconBolt />),
+      makeOption("pricing-tiers", "Pricing tiers", <IconFinance />),
+    ],
+    conversion: [
+      makeOption("create-account", "Create account", <IconTarget />),
+      makeOption("apply-now", "Apply now", <IconBolt />),
+      makeOption("schedule-advisor", "Schedule advisor call", <IconPeople />),
+      makeOption("download-report", "Download report", <IconCompass />),
+      makeOption("subscribe-brief", "Subscribe to market brief", <IconShield />),
+    ],
+  },
+  travel: {
+    audience: [
+      makeOption("vacationers", "Vacationers", <IconTravel />),
+      makeOption("business-travelers", "Business travelers", <IconFinance />),
+      makeOption("families", "Families", <IconPeople />),
+      makeOption("digital-nomads", "Digital nomads", <IconTech />),
+      makeOption("local-explorers", "Local explorers", <IconCompass />),
+    ],
+    value: [
+      makeOption("plan-itinerary", "Plan itinerary", <IconCompass />),
+      makeOption("find-deals", "Find travel deals", <IconBolt />),
+      makeOption("compare-stays", "Compare stays", <IconTarget />),
+      makeOption("discover-activities", "Discover activities", <IconSpark />),
+      makeOption("simple-booking", "Book quickly", <IconTravel />),
+    ],
+    section: [
+      makeOption("destination-guides", "Destination guides", <IconCompass />),
+      makeOption("package-deals", "Package deals", <IconBolt />),
+      makeOption("map-planner", "Map planner", <IconTravel />),
+      makeOption("traveler-reviews", "Traveler reviews", <IconShield />),
+      makeOption("seasonal-highlights", "Seasonal highlights", <IconSpark />),
+    ],
+    conversion: [
+      makeOption("book-trip", "Book trip", <IconTarget />),
+      makeOption("build-itinerary", "Build itinerary", <IconCompass />),
+      makeOption("request-quote", "Request quote", <IconFinance />),
+      makeOption("save-plan", "Save trip plan", <IconSpark />),
+      makeOption("join-alerts", "Join travel alerts", <IconShield />),
+    ],
+  },
+  "real-estate": {
+    audience: [
+      makeOption("home-buyers", "Home buyers", <IconRealEstate />),
+      makeOption("renters", "Renters", <IconPeople />),
+      makeOption("sellers", "Sellers", <IconTarget />),
+      makeOption("agents", "Agents", <IconCompass />),
+      makeOption("investors", "Investors", <IconFinance />),
+    ],
+    value: [
+      makeOption("browse-listings", "Browse listings", <IconRealEstate />),
+      makeOption("compare-neighborhoods", "Compare neighborhoods", <IconCompass />),
+      makeOption("book-tour", "Book tours", <IconBolt />),
+      makeOption("estimate-value", "Estimate property value", <IconTarget />),
+      makeOption("mortgage-prequal", "Start mortgage pre-qual", <IconShield />),
+    ],
+    section: [
+      makeOption("featured-listings", "Featured listings", <IconRealEstate />),
+      makeOption("map-search", "Map search", <IconTravel />),
+      makeOption("affordability-tool", "Affordability calculator", <IconFinance />),
+      makeOption("agent-profiles", "Agent profiles", <IconPeople />),
+      makeOption("market-trends", "Market trends", <IconCompass />),
+    ],
+    conversion: [
+      makeOption("book-viewing", "Book viewing", <IconTarget />),
+      makeOption("contact-agent", "Contact agent", <IconPeople />),
+      makeOption("request-valuation", "Request valuation", <IconFinance />),
+      makeOption("save-listing", "Save listing", <IconSpark />),
+      makeOption("start-prequal", "Start pre-qualification", <IconShield />),
+    ],
+  },
+  nonprofit: {
+    audience: [
+      makeOption("donors", "Donors", <IconFinance />),
+      makeOption("volunteers", "Volunteers", <IconPeople />),
+      makeOption("beneficiaries", "Beneficiaries", <IconShield />),
+      makeOption("partners", "Partners", <IconCompass />),
+      makeOption("advocates", "Advocates", <IconSpark />),
+    ],
+    value: [
+      makeOption("understand-mission", "Understand mission", <IconCompass />),
+      makeOption("track-impact", "See impact metrics", <IconTarget />),
+      makeOption("find-programs", "Find programs", <IconShield />),
+      makeOption("join-campaigns", "Join campaigns", <IconSpark />),
+      makeOption("support-fundraising", "Support fundraising", <IconBolt />),
+    ],
+    section: [
+      makeOption("mission-story", "Mission story", <IconCompass />),
+      makeOption("impact-metrics", "Impact metrics", <IconTarget />),
+      makeOption("active-campaigns", "Active campaigns", <IconSpark />),
+      makeOption("volunteer-hub", "Volunteer hub", <IconPeople />),
+      makeOption("annual-reports", "Annual reports", <IconShield />),
+    ],
+    conversion: [
+      makeOption("donate-now", "Donate now", <IconTarget />),
+      makeOption("volunteer-signup", "Volunteer signup", <IconPeople />),
+      makeOption("register-event", "Register for event", <IconBolt />),
+      makeOption("join-newsletter", "Join newsletter", <IconSpark />),
+      makeOption("share-campaign", "Share campaign", <IconCompass />),
+    ],
+  },
+  food: {
+    audience: [
+      makeOption("dine-in", "Dine-in guests", <IconFood />),
+      makeOption("delivery", "Delivery customers", <IconTravel />),
+      makeOption("event-planners", "Event planners", <IconCompass />),
+      makeOption("regulars", "Regular customers", <IconPeople />),
+      makeOption("franchise", "Franchise prospects", <IconFinance />),
+    ],
+    value: [
+      makeOption("browse-menu", "Browse menu quickly", <IconFood />),
+      makeOption("order-fast", "Order in seconds", <IconBolt />),
+      makeOption("reserve-table", "Reserve tables", <IconTarget />),
+      makeOption("plan-catering", "Plan catering", <IconCompass />),
+      makeOption("discover-specials", "Discover specials", <IconSpark />),
+    ],
+    section: [
+      makeOption("signature-dishes", "Signature dishes", <IconSpark />),
+      makeOption("menu-categories", "Menu categories", <IconFood />),
+      makeOption("customer-reviews", "Customer reviews", <IconShield />),
+      makeOption("locations-hours", "Locations and hours", <IconTravel />),
+      makeOption("offers-deals", "Offers and deals", <IconBolt />),
+    ],
+    conversion: [
+      makeOption("order-now", "Order now", <IconTarget />),
+      makeOption("reserve-now", "Reserve table", <IconFood />),
+      makeOption("request-catering", "Request catering quote", <IconCompass />),
+      makeOption("join-loyalty", "Join loyalty", <IconPeople />),
+      makeOption("get-coupon", "Get coupon", <IconSpark />),
+    ],
+  },
+  media: {
+    audience: [
+      makeOption("readers", "Readers", <IconMedia />),
+      makeOption("listeners", "Listeners", <IconOrbit />),
+      makeOption("viewers", "Viewers", <IconSpark />),
+      makeOption("creators", "Creators", <IconPeople />),
+      makeOption("advertisers", "Advertisers", <IconFinance />),
+    ],
+    value: [
+      makeOption("discover-content", "Discover new content", <IconCompass />),
+      makeOption("personalized-feed", "Get personalized feed", <IconOrbit />),
+      makeOption("follow-topics", "Follow topics", <IconTarget />),
+      makeOption("support-creators", "Support creators", <IconSpark />),
+      makeOption("join-discussion", "Join conversations", <IconPeople />),
+    ],
+    section: [
+      makeOption("trending-feed", "Trending feed", <IconBolt />),
+      makeOption("editorial-picks", "Editorial picks", <IconCompass />),
+      makeOption("creator-spotlight", "Creator spotlight", <IconPeople />),
+      makeOption("topic-hubs", "Topic hubs", <IconTarget />),
+      makeOption("member-benefits", "Member benefits", <IconShield />),
+    ],
+    conversion: [
+      makeOption("subscribe", "Subscribe", <IconTarget />),
+      makeOption("start-free", "Start free access", <IconBolt />),
+      makeOption("follow-topic", "Follow a topic", <IconCompass />),
+      makeOption("join-community", "Join community", <IconPeople />),
+      makeOption("contact-partnerships", "Contact partnerships", <IconFinance />),
+    ],
+  },
+};
+
+const QUESTION_TEMPLATES = [
+  {
+    id: "primary-audience",
+    key: "audience",
+    prompt: (label) =>
+      `Who is the primary audience for this ${label.toLowerCase()} website?`,
+    helper: "Pick the core users so layout and messaging stay focused.",
+  },
+  {
+    id: "core-value",
+    key: "value",
+    prompt: (label) =>
+      `What should visitors accomplish first on the ${label.toLowerCase()} site?`,
+    helper: "Choose the fastest value moment users should experience.",
+  },
+  {
+    id: "hero-section",
+    key: "section",
+    prompt: (label) =>
+      `Which homepage section should lead for your ${label.toLowerCase()} idea?`,
+    helper: "This determines the strongest first screen hierarchy.",
+  },
+  {
+    id: "primary-conversion",
+    key: "conversion",
+    prompt: (label) =>
+      `What is the main conversion goal for this ${label.toLowerCase()} website?`,
+    helper: "Select the action that defines project success.",
   },
 ];
+
+const buildDefaultQuestions = (categoryId = CATEGORY_OPTIONS[0]?.id || "tech") => {
+  const fallbackCategoryId = CATEGORY_OPTIONS[0]?.id || "tech";
+  const category =
+    CATEGORY_OPTIONS.find((option) => option.id === categoryId) ||
+    CATEGORY_OPTIONS.find((option) => option.id === fallbackCategoryId) ||
+    CATEGORY_OPTIONS[0];
+  const questionSet =
+    CATEGORY_QUESTION_BANK[category.id] ||
+    CATEGORY_QUESTION_BANK[fallbackCategoryId] ||
+    CATEGORY_QUESTION_BANK.tech;
+  return [
+    {
+      id: CATEGORY_QUESTION_ID,
+      prompt: "What category best describes the website idea?",
+      helper:
+        "Pick a category first. Subquestions adapt automatically for that domain.",
+      options: CATEGORY_OPTIONS,
+    },
+    ...QUESTION_TEMPLATES.map((template) => ({
+      id: template.id,
+      prompt: template.prompt(category.label),
+      helper: template.helper,
+      options: questionSet[template.key] || [],
+    })),
+  ];
+};
 
 const buildSelectionItems = (questions, selections) => {
-  return questions.slice(0, 5).map((question, index) => {
+  return questions.map((question, index) => {
     const selectedId = selections[question.id];
     const selectedOption = question.options?.find(
       (option) => option.id === selectedId
@@ -214,6 +608,13 @@ export default function InspireRadialSelector({
 }) {
   const surfaceRef = useRef(null);
   const [menuMetrics, setMenuMetrics] = useState(null);
+  const [selectedByQuestion, setSelectedByQuestion] = useState({});
+  const selectedCategoryId =
+    selectedByQuestion[CATEGORY_QUESTION_ID] || CATEGORY_OPTIONS[0]?.id || "tech";
+  const categoryQuestions = useMemo(
+    () => buildDefaultQuestions(selectedCategoryId),
+    [selectedCategoryId]
+  );
   const resolvedQuestions = useMemo(() => {
     if (questions?.length) {
       return questions;
@@ -228,9 +629,15 @@ export default function InspireRadialSelector({
         },
       ];
     }
-    return DEFAULT_QUESTIONS;
-  }, [question, options, questions]);
+    return categoryQuestions;
+  }, [categoryQuestions, question, options, questions]);
   const [questionIndex, setQuestionIndex] = useState(0);
+  useEffect(() => {
+    if (questionIndex < resolvedQuestions.length) {
+      return;
+    }
+    setQuestionIndex(0);
+  }, [questionIndex, resolvedQuestions.length]);
   const currentQuestion = resolvedQuestions[questionIndex] || resolvedQuestions[0];
   const currentOptions = useMemo(() => {
     if (currentQuestion?.options?.length >= 2) {
@@ -238,7 +645,6 @@ export default function InspireRadialSelector({
     }
     return options?.length >= 2 ? options : DEFAULT_OPTIONS;
   }, [currentQuestion, options]);
-  const [selectedByQuestion, setSelectedByQuestion] = useState({});
   const selectionItems = useMemo(() => {
     if (!resolvedQuestions.length) {
       return [];
@@ -309,14 +715,37 @@ export default function InspireRadialSelector({
     if (!activeOption || !currentQuestion) {
       return;
     }
-    setSelectedByQuestion((current) => ({
-      ...current,
-      [currentQuestion.id]: activeOption.id,
-    }));
-    onConfirm?.(activeOption, currentQuestion);
+    const isCategoryQuestion = currentQuestion.id === CATEGORY_QUESTION_ID;
+    const nextSelections = isCategoryQuestion
+      ? { [CATEGORY_QUESTION_ID]: activeOption.id }
+      : {
+          ...selectedByQuestion,
+          [currentQuestion.id]: activeOption.id,
+        };
+    setSelectedByQuestion(nextSelections);
+    const nextQuestions = questions?.length
+      ? questions
+      : question
+      ? [
+          {
+            id: "prompt",
+            prompt: question,
+            helper: "Choose the focus that feels right.",
+            options: options?.length >= 2 ? options : DEFAULT_OPTIONS,
+          },
+        ]
+      : buildDefaultQuestions(
+          nextSelections?.[CATEGORY_QUESTION_ID] ||
+            selectedCategoryId ||
+            CATEGORY_OPTIONS[0]?.id
+        );
+    onConfirm?.(activeOption, currentQuestion, nextSelections, nextQuestions);
     setQuestionIndex((current) => {
       if (resolvedQuestions.length <= 1) {
         return current;
+      }
+      if (isCategoryQuestion) {
+        return 1;
       }
       return (current + 1) % resolvedQuestions.length;
     });
@@ -326,16 +755,20 @@ export default function InspireRadialSelector({
     <div className="inspire-radial-stage">
       <div className="inspire-radial-left">
         <div className="inspire-radial-question">
-          <span className="inspire-radial-kicker">Inspire prompt</span>
+          <span className="inspire-radial-kicker">
+            Website brief question {Math.min(questionIndex + 1, resolvedQuestions.length)}
+            {" "}
+            of {resolvedQuestions.length || 1}
+          </span>
           <h2>{currentQuestion?.prompt || question}</h2>
           <p>
             {currentQuestion?.helper ||
-              "Select one focus area to steer the next iteration."}
+              "Select one focused answer to shape the generated site concept."}
           </p>
         </div>
         {visibleSelectionItems.length ? (
           <div className="inspire-selection-panel">
-            <span className="inspire-selection-kicker">Selections</span>
+            <span className="inspire-selection-kicker">Saved answers</span>
             <div className="inspire-selection-tree">
               <SelectionTree items={visibleSelectionItems} />
             </div>
@@ -344,7 +777,7 @@ export default function InspireRadialSelector({
       </div>
       <div className="inspire-radial-surface" ref={surfaceRef}>
         <div className="inspire-radial-center">
-          <span className="inspire-radial-center-kicker">Selected focus</span>
+          <span className="inspire-radial-center-kicker">Selected answer</span>
           <div className="inspire-radial-center-row">
             <div className="inspire-radial-center-pill" style={centerStyle}>
               <strong>{activeOption?.label || "Select"}</strong>
@@ -353,7 +786,7 @@ export default function InspireRadialSelector({
               className="inspire-radial-confirm"
               type="button"
               onClick={handleConfirm}
-              aria-label="Confirm selection"
+              aria-label="Confirm answer"
               disabled={!activeOption}
             >
               <svg

@@ -8137,6 +8137,7 @@ div {
 
 .inspire-workspace-label input {
   width: 140px;
+  accent-color: #f97316;
 }
 
 .inspire-workspace-clear {
@@ -8147,6 +8148,12 @@ div {
   font-size: 11px;
   cursor: pointer;
   color: #334155;
+}
+
+.inspire-workspace-hint {
+  margin: 0;
+  font-size: 11px;
+  color: #9a3412;
 }
 
 .inspire-workspace-stage {
@@ -8222,7 +8229,25 @@ div {
   width: 100%;
   height: 100%;
   touch-action: none;
-  cursor: crosshair;
+  cursor: none;
+}
+
+.inspire-brush-cursor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 3;
+  pointer-events: none;
+  border-radius: 999px;
+  border: 2px solid rgba(249, 115, 22, 0.95);
+  background: rgba(249, 115, 22, 0.16);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.75);
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.inspire-brush-cursor.is-visible {
+  opacity: 1;
 }
 
 .inspire-previews-grid {
@@ -8237,6 +8262,18 @@ div {
   flex-direction: column;
   gap: 12px;
   width: 100%;
+}
+
+.inspire-previews.is-image-mode {
+  min-height: 100%;
+  justify-content: center;
+}
+
+.inspire-previews.is-image-mode .inspire-previews-grid {
+  grid-template-columns: repeat(3, minmax(0, 220px));
+  grid-template-rows: repeat(2, auto);
+  justify-content: center;
+  align-content: center;
 }
 
 .inspire-preview-card {

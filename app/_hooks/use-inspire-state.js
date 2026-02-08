@@ -367,7 +367,10 @@ export default function useInspireState() {
       return;
     }
 
-    const count = clampNumber(Number(previewCount) || 1, 1, 6);
+    const count =
+      previewMode === "image"
+        ? 6
+        : clampNumber(Number(previewCount) || 1, 1, 6);
     setIsGeneratingPreviews(true);
     setSelectedPreviewIndex(0);
     setPreviewItems(

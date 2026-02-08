@@ -2,6 +2,7 @@
 
 import {
   forwardRef,
+  useCallback,
   useEffect,
   useImperativeHandle,
   useMemo,
@@ -64,6 +65,76 @@ const INSPIRE_STEPS = {
   SETTINGS: "settings",
 };
 
+const BRIEF_QUESTION_IDS = {
+  CATEGORY: "site-category",
+  AUDIENCE: "primary-audience",
+  VALUE: "core-value",
+  SECTION: "hero-section",
+  CONVERSION: "primary-conversion",
+};
+
+const getSelectionLabel = (questions, selections, questionId) => {
+  if (!Array.isArray(questions) || !selections || !questionId) {
+    return "";
+  }
+  const question = questions.find((entry) => entry?.id === questionId);
+  if (!question) {
+    return "";
+  }
+  const selectedId = selections[questionId];
+  if (!selectedId) {
+    return "";
+  }
+  const selectedOption = question.options?.find(
+    (entry) => entry?.id === selectedId
+  );
+  return selectedOption?.label?.toString().trim() || "";
+};
+
+const buildBriefFromSelections = (questions, selections) => {
+  const category = getSelectionLabel(
+    questions,
+    selections,
+    BRIEF_QUESTION_IDS.CATEGORY
+  );
+  const audience = getSelectionLabel(
+    questions,
+    selections,
+    BRIEF_QUESTION_IDS.AUDIENCE
+  );
+  const value = getSelectionLabel(questions, selections, BRIEF_QUESTION_IDS.VALUE);
+  const section = getSelectionLabel(
+    questions,
+    selections,
+    BRIEF_QUESTION_IDS.SECTION
+  );
+  const conversion = getSelectionLabel(
+    questions,
+    selections,
+    BRIEF_QUESTION_IDS.CONVERSION
+  );
+
+  const title = category ? `${category} website concept` : "";
+  const name = [category, value].filter(Boolean).join(" - ");
+  const details = [
+    category ? `Category: ${category}.` : "",
+    value ? `Primary visitor value: ${value}.` : "",
+    section ? `Leading section: ${section}.` : "",
+    conversion ? `Main conversion: ${conversion}.` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const goals = [value, conversion].filter(Boolean).join(" | ");
+
+  return {
+    title,
+    name,
+    details,
+    audience,
+    goals,
+  };
+};
+
 const getPointer = (event, element) => {
   if (!element) {
     return null;
@@ -80,9 +151,11 @@ const InspireBrushCanvas = forwardRef(function InspireBrushCanvas(
   ref
 ) {
   const canvasRef = useRef(null);
+  const cursorRef = useRef(null);
   const containerRef = useRef(null);
   const isDrawingRef = useRef(false);
   const boundsRef = useRef(null);
+  const [cursorVisible, setCursorVisible] = useState(false);
 
   useImperativeHandle(ref, () => ({
     getCanvas: () => canvasRef.current,
@@ -130,6 +203,27 @@ const InspireBrushCanvas = forwardRef(function InspireBrushCanvas(
     boundsRef.current = null;
     onMaskChange?.(null);
   }, [clearSignal, onMaskChange]);
+
+  useEffect(() => {
+    const cursor = cursorRef.current;
+    if (!cursor) {
+      return;
+    }
+    cursor.style.width = `${brushSize}px`;
+    cursor.style.height = `${brushSize}px`;
+    cursor.style.marginLeft = `${Math.round(brushSize / -2)}px`;
+    cursor.style.marginTop = `${Math.round(brushSize / -2)}px`;
+  }, [brushSize]);
+
+  const moveCursor = (point) => {
+    const cursor = cursorRef.current;
+    if (!cursor || !point) {
+      return;
+    }
+    cursor.style.transform = `translate(${Math.round(point.x)}px, ${Math.round(
+      point.y
+    )}px)`;
+  };
 
   const updateBounds = (point) => {
     if (!point) {
@@ -192,12 +286,17 @@ const InspireBrushCanvas = forwardRef(function InspireBrushCanvas(
     if (!point) {
       return;
     }
+    moveCursor(point);
+    setCursorVisible(true);
     event.preventDefault();
     isDrawingRef.current = true;
-    context.strokeStyle = "rgba(15, 118, 110, 0.7)";
+    context.strokeStyle = "rgba(249, 115, 22, 0.55)";
     context.lineWidth = brushSize;
     context.lineCap = "round";
     context.lineJoin = "round";
+    context.globalCompositeOperation = "source-over";
+    context.shadowBlur = 6;
+    context.shadowColor = "rgba(249, 115, 22, 0.35)";
     context.beginPath();
     context.moveTo(point.x, point.y);
     updateBounds(point);
@@ -219,6 +318,10 @@ const InspireBrushCanvas = forwardRef(function InspireBrushCanvas(
     if (!point) {
       return;
     }
+    moveCursor(point);
+    if (!cursorVisible) {
+      setCursorVisible(true);
+    }
     event.preventDefault();
     context.lineTo(point.x, point.y);
     context.stroke();
@@ -227,6 +330,7 @@ const InspireBrushCanvas = forwardRef(function InspireBrushCanvas(
 
   const handlePointerUp = (event) => {
     if (!isDrawingRef.current) {
+      setCursorVisible(false);
       return;
     }
     const canvas = canvasRef.current;
@@ -240,7 +344,16 @@ const InspireBrushCanvas = forwardRef(function InspireBrushCanvas(
     event.preventDefault();
     context.closePath();
     isDrawingRef.current = false;
+    setCursorVisible(false);
     emitMask();
+  };
+
+  const handlePointerLeave = (event) => {
+    if (isDrawingRef.current) {
+      handlePointerUp(event);
+      return;
+    }
+    setCursorVisible(false);
   };
 
   return (
@@ -251,8 +364,14 @@ const InspireBrushCanvas = forwardRef(function InspireBrushCanvas(
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        onPointerLeave={handlePointerUp}
+        onPointerEnter={() => setCursorVisible(true)}
+        onPointerLeave={handlePointerLeave}
         onPointerCancel={handlePointerUp}
+      />
+      <div
+        ref={cursorRef}
+        className={`inspire-brush-cursor${cursorVisible ? " is-visible" : ""}`}
+        aria-hidden="true"
       />
     </div>
   );
@@ -277,6 +396,21 @@ export default function InspireView() {
   const isDescriptionStep = inspireStep === INSPIRE_STEPS.DESCRIPTION;
   const isStyleStep = inspireStep === INSPIRE_STEPS.STYLE;
   const isTreeStep = inspireStep === INSPIRE_STEPS.TREE;
+
+  const handleDescriptionConfirm = useCallback(
+    (_option, _currentQuestion, selections, resolvedQuestions) => {
+      if (!selections || !resolvedQuestions?.length) {
+        return;
+      }
+      const nextBrief = buildBriefFromSelections(resolvedQuestions, selections);
+      inspireActions.updateBrief("title", nextBrief.title);
+      inspireActions.updateBrief("name", nextBrief.name);
+      inspireActions.updateBrief("details", nextBrief.details);
+      inspireActions.updateBrief("audience", nextBrief.audience);
+      inspireActions.updateBrief("goals", nextBrief.goals);
+    },
+    [inspireActions]
+  );
 
   useEffect(() => {
     if (inspireStep === INSPIRE_STEPS.BUILDER && imageState.viewMode !== "builder") {
@@ -424,17 +558,23 @@ export default function InspireView() {
   }`;
 
   const previewCards = useMemo(() => {
-    if (inspireState.previewItems.length) {
-      return inspireState.previewItems;
-    }
-    return Array.from({ length: inspireState.previewCount }, (_, index) => ({
-      id: `preview-${index + 1}`,
-      status: "empty",
-      imageUrl: null,
-      html: null,
-      plan: null,
-    }));
-  }, [inspireState.previewCount, inspireState.previewItems]);
+    const targetCount =
+      inspireState.previewMode === "image" ? 6 : inspireState.previewCount;
+    const items = inspireState.previewItems.slice(0, targetCount);
+    return Array.from({ length: targetCount }, (_, index) => {
+      const preview = items[index];
+      if (preview) {
+        return preview;
+      }
+      return {
+        id: `preview-${index + 1}`,
+        status: "empty",
+        imageUrl: null,
+        html: null,
+        plan: null,
+      };
+    });
+  }, [inspireState.previewCount, inspireState.previewItems, inspireState.previewMode]);
 
   const handleContinueToWorkspace = () => {
     if (inspireState.isGeneratingPreviews) {
@@ -473,7 +613,7 @@ export default function InspireView() {
 
   const renderMainPanel = () => {
     if (inspireStep === INSPIRE_STEPS.DESCRIPTION) {
-      return <InspireRadialSelector />;
+      return <InspireRadialSelector onConfirm={handleDescriptionConfirm} />;
     }
     if (inspireStep === INSPIRE_STEPS.BUILDER) {
       return <BuilderView />;
@@ -483,7 +623,11 @@ export default function InspireView() {
     }
     if (inspireStep === INSPIRE_STEPS.PREVIEWS) {
       return (
-        <div className="inspire-previews">
+        <div
+          className={`inspire-previews${
+            inspireState.previewMode === "image" ? " is-image-mode" : ""
+          }`}
+        >
           {inspireState.previewError ? (
             <div className="inspire-preview-error" role="status">
               {inspireState.previewError}
@@ -849,7 +993,7 @@ export default function InspireView() {
             >
               {inspireState.isApplyingMaskEdit
                 ? "Applying mask edit..."
-                : "Apply mask edit"}
+                : "Apply changes to image"}
             </button>
             {!isImagePreviewMode ? (
               <div className="inspire-preview-error" role="status">
@@ -865,7 +1009,7 @@ export default function InspireView() {
               >
                 {inspireState.isFinalizingPreview
                   ? "Finalizing..."
-                  : "Finalize -> Generate HTML"}
+                  : "Convert to HTML"}
               </button>
             ) : null}
             <button
@@ -874,8 +1018,11 @@ export default function InspireView() {
               onClick={handleContinueToIteration}
               disabled={!hasFinalHtml || inspireState.isFinalizingPreview}
             >
-              Continue to iteration editor
+              Open in editor
             </button>
+            <p className="inspire-workspace-hint">
+              Flow: Apply changes -&gt; Convert to HTML -&gt; Open in editor.
+            </p>
           </div>
         </aside>
       );
