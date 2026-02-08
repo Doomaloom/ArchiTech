@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import InspirePaletteSpheres3D from "./InspirePaletteSpheres3D";
 
 const FALLBACK_PALETTE = [
   "#f97316",
@@ -51,38 +52,16 @@ export default function InspireStyleEditor({
     <div className="inspire-style">
       <div className="inspire-style-top">
         <div className="inspire-style-top-grid">
-          <div className="inspire-style-panel">
+          <div className="inspire-style-panel is-canvas">
             <div
               className="inspire-style-library"
               role="img"
-              aria-label="Selected color library"
+              aria-label="Selected color library in 3D"
             >
-              <div className="inspire-style-library-fallback inspire-style-library-2d">
-                <div className="inspire-style-library-header">
-                  <span>Selected palette</span>
-                  <strong>{selectedStyle?.title || "Style palette"}</strong>
-                </div>
-                <div className="inspire-style-library-bar">
-                  {libraryColors.map((color, index) => (
-                    <span
-                      key={`${color}-${index}`}
-                      className="inspire-style-library-swatch"
-                      style={{ background: color }}
-                    />
-                  ))}
-                </div>
-                <div className="inspire-style-library-swatches">
-                  {libraryColors.map((color, index) => (
-                    <span
-                      key={`chip-${color}-${index}`}
-                      className="inspire-style-library-chip"
-                    >
-                      <span style={{ background: color }} />
-                      <code>{color}</code>
-                    </span>
-                  ))}
-                </div>
-              </div>
+              <InspirePaletteSpheres3D
+                title={selectedStyle?.title || "Style palette"}
+                colors={libraryColors}
+              />
             </div>
           </div>
           <div className="inspire-style-middle">
