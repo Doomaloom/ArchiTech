@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
 
 const WorkflowContext = createContext(null);
 
@@ -10,12 +10,12 @@ export function WorkflowProvider({ children }) {
   const [workflowMode, setWorkflowMode] = useState("image-to-site");
   const [inspireStep, setInspireStep] = useState(DEFAULT_INSPIRE_STEP);
 
-  const setMode = (nextMode) => {
+  const setMode = useCallback((nextMode) => {
     setWorkflowMode(nextMode);
-    if (nextMode === "inspire" && !inspireStep) {
-      setInspireStep(DEFAULT_INSPIRE_STEP);
+    if (nextMode === "inspire") {
+      setInspireStep((current) => current || DEFAULT_INSPIRE_STEP);
     }
-  };
+  }, []);
 
   const value = useMemo(
     () => ({
@@ -24,7 +24,7 @@ export function WorkflowProvider({ children }) {
       setWorkflowMode: setMode,
       setInspireStep,
     }),
-    [workflowMode, inspireStep]
+    [workflowMode, inspireStep, setMode]
   );
 
   return (
