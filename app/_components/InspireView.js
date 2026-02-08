@@ -152,7 +152,6 @@ const InspireBrushCanvas = forwardRef(function InspireBrushCanvas(
 ) {
   const canvasRef = useRef(null);
   const cursorRef = useRef(null);
-  const containerRef = useRef(null);
   const isDrawingRef = useRef(false);
   const boundsRef = useRef(null);
   const [cursorVisible, setCursorVisible] = useState(false);
@@ -163,8 +162,8 @@ const InspireBrushCanvas = forwardRef(function InspireBrushCanvas(
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    const container = containerRef.current;
-    if (!canvas || !container) {
+    const host = canvas?.parentElement;
+    if (!canvas || !host) {
       return;
     }
     const context = canvas.getContext("2d");
@@ -172,7 +171,7 @@ const InspireBrushCanvas = forwardRef(function InspireBrushCanvas(
       return;
     }
     const resize = () => {
-      const bounds = container.getBoundingClientRect();
+      const bounds = host.getBoundingClientRect();
       const scale = window.devicePixelRatio || 1;
       canvas.width = Math.max(1, Math.floor(bounds.width * scale));
       canvas.height = Math.max(1, Math.floor(bounds.height * scale));
@@ -186,7 +185,7 @@ const InspireBrushCanvas = forwardRef(function InspireBrushCanvas(
       return () => window.removeEventListener("resize", resize);
     }
     const observer = new ResizeObserver(resize);
-    observer.observe(container);
+    observer.observe(host);
     return () => observer.disconnect();
   }, []);
 
@@ -303,15 +302,8 @@ const InspireBrushCanvas = forwardRef(function InspireBrushCanvas(
   };
 
   const handlePointerMove = (event) => {
-    if (!isDrawingRef.current) {
-      return;
-    }
     const canvas = canvasRef.current;
     if (!canvas) {
-      return;
-    }
-    const context = canvas.getContext("2d");
-    if (!context) {
       return;
     }
     const point = getPointer(event, canvas);
@@ -321,6 +313,13 @@ const InspireBrushCanvas = forwardRef(function InspireBrushCanvas(
     moveCursor(point);
     if (!cursorVisible) {
       setCursorVisible(true);
+    }
+    if (!isDrawingRef.current) {
+      return;
+    }
+    const context = canvas.getContext("2d");
+    if (!context) {
+      return;
     }
     event.preventDefault();
     context.lineTo(point.x, point.y);
@@ -343,8 +342,16 @@ const InspireBrushCanvas = forwardRef(function InspireBrushCanvas(
     }
     event.preventDefault();
     context.closePath();
+    moveCursor(getPointer(event, canvas));
     isDrawingRef.current = false;
-    setCursorVisible(false);
+    setCursorVisible(true);
+    if (typeof canvas.releasePointerCapture === "function") {
+      try {
+        canvas.releasePointerCapture(event.pointerId);
+      } catch (_error) {
+        // no-op if the pointer is not captured
+      }
+    }
     emitMask();
   };
 
@@ -357,14 +364,20 @@ const InspireBrushCanvas = forwardRef(function InspireBrushCanvas(
   };
 
   return (
-    <div className="inspire-brush-stage" ref={containerRef}>
+    <>
       <canvas
         ref={canvasRef}
         className="inspire-brush-canvas"
-        onPointerDown={handlePointerDown}
+        onPointerDown={(event) => {
+          const canvas = canvasRef.current;
+          if (canvas && typeof canvas.setPointerCapture === "function") {
+            canvas.setPointerCapture(event.pointerId);
+          }
+          handlePointerDown(event);
+        }}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        onPointerEnter={() => setCursorVisible(true)}
+        onPointerEnter={handlePointerMove}
         onPointerLeave={handlePointerLeave}
         onPointerCancel={handlePointerUp}
       />
@@ -373,7 +386,7 @@ const InspireBrushCanvas = forwardRef(function InspireBrushCanvas(
         className={`inspire-brush-cursor${cursorVisible ? " is-visible" : ""}`}
         aria-hidden="true"
       />
-    </div>
+    </>
   );
 });
 

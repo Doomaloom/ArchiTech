@@ -4,6 +4,8 @@ export const runtime = "nodejs";
 
 const IDEOGRAM_EDIT_ENDPOINT = "https://api.ideogram.ai/v1/ideogram-v3/edit";
 let sharpPromise = null;
+const MIN_MASK_COVERAGE = 0.0015;
+const MAX_MASK_COVERAGE = 0.95;
 
 const isFileLike = (value) =>
   value && typeof value === "object" && typeof value.arrayBuffer === "function";
@@ -142,6 +144,11 @@ const toIdeogramErrorMessage = (status, payload) => {
       ? `Ideogram rate limited the edit request (429): ${message}`
       : "Ideogram rate limited the edit request (429). Please retry shortly.";
   }
+  if (status === 400) {
+    return message
+      ? `Ideogram rejected the edit payload (400): ${message}`
+      : "Ideogram rejected the edit payload (400). Use a clear partial mask and try again.";
+  }
   if (message) {
     return `Ideogram edit request failed (${status}): ${message}`;
   }
@@ -179,6 +186,45 @@ const ensureMaskMatchesImage = async ({ sharp, imageBuffer, maskBuffer }) => {
     .png()
     .toBuffer();
   return { maskBuffer: resizedMask, resized: true };
+};
+
+const buildIdeogramMask = async ({ sharp, maskBuffer }) => {
+  const { data, info } = await sharp(maskBuffer)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  const totalPixels = info.width * info.height;
+  const monoMask = Buffer.alloc(totalPixels);
+  let editedPixels = 0;
+
+  for (let index = 0; index < totalPixels; index += 1) {
+    const offset = index * info.channels;
+    const red = data[offset] ?? 0;
+    const green = data[offset + 1] ?? 0;
+    const blue = data[offset + 2] ?? 0;
+    const alpha = data[offset + 3] ?? 255;
+    const luminance = red * 0.299 + green * 0.587 + blue * 0.114;
+    const isEdited = alpha > 24 && luminance < 245;
+
+    monoMask[index] = isEdited ? 0 : 255;
+    if (isEdited) {
+      editedPixels += 1;
+    }
+  }
+
+  const coverage = totalPixels ? editedPixels / totalPixels : 0;
+  const ideogramMask = await sharp(monoMask, {
+    raw: {
+      width: info.width,
+      height: info.height,
+      channels: 1,
+    },
+  })
+    .png()
+    .toBuffer();
+
+  return { ideogramMask, coverage };
 };
 
 export async function POST(request) {
@@ -228,6 +274,28 @@ export async function POST(request) {
       imageBuffer,
       maskBuffer,
     });
+    const { ideogramMask, coverage } = await buildIdeogramMask({
+      sharp,
+      maskBuffer: normalizedMask,
+    });
+    if (coverage <= MIN_MASK_COVERAGE) {
+      return NextResponse.json(
+        {
+          error:
+            "Mask area is too small. Paint a larger region before applying edits.",
+        },
+        { status: 400 }
+      );
+    }
+    if (coverage >= MAX_MASK_COVERAGE) {
+      return NextResponse.json(
+        {
+          error:
+            "Mask covers most of the image. Use a smaller, partial mask for Ideogram edits.",
+        },
+        { status: 400 }
+      );
+    }
     const prompt = buildEditPrompt({
       prompt: payload?.prompt,
       plan: payload?.plan,
@@ -245,12 +313,12 @@ export async function POST(request) {
     );
     formData.append(
       "mask",
-      new Blob([normalizedMask], { type: "image/png" }),
+      new Blob([ideogramMask], { type: "image/png" }),
       "mask.png"
     );
+    formData.append("num_images", "1");
     formData.append("rendering_speed", "QUALITY");
     formData.append("magic_prompt", "OFF");
-    formData.append("upscale_factor", "X2");
 
     const response = await fetch(IDEOGRAM_EDIT_ENDPOINT, {
       method: "POST",
@@ -281,6 +349,7 @@ export async function POST(request) {
     return NextResponse.json({
       imageUrl,
       resizedMask: resized,
+      maskCoverage: coverage,
       model: "ideogram-v3-edit",
     });
   } catch (error) {
