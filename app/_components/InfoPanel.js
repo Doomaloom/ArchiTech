@@ -1,5 +1,6 @@
 import { useImageToSite } from "./../_context/image-to-site-context";
 import FileTree from "./FileTree";
+import PreviewGenerationControls from "./PreviewGenerationControls";
 
 export default function InfoPanel() {
   const { state, derived, actions } = useImageToSite();
@@ -144,75 +145,17 @@ export default function InfoPanel() {
             )}
           </div>
           {state.viewMode === "nodes" ? (
-            <div className="imageflow-info-fields">
-              <div className="imageflow-slider-row">
-                <label className="imageflow-field">
-                  <span className="imageflow-field-label">
-                    Preview count: {state.previewCount}
-                  </span>
-                  <input
-                    className="imageflow-slider"
-                    type="range"
-                    min="1"
-                    max="6"
-                    value={state.previewCount}
-                    onChange={(event) =>
-                      actions.setPreviewCount(Number(event.target.value))
-                    }
-                  />
-                </label>
-                <label className="imageflow-field">
-                  <span className="imageflow-field-label">
-                    Quality: {derived.qualityLabel}
-                  </span>
-                  <input
-                    className="imageflow-slider"
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="1"
-                    value={derived.qualityIndex}
-                    onChange={(event) =>
-                      actions.setModelQuality(
-                        Number(event.target.value) === 1 ? "pro" : "flash"
-                      )
-                    }
-                  />
-                  <div className="imageflow-slider-labels">
-                    <span>Flash</span>
-                    <span>Pro</span>
-                  </div>
-                </label>
-                <label className="imageflow-field">
-                  <span className="imageflow-field-label">
-                    Creativity: {state.creativityValue}
-                  </span>
-                  <input
-                    className="imageflow-slider"
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={state.creativityValue}
-                    onChange={(event) =>
-                      actions.setCreativityValue(Number(event.target.value))
-                    }
-                  />
-                </label>
-              </div>
-              <button
-                className="imageflow-generate-button"
-                type="button"
-                onClick={actions.handleGeneratePreviews}
-                disabled={state.isGeneratingPreviews}
-              >
-                {state.isGeneratingPreviews
-                  ? "Generating previews..."
-                  : "Generate previews"}
-              </button>
-              {state.previewError ? (
-                <p className="imageflow-error">{state.previewError}</p>
-              ) : null}
-            </div>
+            <PreviewGenerationControls
+              previewCount={state.previewCount}
+              quality={state.modelQuality}
+              creativityValue={state.creativityValue}
+              onPreviewCountChange={actions.setPreviewCount}
+              onQualityChange={actions.setModelQuality}
+              onCreativityChange={actions.setCreativityValue}
+              onGenerate={actions.handleGeneratePreviews}
+              isGenerating={state.isGeneratingPreviews}
+              errorMessage={state.previewError}
+            />
           ) : state.viewMode === "preview" || state.viewMode === "selected" ? (
             <div className="imageflow-info-fields">
               <button

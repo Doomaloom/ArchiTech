@@ -2,6 +2,7 @@
 
 import {
   forwardRef,
+  useCallback,
   useEffect,
   useImperativeHandle,
   useMemo,
@@ -16,6 +17,10 @@ import { useWorkflow } from "./../_context/workflow-context";
 import CodeEditorView from "./views/CodeEditorView";
 import BuilderView from "./views/BuilderView";
 import InspireRadialSelector from "./InspireRadialSelector";
+import InspireStyleEditor from "./InspireStyleEditor";
+import DropzonePanel from "./DropzonePanel";
+import GalleryPanel from "./GalleryPanel";
+import InfoPanel from "./InfoPanel";
 
 const STYLE_PRESETS = [
   {
@@ -60,6 +65,76 @@ const INSPIRE_STEPS = {
   SETTINGS: "settings",
 };
 
+const BRIEF_QUESTION_IDS = {
+  CATEGORY: "site-category",
+  AUDIENCE: "primary-audience",
+  VALUE: "core-value",
+  SECTION: "hero-section",
+  CONVERSION: "primary-conversion",
+};
+
+const getSelectionLabel = (questions, selections, questionId) => {
+  if (!Array.isArray(questions) || !selections || !questionId) {
+    return "";
+  }
+  const question = questions.find((entry) => entry?.id === questionId);
+  if (!question) {
+    return "";
+  }
+  const selectedId = selections[questionId];
+  if (!selectedId) {
+    return "";
+  }
+  const selectedOption = question.options?.find(
+    (entry) => entry?.id === selectedId
+  );
+  return selectedOption?.label?.toString().trim() || "";
+};
+
+const buildBriefFromSelections = (questions, selections) => {
+  const category = getSelectionLabel(
+    questions,
+    selections,
+    BRIEF_QUESTION_IDS.CATEGORY
+  );
+  const audience = getSelectionLabel(
+    questions,
+    selections,
+    BRIEF_QUESTION_IDS.AUDIENCE
+  );
+  const value = getSelectionLabel(questions, selections, BRIEF_QUESTION_IDS.VALUE);
+  const section = getSelectionLabel(
+    questions,
+    selections,
+    BRIEF_QUESTION_IDS.SECTION
+  );
+  const conversion = getSelectionLabel(
+    questions,
+    selections,
+    BRIEF_QUESTION_IDS.CONVERSION
+  );
+
+  const title = category ? `${category} website concept` : "";
+  const name = [category, value].filter(Boolean).join(" - ");
+  const details = [
+    category ? `Category: ${category}.` : "",
+    value ? `Primary visitor value: ${value}.` : "",
+    section ? `Leading section: ${section}.` : "",
+    conversion ? `Main conversion: ${conversion}.` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const goals = [value, conversion].filter(Boolean).join(" | ");
+
+  return {
+    title,
+    name,
+    details,
+    audience,
+    goals,
+  };
+};
+
 const getPointer = (event, element) => {
   if (!element) {
     return null;
@@ -76,9 +151,11 @@ const InspireBrushCanvas = forwardRef(function InspireBrushCanvas(
   ref
 ) {
   const canvasRef = useRef(null);
+  const cursorRef = useRef(null);
   const containerRef = useRef(null);
   const isDrawingRef = useRef(false);
   const boundsRef = useRef(null);
+  const [cursorVisible, setCursorVisible] = useState(false);
 
   useImperativeHandle(ref, () => ({
     getCanvas: () => canvasRef.current,
@@ -126,6 +203,27 @@ const InspireBrushCanvas = forwardRef(function InspireBrushCanvas(
     boundsRef.current = null;
     onMaskChange?.(null);
   }, [clearSignal, onMaskChange]);
+
+  useEffect(() => {
+    const cursor = cursorRef.current;
+    if (!cursor) {
+      return;
+    }
+    cursor.style.width = `${brushSize}px`;
+    cursor.style.height = `${brushSize}px`;
+    cursor.style.marginLeft = `${Math.round(brushSize / -2)}px`;
+    cursor.style.marginTop = `${Math.round(brushSize / -2)}px`;
+  }, [brushSize]);
+
+  const moveCursor = (point) => {
+    const cursor = cursorRef.current;
+    if (!cursor || !point) {
+      return;
+    }
+    cursor.style.transform = `translate(${Math.round(point.x)}px, ${Math.round(
+      point.y
+    )}px)`;
+  };
 
   const updateBounds = (point) => {
     if (!point) {
@@ -188,12 +286,17 @@ const InspireBrushCanvas = forwardRef(function InspireBrushCanvas(
     if (!point) {
       return;
     }
+    moveCursor(point);
+    setCursorVisible(true);
     event.preventDefault();
     isDrawingRef.current = true;
-    context.strokeStyle = "rgba(15, 118, 110, 0.7)";
+    context.strokeStyle = "rgba(249, 115, 22, 0.55)";
     context.lineWidth = brushSize;
     context.lineCap = "round";
     context.lineJoin = "round";
+    context.globalCompositeOperation = "source-over";
+    context.shadowBlur = 6;
+    context.shadowColor = "rgba(249, 115, 22, 0.35)";
     context.beginPath();
     context.moveTo(point.x, point.y);
     updateBounds(point);
@@ -215,6 +318,10 @@ const InspireBrushCanvas = forwardRef(function InspireBrushCanvas(
     if (!point) {
       return;
     }
+    moveCursor(point);
+    if (!cursorVisible) {
+      setCursorVisible(true);
+    }
     event.preventDefault();
     context.lineTo(point.x, point.y);
     context.stroke();
@@ -223,6 +330,7 @@ const InspireBrushCanvas = forwardRef(function InspireBrushCanvas(
 
   const handlePointerUp = (event) => {
     if (!isDrawingRef.current) {
+      setCursorVisible(false);
       return;
     }
     const canvas = canvasRef.current;
@@ -236,7 +344,16 @@ const InspireBrushCanvas = forwardRef(function InspireBrushCanvas(
     event.preventDefault();
     context.closePath();
     isDrawingRef.current = false;
+    setCursorVisible(false);
     emitMask();
+  };
+
+  const handlePointerLeave = (event) => {
+    if (isDrawingRef.current) {
+      handlePointerUp(event);
+      return;
+    }
+    setCursorVisible(false);
   };
 
   return (
@@ -247,8 +364,14 @@ const InspireBrushCanvas = forwardRef(function InspireBrushCanvas(
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        onPointerLeave={handlePointerUp}
+        onPointerEnter={() => setCursorVisible(true)}
+        onPointerLeave={handlePointerLeave}
         onPointerCancel={handlePointerUp}
+      />
+      <div
+        ref={cursorRef}
+        className={`inspire-brush-cursor${cursorVisible ? " is-visible" : ""}`}
+        aria-hidden="true"
       />
     </div>
   );
@@ -256,17 +379,38 @@ const InspireBrushCanvas = forwardRef(function InspireBrushCanvas(
 
 export default function InspireView() {
   const { inspireStep, setInspireStep } = useWorkflow();
-  const { state: imageState, actions: imageActions } = useImageToSite();
+  const {
+    state: imageState,
+    derived: imageDerived,
+    actions: imageActions,
+  } = useImageToSite();
   const {
     state: inspireState,
     derived: inspireDerived,
     actions: inspireActions,
   } = useInspire();
-  const [styleTab, setStyleTab] = useState("ai");
   const [brushSize, setBrushSize] = useState(18);
   const [clearTick, setClearTick] = useState(0);
   const brushRef = useRef(null);
+  const syncedTreeRef = useRef(null);
   const isDescriptionStep = inspireStep === INSPIRE_STEPS.DESCRIPTION;
+  const isStyleStep = inspireStep === INSPIRE_STEPS.STYLE;
+  const isTreeStep = inspireStep === INSPIRE_STEPS.TREE;
+
+  const handleDescriptionConfirm = useCallback(
+    (_option, _currentQuestion, selections, resolvedQuestions) => {
+      if (!selections || !resolvedQuestions?.length) {
+        return;
+      }
+      const nextBrief = buildBriefFromSelections(resolvedQuestions, selections);
+      inspireActions.updateBrief("title", nextBrief.title);
+      inspireActions.updateBrief("name", nextBrief.name);
+      inspireActions.updateBrief("details", nextBrief.details);
+      inspireActions.updateBrief("audience", nextBrief.audience);
+      inspireActions.updateBrief("goals", nextBrief.goals);
+    },
+    [inspireActions]
+  );
 
   useEffect(() => {
     if (inspireStep === INSPIRE_STEPS.BUILDER && imageState.viewMode !== "builder") {
@@ -321,11 +465,58 @@ export default function InspireView() {
   ]);
 
   useEffect(() => {
+    if (inspireStep === INSPIRE_STEPS.TREE) {
+      return;
+    }
+    syncedTreeRef.current = null;
+  }, [inspireStep]);
+
+  useEffect(() => {
+    if (inspireStep !== INSPIRE_STEPS.TREE || !inspireDerived.treeRoot) {
+      return;
+    }
+    if (syncedTreeRef.current !== inspireDerived.treeRoot) {
+      imageActions.setStructureFlow(inspireDerived.treeRoot);
+      syncedTreeRef.current = inspireDerived.treeRoot;
+    }
+    const isTreeCompatibleView =
+      imageState.viewMode === "nodes" ||
+      imageState.viewMode === "preview" ||
+      imageState.viewMode === "selected";
+    if (!isTreeCompatibleView) {
+      imageActions.setViewMode("nodes");
+    }
+  }, [
+    imageActions.setStructureFlow,
+    imageActions.setViewMode,
+    imageState.viewMode,
+    inspireDerived.treeRoot,
+    inspireStep,
+  ]);
+
+  useEffect(() => {
+    if (
+      inspireStep !== INSPIRE_STEPS.PREVIEWS ||
+      !imageState.selectedNodeId ||
+      imageState.selectedNodeId === inspireState.selectedNodeId
+    ) {
+      return;
+    }
+    inspireActions.setSelectedNodeId(imageState.selectedNodeId);
+  }, [
+    imageState.selectedNodeId,
+    inspireActions.setSelectedNodeId,
+    inspireState.selectedNodeId,
+    inspireStep,
+  ]);
+
+  useEffect(() => {
     if (
       inspireStep === INSPIRE_STEPS.PREVIEWS &&
       !inspireState.previewItems.length &&
       !inspireState.isGeneratingPreviews &&
-      inspireDerived.treeNodes.length
+      inspireDerived.treeNodes.length &&
+      inspireState.selectedNodeId
     ) {
       inspireActions.generatePreviews();
     }
@@ -334,6 +525,7 @@ export default function InspireView() {
     inspireDerived.treeNodes.length,
     inspireState.isGeneratingPreviews,
     inspireState.previewItems.length,
+    inspireState.selectedNodeId,
     inspireStep,
   ]);
 
@@ -353,40 +545,36 @@ export default function InspireView() {
   }, [inspireState.selectedStyle, inspireState.styleIdeas]);
   const isImagePreviewMode = inspireState.previewMode !== "html";
 
-  const layoutClassName = `imageflow-layout inspire-layout is-no-gallery${
+  const layoutClassName = `imageflow-layout inspire-layout${
+    isTreeStep ? "" : " is-no-gallery"
+  }${
     inspireStep === INSPIRE_STEPS.BUILDER
       ? " is-builder"
       : inspireStep === INSPIRE_STEPS.CODE
       ? " is-code"
       : ""
-  }${isDescriptionStep ? " is-preview-only" : ""}`;
-
-  const treePages = useMemo(() => {
-    return inspireDerived.treeNodes.filter((node) => node.depth === 1);
-  }, [inspireDerived.treeNodes]);
+  }${isDescriptionStep ? " is-preview-only" : ""}${
+    isStyleStep ? " is-style-editor" : ""
+  }`;
 
   const previewCards = useMemo(() => {
-    if (inspireState.previewItems.length) {
-      return inspireState.previewItems;
-    }
-    return Array.from({ length: inspireState.previewCount }, (_, index) => ({
-      id: `preview-${index + 1}`,
-      status: "empty",
-      imageUrl: null,
-      html: null,
-      plan: null,
-    }));
-  }, [inspireState.previewCount, inspireState.previewItems]);
-
-  const handleContinueToTree = () => {
-    setInspireStep(INSPIRE_STEPS.TREE);
-    inspireActions.generateTree();
-  };
-
-  const handleContinueToPreviews = () => {
-    setInspireStep(INSPIRE_STEPS.PREVIEWS);
-    inspireActions.generatePreviews();
-  };
+    const targetCount =
+      inspireState.previewMode === "image" ? 6 : inspireState.previewCount;
+    const items = inspireState.previewItems.slice(0, targetCount);
+    return Array.from({ length: targetCount }, (_, index) => {
+      const preview = items[index];
+      if (preview) {
+        return preview;
+      }
+      return {
+        id: `preview-${index + 1}`,
+        status: "empty",
+        imageUrl: null,
+        html: null,
+        plan: null,
+      };
+    });
+  }, [inspireState.previewCount, inspireState.previewItems, inspireState.previewMode]);
 
   const handleContinueToWorkspace = () => {
     if (inspireState.isGeneratingPreviews) {
@@ -425,7 +613,7 @@ export default function InspireView() {
 
   const renderMainPanel = () => {
     if (inspireStep === INSPIRE_STEPS.DESCRIPTION) {
-      return <InspireRadialSelector />;
+      return <InspireRadialSelector onConfirm={handleDescriptionConfirm} />;
     }
     if (inspireStep === INSPIRE_STEPS.BUILDER) {
       return <BuilderView />;
@@ -435,7 +623,11 @@ export default function InspireView() {
     }
     if (inspireStep === INSPIRE_STEPS.PREVIEWS) {
       return (
-        <div className="inspire-previews">
+        <div
+          className={`inspire-previews${
+            inspireState.previewMode === "image" ? " is-image-mode" : ""
+          }`}
+        >
           {inspireState.previewError ? (
             <div className="inspire-preview-error" role="status">
               {inspireState.previewError}
@@ -497,75 +689,31 @@ export default function InspireView() {
       );
     }
     if (inspireStep === INSPIRE_STEPS.TREE) {
-      return (
-        <div className="inspire-tree-panel">
-          <div className="inspire-tree-header">
-            <div>
-              <span className="inspire-tree-kicker">Project tree</span>
-              <h2>Structure outline</h2>
-              <p>Drafted sections based on the selected style.</p>
+      if (!inspireDerived.treeRoot) {
+        return (
+          <div className="inspire-tree-panel">
+            <div className="inspire-tree-header">
+              <div>
+                <span className="inspire-tree-kicker">Project tree</span>
+                <h2>Structure outline</h2>
+                <p>Generating structure from stage 1 and 2 inputs.</p>
+              </div>
             </div>
-            <button
-              className="imageflow-generate-button"
-              type="button"
-              onClick={inspireActions.generateTree}
-              disabled={inspireState.isGeneratingTree}
-            >
-              Regenerate tree
-            </button>
-          </div>
-          {inspireState.treeError ? (
-            <div className="inspire-tree-error" role="status">
-              {inspireState.treeError}
-            </div>
-          ) : null}
-          <div className="inspire-tree-layout">
-            <ul className="inspire-tree-list">
-              {treePages.length ? (
-                treePages.map((node) => (
-                  <li
-                    key={node.id}
-                    className={
-                      inspireState.selectedNodeId === node.id ? "is-selected" : ""
-                    }
-                  >
-                    <button
-                      type="button"
-                      className="inspire-tree-item"
-                      onClick={() => inspireActions.setSelectedNodeId(node.id)}
-                    >
-                      <span>{node.label}</span>
-                      <span className="inspire-tree-role">Page</span>
-                    </button>
-                  </li>
-                ))
-              ) : (
+            <div className="inspire-tree-layout">
+              <ul className="inspire-tree-list">
                 <li>
                   <span>
                     {inspireState.isGeneratingTree
                       ? "Generating tree..."
-                      : "Generate the tree to see pages."}
+                      : "Generate the tree to start."}
                   </span>
                 </li>
-              )}
-            </ul>
-            <div className="inspire-tree-summary">
-              <div>
-                <span>Style</span>
-                <strong>{selectedStyle?.title || ""}</strong>
-              </div>
-              <div>
-                <span>Pages</span>
-                <strong>{treePages.length || "-"}</strong>
-              </div>
-              <div>
-                <span>Focus</span>
-                <strong>{inspireState.brief.goals || "Conversion"}</strong>
-              </div>
+              </ul>
             </div>
           </div>
-        </div>
-      );
+        );
+      }
+      return <DropzonePanel />;
     }
     if (inspireStep === INSPIRE_STEPS.WORKSPACE) {
       const workspacePreview = inspireDerived.selectedPreview;
@@ -646,95 +794,13 @@ export default function InspireView() {
     }
     if (inspireStep === INSPIRE_STEPS.STYLE) {
       return (
-        <div className="inspire-style">
-          <div className="imageflow-panel-switch" role="tablist">
-            <button
-              type="button"
-              className={`imageflow-switch-button${
-                styleTab === "ai" ? " is-active" : ""
-              }`}
-              onClick={() => setStyleTab("ai")}
-              role="tab"
-              aria-selected={styleTab === "ai"}
-            >
-              AI Style Ideas
-            </button>
-            <button
-              type="button"
-              className={`imageflow-switch-button${
-                styleTab === "presets" ? " is-active" : ""
-              }`}
-              onClick={() => setStyleTab("presets")}
-              role="tab"
-              aria-selected={styleTab === "presets"}
-            >
-              Inspiration
-            </button>
-          </div>
-          {inspireState.styleError ? (
-            <div className="inspire-style-error" role="status">
-              {inspireState.styleError}
-            </div>
-          ) : null}
-          {styleTab === "ai" ? (
-            <div className="inspire-style-grid">
-              {inspireState.isGeneratingStyles &&
-              !inspireState.styleIdeas.length ? (
-                <div className="inspire-style-loading">
-                  Generating style ideas...
-                </div>
-              ) : null}
-              {inspireState.styleIdeas.map((style) => (
-                <button
-                  key={style.id}
-                  type="button"
-                  className={`inspire-style-card${
-                    selectedStyle?.id === style.id ? " is-selected" : ""
-                  }`}
-                  onClick={() => inspireActions.selectStyle(style)}
-                >
-                  <div className="inspire-style-card-header">
-                    <h3>{style.title}</h3>
-                    <span>{style.summary}</span>
-                  </div>
-                  <div className="inspire-style-palette">
-                    {style.palette.map((color) => (
-                      <span key={color} style={{ background: color }} />
-                    ))}
-                  </div>
-                  <div className="inspire-style-tags">
-                    {style.tags.map((tag) => (
-                      <span key={tag}>{tag}</span>
-                    ))}
-                  </div>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="inspire-preset-grid">
-              {STYLE_PRESETS.map((style) => (
-                <button
-                  key={style.id}
-                  type="button"
-                  className={`inspire-preset-card${
-                    selectedStyle?.id === style.id ? " is-selected" : ""
-                  }`}
-                  onClick={() => inspireActions.selectStyle(style)}
-                >
-                  <div className="inspire-preset-cover">
-                    {style.palette.map((color) => (
-                      <span key={color} style={{ background: color }} />
-                    ))}
-                  </div>
-                  <div className="inspire-preset-meta">
-                    <h3>{style.title}</h3>
-                    <span>{style.tags.join(" - ")}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <InspireStyleEditor
+          styleError={inspireState.styleError}
+          isGeneratingStyles={inspireState.isGeneratingStyles}
+          styleIdeas={inspireState.styleIdeas}
+          selectedStyle={selectedStyle}
+          onSelectStyle={inspireActions.selectStyle}
+        />
       );
     }
     if (inspireStep === INSPIRE_STEPS.SETTINGS) {
@@ -857,43 +923,35 @@ export default function InspireView() {
       );
     }
     if (inspireStep === INSPIRE_STEPS.TREE) {
-      return (
-        <aside className="imageflow-info inspire-info">
-          <div className="imageflow-info-header">
-            <p className="imageflow-info-kicker">Structure</p>
-            <h1 className="imageflow-info-title">Review the tree</h1>
-            <p className="imageflow-info-subtitle">
-              Validate the page outline before generating previews.
-            </p>
-          </div>
-          <div className="imageflow-panel-switch" role="tablist">
-            {PREVIEW_MODE_OPTIONS.map((option) => (
+      if (!inspireDerived.treeRoot) {
+        return (
+          <aside className="imageflow-info inspire-info">
+            <div className="imageflow-info-header">
+              <p className="imageflow-info-kicker">Structure</p>
+              <h1 className="imageflow-info-title">Review the tree</h1>
+              <p className="imageflow-info-subtitle">
+                Validate the page outline before generating previews.
+              </p>
+            </div>
+            <div className="imageflow-info-fields">
               <button
-                key={option.id}
+                className="imageflow-generate-button"
                 type="button"
-                className={`imageflow-switch-button${
-                  inspireState.previewMode === option.id ? " is-active" : ""
-                }`}
-                onClick={() => inspireActions.setPreviewMode(option.id)}
-                role="tab"
-                aria-selected={inspireState.previewMode === option.id}
+                onClick={inspireActions.generateTree}
+                disabled={inspireState.isGeneratingTree}
               >
-                {option.label}
+                {inspireState.isGeneratingTree
+                  ? "Generating tree..."
+                  : "Regenerate tree"}
               </button>
-            ))}
-          </div>
-          <div className="imageflow-info-fields">
-            <button
-              className="imageflow-generate-button"
-              type="button"
-              onClick={handleContinueToPreviews}
-              disabled={inspireState.isGeneratingTree || !inspireDerived.treeNodes.length}
-            >
-              Continue to previews
-            </button>
-          </div>
-        </aside>
-      );
+              {inspireState.treeError ? (
+                <p className="imageflow-error">{inspireState.treeError}</p>
+              ) : null}
+            </div>
+          </aside>
+        );
+      }
+      return <InfoPanel />;
     }
     if (inspireStep === INSPIRE_STEPS.WORKSPACE) {
       const selectedPreview = inspireDerived.selectedPreview;
@@ -935,7 +993,7 @@ export default function InspireView() {
             >
               {inspireState.isApplyingMaskEdit
                 ? "Applying mask edit..."
-                : "Apply mask edit"}
+                : "Apply changes to image"}
             </button>
             {!isImagePreviewMode ? (
               <div className="inspire-preview-error" role="status">
@@ -951,7 +1009,7 @@ export default function InspireView() {
               >
                 {inspireState.isFinalizingPreview
                   ? "Finalizing..."
-                  : "Finalize -> Generate HTML"}
+                  : "Convert to HTML"}
               </button>
             ) : null}
             <button
@@ -960,53 +1018,17 @@ export default function InspireView() {
               onClick={handleContinueToIteration}
               disabled={!hasFinalHtml || inspireState.isFinalizingPreview}
             >
-              Continue to iteration editor
+              Open in editor
             </button>
+            <p className="inspire-workspace-hint">
+              Flow: Apply changes -&gt; Convert to HTML -&gt; Open in editor.
+            </p>
           </div>
         </aside>
       );
     }
     if (inspireStep === INSPIRE_STEPS.STYLE) {
-      return (
-        <aside className="imageflow-info inspire-info">
-          <div className="imageflow-info-header">
-            <p className="imageflow-info-kicker">Style direction</p>
-            <h1 className="imageflow-info-title">Choose a look</h1>
-            <p className="imageflow-info-subtitle">
-              Select a style to guide palettes, shapes, and components.
-            </p>
-          </div>
-          <div className="inspire-style-summary">
-            <span>Selected style</span>
-            <strong>{selectedStyle?.title || ""}</strong>
-            <div className="inspire-style-swatch-row">
-              {selectedStyle?.palette?.map((color) => (
-                <span key={color} style={{ background: color }} />
-              ))}
-            </div>
-          </div>
-          <div className="imageflow-info-fields">
-            <button
-              className="imageflow-generate-button"
-              type="button"
-              onClick={handleContinueToTree}
-              disabled={inspireState.isGeneratingTree}
-            >
-              Continue to project tree
-            </button>
-            <button
-              className="imageflow-generate-button"
-              type="button"
-              onClick={inspireActions.loadStyleIdeas}
-              disabled={inspireState.isGeneratingStyles}
-            >
-              {inspireState.isGeneratingStyles
-                ? "Generating styles..."
-                : "Regenerate styles"}
-            </button>
-          </div>
-        </aside>
-      );
+      return null;
     }
     if (inspireStep === INSPIRE_STEPS.SETTINGS) {
       return (
@@ -1033,7 +1055,12 @@ export default function InspireView() {
     return null;
   };
 
-  const renderGalleryPanel = () => null;
+  const renderGalleryPanel = () => {
+    if (inspireStep === INSPIRE_STEPS.TREE && inspireDerived.treeRoot) {
+      return <GalleryPanel />;
+    }
+    return null;
+  };
 
   const dropzoneClassName = `imageflow-dropzone inspire-dropzone${
     inspireStep === INSPIRE_STEPS.BUILDER
@@ -1041,7 +1068,9 @@ export default function InspireView() {
       : inspireStep === INSPIRE_STEPS.CODE
       ? " is-code"
       : ""
-  }${inspireStep === INSPIRE_STEPS.PREVIEWS ? " is-preview" : ""}${
+  }${inspireStep === INSPIRE_STEPS.TREE ? " is-tree" : ""}${
+    inspireStep === INSPIRE_STEPS.PREVIEWS ? " is-preview" : ""
+  }${
     isDescriptionStep ? " is-full" : ""
   }`;
 
@@ -1051,11 +1080,23 @@ export default function InspireView() {
         <ImageflowMenuBar />
         <ImageflowRulers />
         <div className={layoutClassName}>
-          <section className={dropzoneClassName}>
-            {renderMainPanel()}
-          </section>
-          {renderInfoPanel()}
-          {renderGalleryPanel()}
+          {isStyleStep ? (
+            renderMainPanel()
+          ) : isTreeStep && inspireDerived.treeRoot ? (
+            <>
+              {renderMainPanel()}
+              {imageDerived.isPreviewMode ? null : renderGalleryPanel()}
+              {imageDerived.isPreviewMode ? null : renderInfoPanel()}
+            </>
+          ) : (
+            <>
+              <section className={dropzoneClassName}>
+                {renderMainPanel()}
+              </section>
+              {renderGalleryPanel()}
+              {renderInfoPanel()}
+            </>
+          )}
         </div>
       </div>
     </div>

@@ -76,7 +76,22 @@ const normalizeTreePayload = (tree) => {
   return normalizeTreeNode(tree);
 };
 
-const buildPrompt = ({ title, name, details }) => {
+const buildPrompt = ({ title, name, details, audience, goals, style }) => {
+  const styleSection = [
+    style?.title ? `Title: ${style.title}` : null,
+    style?.summary ? `Summary: ${style.summary}` : null,
+    Array.isArray(style?.palette) && style.palette.length
+      ? `Palette: ${style.palette.join(", ")}`
+      : null,
+    Array.isArray(style?.tags) && style.tags.length
+      ? `Tags: ${style.tags.join(", ")}`
+      : null,
+    Array.isArray(style?.components) && style.components.length
+      ? `Components: ${style.components.join(", ")}`
+      : null,
+    style?.stylePrompt ? `Style prompt: ${style.stylePrompt}` : null,
+  ].filter(Boolean);
+
   return [
     "You are an information architect for web apps.",
     "Return JSON only with this schema:",
@@ -109,7 +124,14 @@ const buildPrompt = ({ title, name, details }) => {
     `Title: ${title || "Untitled"}`,
     `Name: ${name || "Unknown"}`,
     `Details: ${details || "None provided."}`,
-  ].join("\n");
+    audience ? `Audience: ${audience}` : null,
+    goals ? `Goals: ${goals}` : null,
+    styleSection.length ? "" : null,
+    styleSection.length ? "Selected style:" : null,
+    ...styleSection,
+  ]
+    .filter(Boolean)
+    .join("\n");
 };
 
 const buildImageAnalysisPrompt = ({ title, name, details }) => {
@@ -334,39 +356,63 @@ export async function POST(request) {
       );
     }
 
-    const formData = await request.formData();
-    const image = formData.get("image");
-    const title = formData.get("title")?.toString() ?? "";
-    const name = formData.get("name")?.toString() ?? "";
-    const details = formData.get("details")?.toString() ?? "";
+    const contentType = request.headers.get("content-type") || "";
+    const isMultipartRequest = contentType.includes("multipart/form-data");
+    const formData = isMultipartRequest ? await request.formData() : null;
+    const payload = !isMultipartRequest
+      ? await request.json().catch(() => ({}))
+      : null;
+
+    const image = isMultipartRequest ? formData.get("image") : null;
+    const title = isMultipartRequest
+      ? formData.get("title")?.toString() ?? ""
+      : payload?.title?.toString() ?? "";
+    const name = isMultipartRequest
+      ? formData.get("name")?.toString() ?? ""
+      : payload?.name?.toString() ?? "";
+    const details = isMultipartRequest
+      ? formData.get("details")?.toString() ?? ""
+      : payload?.details?.toString() ?? "";
+    const audience = isMultipartRequest
+      ? formData.get("audience")?.toString() ?? ""
+      : payload?.audience?.toString() ?? "";
+    const goals = isMultipartRequest
+      ? formData.get("goals")?.toString() ?? ""
+      : payload?.goals?.toString() ?? "";
+    const style =
+      payload?.style && typeof payload.style === "object" ? payload.style : null;
     const ideogramKey = process.env.IDEOGRAM_API_KEY;
 
-    if (!image || typeof image.arrayBuffer !== "function") {
+    if (
+      isMultipartRequest &&
+      (!image || typeof image.arrayBuffer !== "function")
+    ) {
       return NextResponse.json(
         { error: "Image file is required." },
         { status: 400 }
       );
     }
 
-    const buffer = Buffer.from(await image.arrayBuffer());
-    const prompt = buildPrompt({ title, name, details });
-    const imageFiles = getFormImageFiles(formData);
+    const prompt = buildPrompt({ title, name, details, audience, goals, style });
+    const imageFiles = isMultipartRequest ? getFormImageFiles(formData) : [];
 
     const ai = new GoogleGenAI({ apiKey });
+    const generationParts = [{ text: prompt }];
+    if (image && typeof image.arrayBuffer === "function") {
+      const buffer = Buffer.from(await image.arrayBuffer());
+      generationParts.push({
+        inlineData: {
+          mimeType: image.type || "image/png",
+          data: buffer.toString("base64"),
+        },
+      });
+    }
     const response = await ai.models.generateContent({
       model: MODEL_NAME,
       contents: [
         {
           role: "user",
-          parts: [
-            { text: prompt },
-            {
-              inlineData: {
-                mimeType: image.type || "image/png",
-                data: buffer.toString("base64"),
-              },
-            },
-          ],
+          parts: generationParts,
         },
       ],
     });
@@ -381,6 +427,10 @@ export async function POST(request) {
         { error: "Failed to parse model response.", raw: rawText },
         { status: 502 }
       );
+    }
+
+    if (!imageFiles.length) {
+      return NextResponse.json({ tree, raw: rawText });
     }
 
     const [imageDescriptions, imageAnalysis] = await Promise.all([
