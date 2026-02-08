@@ -8,10 +8,11 @@ export default function PreviewGenerationControls({
   onGenerate,
   isGenerating,
   isGenerateDisabled = false,
-  generateLabel = "Generate previews",
-  generatingLabel = "Generating previews...",
+  generateLabel = "Generate",
+  generatingLabel = "Loading...",
   errorMessage = "",
   className = "",
+  generateButtonClassName = "",
 }) {
   const qualityLabel = quality === "pro" ? "Pro" : "Flash";
   const qualityIndex = quality === "pro" ? 1 : 0;
@@ -69,7 +70,7 @@ export default function PreviewGenerationControls({
         </label>
       </div>
       <button
-        className="imageflow-generate-button"
+        className={`imageflow-generate-button ${generateButtonClassName}`.trim()}
         type="button"
         onClick={onGenerate}
         disabled={isGenerating || isGenerateDisabled}

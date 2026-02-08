@@ -6451,9 +6451,6 @@ div {
 
 .translate-conversion-info {
   gap: 12px;
-  background: rgba(248, 250, 252, 0.62);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
 }
 
 .translate-conversion-summary {
@@ -6489,7 +6486,6 @@ div {
   margin-top: auto;
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 8px;
 }
 
@@ -6516,12 +6512,11 @@ div {
 }
 
 .translate-conversion-info .imageflow-generate-button {
-  align-self: center;
   border-radius: 14px;
   border: 1px solid rgba(234, 88, 12, 0.8);
   background: #f97316;
   color: #fff;
-  font-weight: 400;
+  font-weight: 600;
 }
 
 .translate-conversion-info .imageflow-generate-button:hover:not(:disabled) {
@@ -9787,7 +9782,7 @@ body:has(.inspire-shell)
   pointer-events: none;
   border-radius: 999px;
   border: 2px solid rgba(var(--inspire-accent-rgb), 0.95);
-  background: rgba(var(--inspire-accent-rgb), 0.04);
+  background: rgba(var(--inspire-accent-rgb), 0.15);
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.75),
     0 0 0 3px rgba(15, 23, 42, 0.18);
   opacity: 0;
@@ -10100,16 +10095,6 @@ body:has(.inspire-shell)
 }
 
 .inspire-preview-info {
-  gap: 16px;
-  min-height: 100%;
-}
-
-.translate-preview-info {
-  --inspire-accent-rgb: 59, 130, 246;
-  --inspire-accent-strong-rgb: 29, 78, 216;
-  --inspire-accent-soft-rgb: 219, 234, 254;
-  --inspire-accent-text: #1e3a8a;
-  --inspire-accent-contrast: #eff6ff;
   gap: 16px;
   min-height: 100%;
 }
@@ -10535,4 +10520,43 @@ body:has(.inspire-shell)
   .inspire-tree-layout {
     grid-template-columns: 1fr;
   }
+}
+
+/* Force plain typography for translate generate controls. */
+.translate-info-panel .translate-nodes-controls .imageflow-generate-button,
+.translate-info-panel .inspire-preview-action.is-primary,
+.translate-info-panel .translate-conversion-info .imageflow-generate-button,
+.translate-info-panel .translate-conversion-generate-action {
+  font-family: Arial, sans-serif !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  background: #f97316 !important;
+  border: none !important;
+  color: #ffffff !important;
+}
+
+.translate-info-panel .translate-nodes-controls .imageflow-field-label {
+  font-family: Arial, sans-serif !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+
+.translate-info-panel .translate-conversion-info .imageflow-field-label {
+  font-family: Arial, sans-serif !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+
+.translate-info-panel .translate-nodes-controls .imageflow-generate-button:hover:not(:disabled),
+.translate-info-panel .inspire-preview-action.is-primary:hover:not(:disabled),
+.translate-info-panel .translate-conversion-info .imageflow-generate-button:hover:not(:disabled),
+.translate-info-panel .translate-conversion-generate-action:hover:not(:disabled) {
+  background: #ea580c !important;
+  border: none !important;
 }

@@ -1060,7 +1060,8 @@ export default function InspireView() {
             onGenerate={handleGenerateFromTree}
             isGenerating={inspireState.isGeneratingPreviews}
             isGenerateDisabled={!activeNodeId}
-            generateLabel="Generate and open previews"
+            generateLabel="Generate"
+            generateButtonClassName="inspire-preview-action is-primary"
             errorMessage={inspireState.previewError || inspireState.treeError}
           />
           <div className="imageflow-info-fields">

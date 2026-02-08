@@ -448,14 +448,14 @@ export default function InfoPanel() {
               </div>
               <div className="translate-conversion-actions">
                 <button
-                  className="imageflow-generate-button"
+                  className="imageflow-generate-button inspire-preview-action is-primary translate-conversion-generate-action"
                   type="button"
                   onClick={actions.handleGenerateStructure}
                   disabled={state.isGeneratingStructure || !derived.hasFile}
                 >
                   {state.isGeneratingStructure
-                    ? "Generating Structure..."
-                    : "GENERATE"}
+                    ? "Loading..."
+                    : "Generate"}
                 </button>
                 {state.generationError ? (
                   <p className="imageflow-error">{state.generationError}</p>

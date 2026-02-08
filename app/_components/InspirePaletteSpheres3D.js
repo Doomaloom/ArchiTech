@@ -141,7 +141,7 @@ const normalizeSphereIndex = (value) => {
 };
 
 const formatHexColorValue = (color) => {
-  return `#${normalizeHexColor(color).toUpperCase()}`;
+  return `#${normalizeHexColor(color)}`;
 };
 
 const isMissingModuleError = (error) => {
