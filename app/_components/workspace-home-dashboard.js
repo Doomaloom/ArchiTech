@@ -67,7 +67,7 @@ const formatUpdatedAt = (isoValue) => {
 };
 
 const toWorkflowLabel = (workflow) =>
-  workflow === "inspire" ? "inspire" : "translate";
+  workflow === "inspire" ? "Inspire" : "Translate";
 
 const toWorkflowClassName = (workflow) =>
   workflow === "inspire" ? "is-inspire" : "is-translate";
@@ -75,7 +75,7 @@ const toWorkflowClassName = (workflow) =>
 const toFileCountLabel = (count) => `${count} ${count === 1 ? "file" : "files"}`;
 
 const toUpdatedBadgeLabel = (isoValue) =>
-  `updated ${formatUpdatedAt(isoValue).toLowerCase()}`;
+  `Updated ${formatUpdatedAt(isoValue)}`;
 
 export default function WorkspaceHomeDashboard({
   onStartInspire,
@@ -167,7 +167,6 @@ export default function WorkspaceHomeDashboard({
                   <span className="workspace-home-list-top">
                     <span className="workspace-home-project-cell">
                       <strong>{project.name}</strong>
-                      <span>{project.id}</span>
                     </span>
                     <span className="workspace-home-list-badges">
                       <span

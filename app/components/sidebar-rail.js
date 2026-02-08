@@ -1,5 +1,6 @@
 "use client";
 
+import { useImageToSite } from "../_context/image-to-site-context";
 import { useWorkflow } from "../_context/workflow-context";
 
 const ICONS = {
@@ -235,9 +236,14 @@ const BUTTON_SETS = {
   inspire: INSPIRE_BUTTONS,
 };
 
+const isImageToSiteStepActive = (step, viewMode) =>
+  step === viewMode ||
+  (step === "preview" && (viewMode === "selected" || viewMode === "iterate"));
+
 export default function SidebarRail() {
   const { workflowMode, inspireStep, setWorkflowMode, setInspireStep } =
     useWorkflow();
+  const { state: imageState, actions: imageActions } = useImageToSite();
   const buttonSets = BUTTON_SETS;
   const handleHomeClick = () => {
     setWorkflowMode("home");
@@ -267,9 +273,18 @@ export default function SidebarRail() {
               {buttonSets["image-to-site"].map((button) => (
                 <button
                   key={button.id}
-                  className="rail-button"
+                  className={`rail-button${
+                    isImageToSiteStepActive(button.step, imageState.viewMode)
+                      ? " is-active"
+                      : ""
+                  }`}
                   type="button"
+                  onClick={() => imageActions.setViewMode(button.step)}
                   aria-label={button.label}
+                  aria-pressed={isImageToSiteStepActive(
+                    button.step,
+                    imageState.viewMode
+                  )}
                   data-imageflow-step={button.step}
                 >
                   {ICONS[button.icon]}
@@ -300,28 +315,41 @@ export default function SidebarRail() {
         )}
         <div className="sidebar-footer">
           <div className="workflow-toggle-block">
-            <button
-              className={`rail-button workflow-mode-button is-translate${
-                workflowMode === "image-to-site" ? " is-active" : ""
-              }`}
-              type="button"
-              onClick={() => setWorkflowMode("image-to-site")}
-              aria-pressed={workflowMode === "image-to-site"}
-              aria-label="Switch to Translate workflow"
+            <div
+              className="workflow-mode-toggle"
+              role="radiogroup"
+              aria-label="Workflow mode"
+              style={{
+                "--workflow-toggle-index":
+                  workflowMode === "inspire" ? 1 : 0,
+              }}
             >
-              {ICONS.image}
-            </button>
-            <button
-              className={`rail-button workflow-mode-button is-inspire${
-                workflowMode === "inspire" ? " is-active" : ""
-              }`}
-              type="button"
-              onClick={() => setWorkflowMode("inspire")}
-              aria-pressed={workflowMode === "inspire"}
-              aria-label="Switch to Inspire workflow"
-            >
-              {ICONS.sparkle}
-            </button>
+              <span className="workflow-mode-toggle-indicator" aria-hidden="true" />
+              <button
+                className={`workflow-mode-toggle-button is-translate${
+                  workflowMode === "image-to-site" ? " is-active" : ""
+                }`}
+                type="button"
+                role="radio"
+                aria-checked={workflowMode === "image-to-site"}
+                onClick={() => setWorkflowMode("image-to-site")}
+                aria-label="Switch to Translate workflow"
+              >
+                {ICONS.image}
+              </button>
+              <button
+                className={`workflow-mode-toggle-button is-inspire${
+                  workflowMode === "inspire" ? " is-active" : ""
+                }`}
+                type="button"
+                role="radio"
+                aria-checked={workflowMode === "inspire"}
+                onClick={() => setWorkflowMode("inspire")}
+                aria-label="Switch to Inspire workflow"
+              >
+                {ICONS.sparkle}
+              </button>
+            </div>
           </div>
           <div className="imageflow-sidebar-toggle-block">
             <span className="imageflow-sidebar-toggle-label">

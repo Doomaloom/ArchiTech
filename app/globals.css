@@ -144,6 +144,7 @@ body:has(.imageflow-builder):has(#imageflow-sidebar-toggle:checked)
   flex-direction: column;
   align-items: center;
   gap: 8px;
+  margin-top: auto;
 }
 
 body:has(.imageflow-iteration) .sidebar-rail {
@@ -495,27 +496,114 @@ body:has(.imageflow-builder):not(:has(#imageflow-sidebar-toggle:checked))
   color: #c2410c;
 }
 
-.workflow-mode-button.is-translate {
-  border-color: rgba(251, 146, 60, 0.34);
-  background: rgba(255, 237, 213, 0.66);
-  color: #c2410c;
+.workflow-mode-toggle {
+  --workflow-toggle-gap: 5px;
+  --workflow-toggle-padding: 5px;
+  --workflow-toggle-cell: calc(
+    (100% - (2 * var(--workflow-toggle-padding)) - var(--workflow-toggle-gap)) /
+      2
+  );
+  position: relative;
+  width: 40px;
+  height: 86px;
+  display: grid;
+  grid-template-rows: repeat(2, 1fr);
+  gap: var(--workflow-toggle-gap);
+  padding: var(--workflow-toggle-padding);
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.48);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 214, 170, 0.9) 0%,
+    rgba(186, 230, 253, 0.9) 100%
+  );
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.14);
 }
 
-.workflow-mode-button.is-inspire {
-  border-color: rgba(59, 130, 246, 0.34);
-  background: #d7f3f3;
+.workflow-mode-toggle-indicator {
+  position: absolute;
+  left: var(--workflow-toggle-padding);
+  right: var(--workflow-toggle-padding);
+  height: var(--workflow-toggle-cell);
+  top: calc(
+    var(--workflow-toggle-padding) +
+      (var(--workflow-toggle-index) * (var(--workflow-toggle-cell) + var(--workflow-toggle-gap)))
+  );
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.1);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.94) 0%,
+    rgba(255, 255, 255, 0.78) 100%
+  );
+  transition: top 180ms ease;
+  pointer-events: none;
+}
+
+.workflow-mode-toggle:has(.workflow-mode-toggle-button.is-translate.is-active)
+  .workflow-mode-toggle-indicator {
+  box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.48);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 237, 213, 0.95) 0%,
+    rgba(254, 215, 170, 0.86) 100%
+  );
+}
+
+.workflow-mode-toggle:has(.workflow-mode-toggle-button.is-inspire.is-active)
+  .workflow-mode-toggle-indicator {
+  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.44);
+  background: linear-gradient(
+    180deg,
+    rgba(219, 234, 254, 0.95) 0%,
+    rgba(191, 219, 254, 0.86) 100%
+  );
+}
+
+.workflow-mode-toggle-button {
+  position: relative;
+  z-index: 1;
+  border: none;
+  background: transparent;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: rgba(15, 23, 42, 0.56);
+  transition: color 160ms ease, background 160ms ease;
+}
+
+.workflow-mode-toggle-button:hover {
+  background: rgba(15, 23, 42, 0.06);
+}
+
+.workflow-mode-toggle-button.is-translate {
+  color: #c2410c;
+     background: linear-gradient(#fb923c52 0%, #f9731647 100%);
+}
+
+.workflow-mode-toggle-button.is-inspire {
   color: #1d4ed8;
 }
 
-.workflow-mode-button.is-translate.is-active {
-  border-color: rgba(249, 115, 22, 0.55);
-  background: rgba(255, 237, 213, 0.9);
-  color: #9a3412;
+.workflow-mode-toggle-button.is-translate.is-active {
+  color: #7c2d12;
+  background: linear-gradient(
+    180deg,
+    rgba(251, 146, 60, 0.32) 0%,
+    rgba(249, 115, 22, 0.28) 100%
+  );
+  box-shadow: inset 0 0 0 1px rgba(194, 65, 12, 0.32);
 }
 
-.workflow-mode-button.is-inspire.is-active {
-  border-color: rgba(37, 99, 235, 0.55);
-  background: rgba(219, 234, 254, 0.92);
+body:has(.workspace-home-shell)
+  .workflow-mode-toggle-button.is-translate.is-active {
+  color: #7c2d12;
+  background: linear-gradient(#fb923c52 0%, #f9731647 100%);
+}
+
+.workflow-mode-toggle-button.is-inspire.is-active {
   color: #1e40af;
 }
 
@@ -675,7 +763,7 @@ body:has(.imageflow-builder):has(#imageflow-sidebar-toggle:checked)
 .workspace-home-launch-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 22px 46px rgba(15, 23, 42, 0.15);
-  border-color: rgba(255, 255, 255, 0.78);
+  border-color: rgba(148, 163, 184, 0.58);
 }
 
 .workspace-home-launch-card.is-inspire {
@@ -687,6 +775,12 @@ body:has(.imageflow-builder):has(#imageflow-sidebar-toggle:checked)
   );
 }
 
+.workspace-home-launch-card.is-inspire:hover,
+.workspace-home-launch-card.is-inspire:focus-visible {
+  border-color: rgba(59, 130, 246, 0.56);
+  box-shadow: 0 22px 46px rgba(37, 99, 235, 0.22);
+}
+
 .workspace-home-launch-card.is-translate {
   background: linear-gradient(
     145deg,
@@ -694,6 +788,12 @@ body:has(.imageflow-builder):has(#imageflow-sidebar-toggle:checked)
     rgba(251, 207, 232, 0.3) 54%,
     rgba(255, 251, 235, 0.26) 100%
   );
+}
+
+.workspace-home-launch-card.is-translate:hover,
+.workspace-home-launch-card.is-translate:focus-visible {
+  border-color: rgba(251, 146, 60, 0.58);
+  box-shadow: 0 22px 46px rgba(234, 88, 12, 0.22);
 }
 
 .workspace-home-launch-kicker {
@@ -786,8 +886,8 @@ body:has(.imageflow-builder):has(#imageflow-sidebar-toggle:checked)
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-right: -10px;
-  padding-right: 10px;
+  margin-right: -14px;
+  padding-right: 14px;
   scrollbar-gutter: stable;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.7) transparent;
@@ -849,6 +949,10 @@ body:has(.imageflow-builder):has(#imageflow-sidebar-toggle:checked)
   min-width: 0;
 }
 
+.workspace-home-list-bottom {
+  align-items: center;
+}
+
 .workspace-home-list-badges {
   display: inline-flex;
   align-items: center;
@@ -898,36 +1002,27 @@ body:has(.imageflow-builder):has(#imageflow-sidebar-toggle:checked)
   line-height: 1.35;
 }
 
-.workspace-home-project-cell span {
-  font-size: 11px;
-  color: #64748b;
-  letter-spacing: 0.03em;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .workspace-home-workflow-pill {
   display: inline-flex;
   align-items: center;
   border-radius: 999px;
   font-size: 10px;
-  text-transform: lowercase;
-  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
   font-weight: 600;
   padding: 4px 10px;
 }
 
 .workspace-home-workflow-pill.is-inspire {
-  border: 1px solid rgba(20, 184, 166, 0.34);
-  background: rgba(20, 184, 166, 0.14);
-  color: #0f766e;
+  border: 1px solid rgba(59, 130, 246, 0.34);
+  background: rgba(219, 234, 254, 0.7);
+  color: #1e40af;
 }
 
 .workspace-home-workflow-pill.is-translate {
-  border: 1px solid rgba(249, 115, 22, 0.34);
-  background: rgba(249, 115, 22, 0.14);
-  color: #c2410c;
+  border: 1px solid rgba(251, 146, 60, 0.36);
+  background: rgba(255, 237, 213, 0.76);
+  color: #9a3412;
 }
 
 .workspace-home-date-pill {
@@ -938,8 +1033,8 @@ body:has(.imageflow-builder):has(#imageflow-sidebar-toggle:checked)
   background: rgba(15, 23, 42, 0.08);
   color: #334155;
   font-size: 10px;
-  letter-spacing: 0.04em;
-  text-transform: lowercase;
+  letter-spacing: 0.02em;
+  text-transform: none;
   font-weight: 600;
   padding: 4px 10px;
 }
@@ -6438,8 +6533,8 @@ div {
   }
 
   .workspace-home-list {
-    margin-right: -6px;
-    padding-right: 6px;
+    margin-right: -8px;
+    padding-right: 8px;
   }
 
   .content-frame {
