@@ -19,6 +19,8 @@ CLOUD_TASKS_PACKAGE_QUEUE="app-gen-package"
 CLOUD_TASKS_PACKAGE_URL="https://<app-domain>/api/agentic/tasks/package"
 # Shared dispatch token checked by orchestrator callback route
 AGENTIC_ORCHESTRATOR_TOKEN="<long-random-token>"
+# Optional workspace root override (default /tmp/architech-agentic/jobs)
+AGENTIC_WORKSPACE_ROOT="/tmp/architech-agentic/jobs"
 # Optional but recommended for private Cloud Run target auth
 CLOUD_TASKS_SERVICE_ACCOUNT_EMAIL="<tasks-invoker-service-account-email>"
 # Optional override; defaults to CLOUD_TASKS_ORCHESTRATOR_URL
@@ -38,7 +40,8 @@ Notes:
 - `POST /api/agentic/tasks/orchestrate` validates this token and handles idempotent callbacks.
 - Orchestrator now fans out one `page` task per page via Cloud Tasks.
 - `POST /api/agentic/tasks/page` executes a scaffold page step and updates aggregated page state.
-- `POST /api/agentic/tasks/integrate` handles integration-stage callbacks (currently scaffold behavior).
+- `POST /api/agentic/tasks/page` now attempts real `gemini` CLI page generation and falls back to deterministic TSX when CLI is unavailable.
+- `POST /api/agentic/tasks/integrate` now attempts `gemini` CLI integration updates and queues validation.
 - `POST /api/agentic/tasks/validate` runs `npm install` and `npm run build`; on build failure it queues fix tasks up to max rounds.
 - `POST /api/agentic/tasks/fix` currently performs scaffold fix handling and re-queues validation attempts.
 - `POST /api/agentic/tasks/package` zips workspace output, uploads to `generated-apps`, records `app_generation_artifacts`, and finalizes job status.

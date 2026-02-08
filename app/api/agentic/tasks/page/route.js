@@ -1,4 +1,11 @@
 import { NextResponse } from "next/server";
+import { runGeminiCliPrompt } from "../../../../_lib/agentic/gemini-cli";
+import {
+  createFallbackPageTsx,
+  ensureJobWorkspace,
+  writePageSnapshot,
+  writeRoutePage,
+} from "../../../../_lib/agentic/workspace";
 import { enqueueIntegrateTask } from "../../../../_lib/gcp/cloud-tasks";
 import { createSupabaseAdminClient } from "../../../../_lib/supabase/admin";
 
@@ -183,6 +190,73 @@ export async function POST(request) {
         ? pages[pageIndex]
         : null;
 
+    if (!pageSpec) {
+      const message = `Page spec not found for index ${pageIndex}.`;
+      await admin
+        .from("app_generation_tasks")
+        .update({
+          status: "failed",
+          error_message: message,
+          finished_at: toIsoNow(),
+        })
+        .eq("id", taskId);
+      await admin
+        .from("app_generation_jobs")
+        .update({
+          status: "failed",
+          current_stage: "pages-running",
+          error_message: message,
+          finished_at: toIsoNow(),
+        })
+        .eq("id", jobId);
+      return NextResponse.json({ ok: true, status: "failed", reason: "missing-page-spec" });
+    }
+
+    const workspaceDir = await ensureJobWorkspace(job.id);
+    const fallbackTsx = createFallbackPageTsx({
+      title: normalizeText(pageSpec.name, "Generated Page"),
+      html: normalizeText(pageSpec.selectedPreviewHtml),
+    });
+
+    const prompt = [
+      "Generate a Next.js App Router page component in TSX.",
+      "Return only TSX code for app route page.",
+      "Must export default function Page().",
+      "Preserve structure and style intent from provided HTML.",
+      "Use semantic markup and keep Tailwind classes if present.",
+      "",
+      `Route: ${normalizeText(pageSpec.route, "/")}`,
+      `Page name: ${normalizeText(pageSpec.name, "Page")}`,
+      `Desired actions: ${Array.isArray(pageSpec.actions) ? pageSpec.actions.join(", ") : ""}`,
+      `Notes: ${normalizeText(pageSpec.notes)}`,
+      "",
+      "HTML INPUT:",
+      normalizeText(pageSpec.selectedPreviewHtml),
+    ].join("\n");
+
+    const geminiResult = await runGeminiCliPrompt({
+      cwd: workspaceDir,
+      prompt,
+      timeoutMs: 8 * 60 * 1000,
+    });
+
+    const pageTsx = geminiResult.ok ? geminiResult.output : fallbackTsx;
+    const routeFile = await writeRoutePage({
+      workspaceDir,
+      route: normalizeText(pageSpec.route, "/"),
+      content: pageTsx,
+    });
+    const snapshotFile = await writePageSnapshot({
+      workspaceDir,
+      taskKey: `page-${normalizeText(task.task_key, "root")}`,
+      payload: {
+        route: normalizeText(pageSpec.route, "/"),
+        pageId: normalizeText(pageSpec.pageId, task.task_key),
+        generatedAt: toIsoNow(),
+        method: geminiResult.ok ? "gemini-cli" : "fallback-template",
+      },
+    });
+
     const finishedAt = toIsoNow();
     await admin
       .from("app_generation_tasks")
@@ -191,12 +265,13 @@ export async function POST(request) {
         finished_at: finishedAt,
         result: {
           ...(task.result || {}),
-          scaffold: true,
-          pageId: normalizeText(task?.payload?.pageId),
-          route: normalizeText(task?.payload?.route),
-          selectedPreviewHtmlBytes: pageSpec?.selectedPreviewHtml
-            ? Buffer.byteLength(pageSpec.selectedPreviewHtml, "utf8")
-            : 0,
+          method: geminiResult.ok ? "gemini-cli" : "fallback-template",
+          routeFile,
+          snapshotFile,
+          gemini: {
+            ok: geminiResult.ok,
+            traces: geminiResult.traces,
+          },
         },
       })
       .eq("id", taskId);
@@ -205,12 +280,14 @@ export async function POST(request) {
       job_id: jobId,
       task_id: taskId,
       owner_id: job.owner_id,
-      level: "info",
+      level: geminiResult.ok ? "info" : "warn",
       stage: "page",
-      message: "Page task completed.",
+      message: geminiResult.ok
+        ? "Page generated with Gemini CLI."
+        : "Gemini CLI unavailable or failed; fallback page template used.",
       meta: {
-        pageId: normalizeText(task?.payload?.pageId),
-        route: normalizeText(task?.payload?.route),
+        route: normalizeText(pageSpec.route, "/"),
+        routeFile,
       },
     });
 
@@ -241,16 +318,6 @@ export async function POST(request) {
           finished_at: toIsoNow(),
         })
         .eq("id", jobId);
-
-      await admin.from("app_generation_logs").insert({
-        job_id: jobId,
-        task_id: taskId,
-        owner_id: job.owner_id,
-        level: "error",
-        stage: "page",
-        message: "Job failed because at least one page task failed.",
-        meta: {},
-      });
     } else if (allSucceeded) {
       try {
         const integrateTask = await resolveOrCreateIntegrateTask(admin, job);
@@ -311,18 +378,6 @@ export async function POST(request) {
             finished_at: toIsoNow(),
           })
           .eq("id", jobId);
-
-        await admin.from("app_generation_logs").insert({
-          job_id: jobId,
-          task_id: taskId,
-          owner_id: job.owner_id,
-          level: "error",
-          stage: "page",
-          message: "Page stage completed but integration queue dispatch failed.",
-          meta: {
-            error: message,
-          },
-        });
       }
     } else {
       await admin

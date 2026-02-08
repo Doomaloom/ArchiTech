@@ -1,4 +1,12 @@
+import path from "node:path";
 import { NextResponse } from "next/server";
+import { runGeminiCliPrompt } from "../../../../_lib/agentic/gemini-cli";
+import {
+  ensureJobWorkspace,
+  readWorkspaceFile,
+  writePageSnapshot,
+  writeRoutePage,
+} from "../../../../_lib/agentic/workspace";
 import { enqueueValidateTask } from "../../../../_lib/gcp/cloud-tasks";
 import { createSupabaseAdminClient } from "../../../../_lib/supabase/admin";
 
@@ -79,6 +87,28 @@ async function resolveOrCreateValidateTask(admin, job) {
   }
 
   return existing;
+}
+
+function makeFallbackHomePage(pages) {
+  const links = pages
+    .map((page) => {
+      const route = normalizeText(page?.route, "/");
+      const label = normalizeText(page?.name, route);
+      return `        <li><a href="${route}">${label}</a></li>`;
+    })
+    .join("\n");
+  return `export default function HomePage() {
+  return (
+    <main>
+      <h1>Generated Site</h1>
+      <p>Select a page:</p>
+      <ul>
+${links || "        <li><a href=\"/\">Home</a></li>"}
+      </ul>
+    </main>
+  );
+}
+`;
 }
 
 export async function POST(request) {
@@ -176,9 +206,67 @@ export async function POST(request) {
       owner_id: job.owner_id,
       level: "info",
       stage: "integrate",
-      message: "Integration task started (scaffold).",
+      message: "Integration task started.",
       meta: {},
     });
+
+    const workspaceDir = await ensureJobWorkspace(job.id);
+    const pages = Array.isArray(job?.generation_spec?.pages)
+      ? job.generation_spec.pages
+      : [];
+
+    const rootPage = pages.find((page) => normalizeText(page?.route, "/") === "/");
+    if (!rootPage) {
+      await writeRoutePage({
+        workspaceDir,
+        route: "/",
+        content: makeFallbackHomePage(pages),
+      });
+    }
+
+    const routesSummary = pages.map((page) => ({
+      route: normalizeText(page?.route, "/"),
+      name: normalizeText(page?.name),
+      actions: Array.isArray(page?.actions) ? page.actions : [],
+    }));
+
+    const routesSummaryFile = await writePageSnapshot({
+      workspaceDir,
+      taskKey: "routes-summary",
+      payload: {
+        generatedAt: toIsoNow(),
+        pages: routesSummary,
+      },
+    });
+
+    const appPagePath = path.join(workspaceDir, "app", "page.tsx");
+    const currentRootPage = await readWorkspaceFile(appPagePath);
+    const integrationPrompt = [
+      "You are integrating a generated Next.js App Router project.",
+      "Improve the root app/page.tsx to provide navigation and summary for generated pages.",
+      "Return only TSX code for app/page.tsx.",
+      "",
+      `Project brief: ${normalizeText(job?.generation_spec?.brief?.title)}`,
+      `Global notes: ${normalizeText(job?.generation_spec?.globalNotes)}`,
+      `Pages JSON: ${JSON.stringify(routesSummary)}`,
+      "",
+      "Current app/page.tsx:",
+      currentRootPage,
+    ].join("\n");
+
+    const geminiResult = await runGeminiCliPrompt({
+      cwd: workspaceDir,
+      prompt: integrationPrompt,
+      timeoutMs: 6 * 60 * 1000,
+    });
+
+    if (geminiResult.ok) {
+      await writeRoutePage({
+        workspaceDir,
+        route: "/",
+        content: geminiResult.output,
+      });
+    }
 
     const validateTask = await resolveOrCreateValidateTask(admin, job);
     const queueResult = await enqueueValidateTask({
@@ -197,8 +285,12 @@ export async function POST(request) {
         finished_at: finishedAt,
         result: {
           ...(task.result || {}),
-          scaffold: true,
-          nextStage: "validate",
+          routesSummaryFile,
+          method: geminiResult.ok ? "gemini-cli" : "fallback-template",
+          gemini: {
+            ok: geminiResult.ok,
+            traces: geminiResult.traces,
+          },
           validateTaskId: validateTask.id,
         },
       })
@@ -233,12 +325,13 @@ export async function POST(request) {
       job_id: jobId,
       task_id: taskId,
       owner_id: job.owner_id,
-      level: "info",
+      level: geminiResult.ok ? "info" : "warn",
       stage: "integrate",
-      message: "Integration completed; validation task queued.",
+      message: geminiResult.ok
+        ? "Integration completed with Gemini CLI update."
+        : "Integration completed with fallback root page.",
       meta: {
         validateTaskId: validateTask.id,
-        queueTaskName: queueResult.taskName,
       },
     });
 
