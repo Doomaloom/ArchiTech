@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
+import { enqueueOrchestratorTask } from "../../../_lib/gcp/cloud-tasks";
 import { createServerSupabaseClient } from "../../../_lib/supabase/server";
+
+export const runtime = "nodejs";
 
 const JOB_DEFAULTS = {
   maxFixRounds: 4,
@@ -211,19 +214,23 @@ export async function POST(request) {
       );
     }
 
-    const { error: taskError } = await supabase.from("app_generation_tasks").insert({
-      job_id: job.id,
-      owner_id: user.id,
-      task_type: "orchestrate",
-      task_key: "root",
-      status: "queued",
-      attempt_number: 1,
-      payload: {
-        stage: "queue-dispatch",
-      },
-    });
+    const { data: initialTask, error: taskError } = await supabase
+      .from("app_generation_tasks")
+      .insert({
+        job_id: job.id,
+        owner_id: user.id,
+        task_type: "orchestrate",
+        task_key: "root",
+        status: "queued",
+        attempt_number: 1,
+        payload: {
+          stage: "queue-dispatch",
+        },
+      })
+      .select("*")
+      .single();
 
-    if (taskError) {
+    if (taskError || !initialTask) {
       return NextResponse.json(
         { error: "Created job but failed to create initial task." },
         { status: 500 }
@@ -249,17 +256,118 @@ export async function POST(request) {
       );
     }
 
+    let queueResult = null;
+
+    try {
+      queueResult = await enqueueOrchestratorTask({
+        type: "orchestrate",
+        jobId: job.id,
+        taskId: initialTask.id,
+        ownerId: user.id,
+        projectId,
+        requestedAt: new Date().toISOString(),
+      });
+
+      await supabase
+        .from("app_generation_tasks")
+        .update({
+          status: "queued",
+          result: {
+            queueProvider: "cloud-tasks",
+            queuePath: queueResult.queuePath,
+            queueTaskName: queueResult.taskName,
+            scheduleTime: queueResult.scheduleTime,
+          },
+        })
+        .eq("id", initialTask.id)
+        .eq("owner_id", user.id);
+
+      await supabase
+        .from("app_generation_jobs")
+        .update({
+          current_stage: "orchestrator-queued",
+          metadata: {
+            ...(job.metadata || {}),
+            queueProvider: "cloud-tasks",
+            queuePath: queueResult.queuePath,
+            queueTaskName: queueResult.taskName,
+          },
+        })
+        .eq("id", job.id)
+        .eq("owner_id", user.id);
+
+      await supabase.from("app_generation_logs").insert({
+        job_id: job.id,
+        owner_id: user.id,
+        task_id: initialTask.id,
+        level: "info",
+        stage: "api",
+        message: "Queued orchestrator task in Cloud Tasks.",
+        meta: {
+          queuePath: queueResult.queuePath,
+          queueTaskName: queueResult.taskName,
+        },
+      });
+    } catch (queueError) {
+      const failedAt = new Date().toISOString();
+      const queueMessage =
+        queueError?.message ?? "Failed to enqueue orchestrator task.";
+
+      await supabase
+        .from("app_generation_tasks")
+        .update({
+          status: "failed",
+          error_message: queueMessage,
+          finished_at: failedAt,
+        })
+        .eq("id", initialTask.id)
+        .eq("owner_id", user.id);
+
+      await supabase
+        .from("app_generation_jobs")
+        .update({
+          status: "failed",
+          current_stage: "queue-dispatch",
+          error_message: queueMessage,
+          finished_at: failedAt,
+        })
+        .eq("id", job.id)
+        .eq("owner_id", user.id);
+
+      await supabase.from("app_generation_logs").insert({
+        job_id: job.id,
+        owner_id: user.id,
+        task_id: initialTask.id,
+        level: "error",
+        stage: "api",
+        message: "Cloud Tasks dispatch failed during job creation.",
+        meta: {
+          error: queueMessage,
+        },
+      });
+
+      return NextResponse.json(
+        {
+          error: "Failed to enqueue generation job.",
+          jobId: job.id,
+          detail: queueMessage,
+        },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(
       {
         job: {
           id: job.id,
           status: job.status,
-          currentStage: job.current_stage,
+          currentStage: "orchestrator-queued",
           projectId: job.project_id,
           createdAt: job.created_at,
           maxFixRounds: job.max_fix_rounds,
           maxDurationSeconds: job.max_duration_seconds,
           pageTaskParallelism: job.page_task_parallelism,
+          queueTaskName: queueResult?.taskName || null,
         },
       },
       { status: 202 }
