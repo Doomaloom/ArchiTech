@@ -64,14 +64,14 @@ const PROJECT_FOLDERS = [
 ];
 
 const CONTRIBUTION_TIMELINE_DATA = [
-  { year: "2017", concept: 92, production: 106, quality: 118 },
-  { year: "2018", concept: 101, production: 112, quality: 124 },
-  { year: "2019", concept: 108, production: 120, quality: 116 },
-  { year: "2020", concept: 96, production: 104, quality: 128 },
-  { year: "2021", concept: 110, production: 99, quality: 106 },
-  { year: "2022", concept: 122, production: 114, quality: 120 },
-  { year: "2023", concept: 116, production: 126, quality: 112 },
-  { year: "2024", concept: 134, production: 130, quality: 140 },
+  { year: "2017", concept: 52, production: 94, quality: 136 },
+  { year: "2018", concept: 68, production: 104, quality: 148 },
+  { year: "2019", concept: 74, production: 116, quality: 132 },
+  { year: "2020", concept: 60, production: 96, quality: 156 },
+  { year: "2021", concept: 82, production: 90, quality: 126 },
+  { year: "2022", concept: 92, production: 110, quality: 144 },
+  { year: "2023", concept: 88, production: 124, quality: 138 },
+  { year: "2024", concept: 108, production: 132, quality: 166 },
 ];
 
 const CONTRIBUTOR_ICONS = [
@@ -184,19 +184,21 @@ export default function WorkspaceHomeDashboard({
             <section className="workspace-home-launch-empty" aria-label="Contribution activity">
               <header className="workspace-home-contrib-header">
                 <p className="workspace-home-contrib-kicker">Weekly pulse</p>
-                <h3>Contribution Timeline</h3>
-                <span className="workspace-home-contrib-header-icons" aria-label="Contributors">
-                  {CONTRIBUTOR_ICONS.map((contributor) => (
-                    <span
-                      key={contributor.id}
-                      className="workspace-home-contrib-header-icon"
-                      title={contributor.name}
-                      aria-label={contributor.name}
-                    >
-                      {contributor.initials}
-                    </span>
-                  ))}
-                </span>
+                <div className="workspace-home-contrib-people" aria-label="Contributors">
+                  <span className="workspace-home-contrib-people-label">Contributors</span>
+                  <span className="workspace-home-contrib-header-icons">
+                    {CONTRIBUTOR_ICONS.map((contributor) => (
+                      <span
+                        key={contributor.id}
+                        className="workspace-home-contrib-header-icon"
+                        title={contributor.name}
+                        aria-label={contributor.name}
+                      >
+                        {contributor.initials}
+                      </span>
+                    ))}
+                  </span>
+                </div>
               </header>
 
               <div className="workspace-home-contrib-content">
