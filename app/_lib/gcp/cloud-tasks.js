@@ -84,6 +84,7 @@ export async function enqueueOrchestratorTask(payload) {
   const serviceAccountEmail = firstDefinedValue([
     process.env.CLOUD_TASKS_SERVICE_ACCOUNT_EMAIL,
   ]);
+  const dispatchToken = firstDefinedValue([process.env.AGENTIC_ORCHESTRATOR_TOKEN]);
   const oidcAudience = firstDefinedValue([
     process.env.CLOUD_TASKS_OIDC_AUDIENCE,
     orchestratorUrl,
@@ -98,6 +99,7 @@ export async function enqueueOrchestratorTask(payload) {
     url: orchestratorUrl,
     headers: {
       "Content-Type": "application/json",
+      ...(dispatchToken ? { "X-Agentic-Token": dispatchToken } : {}),
     },
     body: Buffer.from(JSON.stringify(payload), "utf8").toString("base64"),
   };
