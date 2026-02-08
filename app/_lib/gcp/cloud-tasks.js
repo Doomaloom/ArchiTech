@@ -84,6 +84,48 @@ function getIntegrateTaskUrl() {
   return url;
 }
 
+function getValidateQueueName() {
+  const queueName = firstDefinedValue([
+    process.env.CLOUD_TASKS_VALIDATE_QUEUE,
+    process.env.CLOUD_TASKS_ORCHESTRATOR_QUEUE,
+  ]);
+  if (!queueName) {
+    throw new Error(
+      "Missing CLOUD_TASKS_VALIDATE_QUEUE or CLOUD_TASKS_ORCHESTRATOR_QUEUE."
+    );
+  }
+  return queueName;
+}
+
+function getValidateTaskUrl() {
+  const url = firstDefinedValue([process.env.CLOUD_TASKS_VALIDATE_URL]);
+  if (!url) {
+    throw new Error("Missing CLOUD_TASKS_VALIDATE_URL.");
+  }
+  return url;
+}
+
+function getFixQueueName() {
+  const queueName = firstDefinedValue([
+    process.env.CLOUD_TASKS_FIX_QUEUE,
+    process.env.CLOUD_TASKS_ORCHESTRATOR_QUEUE,
+  ]);
+  if (!queueName) {
+    throw new Error(
+      "Missing CLOUD_TASKS_FIX_QUEUE or CLOUD_TASKS_ORCHESTRATOR_QUEUE."
+    );
+  }
+  return queueName;
+}
+
+function getFixTaskUrl() {
+  const url = firstDefinedValue([process.env.CLOUD_TASKS_FIX_URL]);
+  if (!url) {
+    throw new Error("Missing CLOUD_TASKS_FIX_URL.");
+  }
+  return url;
+}
+
 async function getGoogleAccessToken() {
   const explicitAccessToken = firstDefinedValue([process.env.GOOGLE_CLOUD_ACCESS_TOKEN]);
   if (explicitAccessToken) {
@@ -203,5 +245,21 @@ export async function enqueueIntegrateTask(payload) {
     payload,
     queueName: getIntegrateQueueName(),
     targetUrl: getIntegrateTaskUrl(),
+  });
+}
+
+export async function enqueueValidateTask(payload) {
+  return enqueueTask({
+    payload,
+    queueName: getValidateQueueName(),
+    targetUrl: getValidateTaskUrl(),
+  });
+}
+
+export async function enqueueFixTask(payload) {
+  return enqueueTask({
+    payload,
+    queueName: getFixQueueName(),
+    targetUrl: getFixTaskUrl(),
   });
 }

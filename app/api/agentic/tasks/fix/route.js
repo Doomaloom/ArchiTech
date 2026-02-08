@@ -39,7 +39,7 @@ function isUniqueViolation(error) {
   return error?.code === "23505";
 }
 
-async function resolveOrCreateValidateTask(admin, job) {
+async function resolveOrCreateValidateTask(admin, job, attemptNumber) {
   const { data: inserted, error: insertError } = await admin
     .from("app_generation_tasks")
     .insert({
@@ -48,10 +48,10 @@ async function resolveOrCreateValidateTask(admin, job) {
       task_type: "validate",
       task_key: "root",
       status: "queued",
-      attempt_number: 1,
+      attempt_number: attemptNumber,
       payload: {
         stage: "build-validation",
-        requestedBy: "integrate",
+        requestedBy: "fix",
       },
     })
     .select("*")
@@ -71,7 +71,7 @@ async function resolveOrCreateValidateTask(admin, job) {
     .eq("job_id", job.id)
     .eq("task_type", "validate")
     .eq("task_key", "root")
-    .eq("attempt_number", 1)
+    .eq("attempt_number", attemptNumber)
     .maybeSingle();
 
   if (fetchError || !existing) {
@@ -113,7 +113,7 @@ export async function POST(request) {
     if (!task) {
       return NextResponse.json({ ok: true, ignored: true, reason: "task-not-found" });
     }
-    if (task.task_type !== "integrate") {
+    if (task.task_type !== "fix") {
       return NextResponse.json({ ok: true, ignored: true, reason: "wrong-task-type" });
     }
     if (TERMINAL_TASK_STATUSES.has(task.status)) {
@@ -165,8 +165,9 @@ export async function POST(request) {
     await admin
       .from("app_generation_jobs")
       .update({
-        status: "running",
-        current_stage: "integrating",
+        status: "fixing",
+        current_stage: "fixing",
+        fix_round: Math.max(job.fix_round || 0, task.attempt_number || 0),
       })
       .eq("id", jobId);
 
@@ -175,30 +176,36 @@ export async function POST(request) {
       task_id: taskId,
       owner_id: job.owner_id,
       level: "info",
-      stage: "integrate",
-      message: "Integration task started (scaffold).",
-      meta: {},
+      stage: "fix",
+      message: "Fix task started (scaffold).",
+      meta: {
+        fixRound: task.attempt_number,
+      },
     });
 
-    const validateTask = await resolveOrCreateValidateTask(admin, job);
+    const nextValidateAttempt = (task.attempt_number || 0) + 1;
+    const validateTask = await resolveOrCreateValidateTask(
+      admin,
+      job,
+      nextValidateAttempt
+    );
     const queueResult = await enqueueValidateTask({
       type: "validate",
       jobId: job.id,
       taskId: validateTask.id,
-      attemptNumber: validateTask.attempt_number,
+      attemptNumber: nextValidateAttempt,
       requestedAt: toIsoNow(),
     });
 
-    const finishedAt = toIsoNow();
     await admin
       .from("app_generation_tasks")
       .update({
         status: "succeeded",
-        finished_at: finishedAt,
+        finished_at: toIsoNow(),
         result: {
           ...(task.result || {}),
           scaffold: true,
-          nextStage: "validate",
+          nextValidateAttempt,
           validateTaskId: validateTask.id,
         },
       })
@@ -234,11 +241,11 @@ export async function POST(request) {
       task_id: taskId,
       owner_id: job.owner_id,
       level: "info",
-      stage: "integrate",
-      message: "Integration completed; validation task queued.",
+      stage: "fix",
+      message: "Fix task completed; validation re-queued.",
       meta: {
+        nextValidateAttempt,
         validateTaskId: validateTask.id,
-        queueTaskName: queueResult.taskName,
       },
     });
 
@@ -246,10 +253,11 @@ export async function POST(request) {
       ok: true,
       status: "validate-queued",
       validateTaskId: validateTask.id,
+      attemptNumber: nextValidateAttempt,
     });
   } catch (error) {
     return NextResponse.json(
-      { error: error?.message ?? "Unexpected integrate task failure." },
+      { error: error?.message ?? "Unexpected fix task failure." },
       { status: 500 }
     );
   }

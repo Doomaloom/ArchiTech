@@ -11,6 +11,10 @@ CLOUD_TASKS_PAGE_QUEUE="app-gen-page"
 CLOUD_TASKS_PAGE_URL="https://<app-domain>/api/agentic/tasks/page"
 CLOUD_TASKS_INTEGRATE_QUEUE="app-gen-integrate"
 CLOUD_TASKS_INTEGRATE_URL="https://<app-domain>/api/agentic/tasks/integrate"
+CLOUD_TASKS_VALIDATE_QUEUE="app-gen-validate"
+CLOUD_TASKS_VALIDATE_URL="https://<app-domain>/api/agentic/tasks/validate"
+CLOUD_TASKS_FIX_QUEUE="app-gen-fix"
+CLOUD_TASKS_FIX_URL="https://<app-domain>/api/agentic/tasks/fix"
 # Shared dispatch token checked by orchestrator callback route
 AGENTIC_ORCHESTRATOR_TOKEN="<long-random-token>"
 # Optional but recommended for private Cloud Run target auth
@@ -33,5 +37,7 @@ Notes:
 - Orchestrator now fans out one `page` task per page via Cloud Tasks.
 - `POST /api/agentic/tasks/page` executes a scaffold page step and updates aggregated page state.
 - `POST /api/agentic/tasks/integrate` handles integration-stage callbacks (currently scaffold behavior).
+- `POST /api/agentic/tasks/validate` runs `npm install` and `npm run build`; on build failure it queues fix tasks up to max rounds.
+- `POST /api/agentic/tasks/fix` currently performs scaffold fix handling and re-queues validation attempts.
 - If enqueue fails, the job and initial task are marked `failed` with error details.
-- After all page tasks succeed, integration tasks are queued; current integration endpoint still stops at the validation boundary until validate/fix/package stages are implemented.
+- After validation succeeds, the pipeline currently stops at the package boundary until package stage wiring is implemented.
