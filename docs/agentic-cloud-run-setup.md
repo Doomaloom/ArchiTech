@@ -19,6 +19,8 @@ CLOUD_TASKS_PACKAGE_QUEUE="app-gen-package"
 CLOUD_TASKS_PACKAGE_URL="https://<app-domain>/api/agentic/tasks/package"
 # Shared dispatch token checked by orchestrator callback route
 AGENTIC_ORCHESTRATOR_TOKEN="<long-random-token>"
+# Token for scheduled retention cleanup endpoint
+AGENTIC_MAINTENANCE_TOKEN="<long-random-token>"
 # Optional workspace root override (default /tmp/architech-agentic/jobs)
 AGENTIC_WORKSPACE_ROOT="/tmp/architech-agentic/jobs"
 # Optional but recommended for private Cloud Run target auth
@@ -47,3 +49,4 @@ Notes:
 - `POST /api/agentic/tasks/package` zips workspace output, uploads to `generated-apps`, records `app_generation_artifacts`, and finalizes job status.
 - If enqueue fails, the job and initial task are marked `failed` with error details.
 - Completed jobs expose artifacts via `POST /api/agentic/jobs/:jobId/download`.
+- `POST /api/agentic/maintenance/cleanup` enforces retention policy by deleting older artifacts (supports `dryRun` and `keepLatest`).
