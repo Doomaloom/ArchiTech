@@ -495,6 +495,30 @@ body:has(.imageflow-builder):not(:has(#imageflow-sidebar-toggle:checked))
   color: #c2410c;
 }
 
+.workflow-mode-button.is-translate {
+  border-color: rgba(251, 146, 60, 0.34);
+  background: rgba(255, 237, 213, 0.66);
+  color: #c2410c;
+}
+
+.workflow-mode-button.is-inspire {
+  border-color: rgba(59, 130, 246, 0.34);
+  background: #d7f3f3;
+  color: #1d4ed8;
+}
+
+.workflow-mode-button.is-translate.is-active {
+  border-color: rgba(249, 115, 22, 0.55);
+  background: rgba(255, 237, 213, 0.9);
+  color: #9a3412;
+}
+
+.workflow-mode-button.is-inspire.is-active {
+  border-color: rgba(37, 99, 235, 0.55);
+  background: rgba(219, 234, 254, 0.92);
+  color: #1e40af;
+}
+
 .imageflow-sidebar-toggle-label {
   display: flex;
   gap: 8px;
@@ -591,22 +615,35 @@ body:has(.imageflow-builder):has(#imageflow-sidebar-toggle:checked)
   overflow: hidden;
   padding: clamp(10px, 2.2vw, 18px);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
   gap: 14px;
 }
 
-.workspace-home-launch-column {
+.workspace-home-left-column {
+  height: 100%;
   min-height: 0;
   display: grid;
-  grid-template-rows: repeat(2, minmax(0, 1fr));
+  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
   gap: 14px;
+}
+
+.workspace-home-launch-row {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.workspace-home-launch-empty {
+  min-height: 0;
 }
 
 .workspace-home-launch-card {
   border: 1px solid rgba(255, 255, 255, 0.5);
   border-radius: 20px;
   padding: clamp(18px, 2.2vw, 24px);
-  min-height: 210px;
+  min-height: 0;
+  height: 100%;
   text-align: left;
   display: flex;
   flex-direction: column;
@@ -684,6 +721,7 @@ body:has(.imageflow-builder):has(#imageflow-sidebar-toggle:checked)
 }
 
 .workspace-home-files {
+  height: 100%;
   border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.6);
   background: rgba(255, 255, 255, 0.2);
@@ -873,12 +911,35 @@ body:has(.imageflow-builder):has(#imageflow-sidebar-toggle:checked)
   display: inline-flex;
   align-items: center;
   border-radius: 999px;
-  border: 1px solid rgba(14, 116, 144, 0.3);
-  background: rgba(14, 116, 144, 0.14);
-  color: #0e7490;
   font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  text-transform: lowercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  padding: 4px 10px;
+}
+
+.workspace-home-workflow-pill.is-inspire {
+  border: 1px solid rgba(20, 184, 166, 0.34);
+  background: rgba(20, 184, 166, 0.14);
+  color: #0f766e;
+}
+
+.workspace-home-workflow-pill.is-translate {
+  border: 1px solid rgba(249, 115, 22, 0.34);
+  background: rgba(249, 115, 22, 0.14);
+  color: #c2410c;
+}
+
+.workspace-home-date-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 23, 42, 0.2);
+  background: rgba(15, 23, 42, 0.08);
+  color: #334155;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
   font-weight: 600;
   padding: 4px 10px;
 }
@@ -888,35 +949,6 @@ body:has(.imageflow-builder):has(#imageflow-sidebar-toggle:checked)
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
-}
-
-.workspace-home-status-pill {
-  display: inline-flex;
-  align-items: center;
-  border-radius: 999px;
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  font-weight: 600;
-  padding: 4px 10px;
-}
-
-.workspace-home-status-pill.is-active {
-  border: 1px solid rgba(22, 163, 74, 0.32);
-  background: rgba(22, 163, 74, 0.14);
-  color: #15803d;
-}
-
-.workspace-home-status-pill.is-review {
-  border: 1px solid rgba(217, 119, 6, 0.32);
-  background: rgba(217, 119, 6, 0.12);
-  color: #b45309;
-}
-
-.workspace-home-status-pill.is-draft {
-  border: 1px solid rgba(100, 116, 139, 0.3);
-  background: rgba(100, 116, 139, 0.12);
-  color: #475569;
 }
 
 .workspace-home-open-button {
@@ -6277,8 +6309,16 @@ div {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .workspace-home-launch-column {
-    grid-template-rows: none;
+  .workspace-home-left-column {
+    grid-template-rows: auto auto;
+  }
+
+  .workspace-home-launch-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .workspace-home-launch-empty {
+    min-height: 160px;
   }
 
   .workspace-home-launch-card {

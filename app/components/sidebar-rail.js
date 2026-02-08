@@ -301,21 +301,26 @@ export default function SidebarRail() {
         <div className="sidebar-footer">
           <div className="workflow-toggle-block">
             <button
-              className="rail-button workflow-toggle-circle"
+              className={`rail-button workflow-mode-button is-translate${
+                workflowMode === "image-to-site" ? " is-active" : ""
+              }`}
               type="button"
-              onClick={() =>
-                setWorkflowMode(
-                  workflowMode === "image-to-site" ? "inspire" : "image-to-site"
-                )
-              }
-              aria-pressed={workflowMode === "inspire"}
-              aria-label={
-                workflowMode === "image-to-site"
-                  ? "Switch to Inspire workflow"
-                  : "Switch to Image-to-Site workflow"
-              }
+              onClick={() => setWorkflowMode("image-to-site")}
+              aria-pressed={workflowMode === "image-to-site"}
+              aria-label="Switch to Translate workflow"
             >
-              {workflowMode === "image-to-site" ? ICONS.sparkle : ICONS.image}
+              {ICONS.image}
+            </button>
+            <button
+              className={`rail-button workflow-mode-button is-inspire${
+                workflowMode === "inspire" ? " is-active" : ""
+              }`}
+              type="button"
+              onClick={() => setWorkflowMode("inspire")}
+              aria-pressed={workflowMode === "inspire"}
+              aria-label="Switch to Inspire workflow"
+            >
+              {ICONS.sparkle}
             </button>
           </div>
           <div className="imageflow-sidebar-toggle-block">

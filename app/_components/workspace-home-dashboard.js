@@ -10,7 +10,6 @@ const PROJECT_FOLDERS = [
     workflow: "inspire",
     owner: "Yassine",
     updatedAt: "2026-02-07T18:44:00.000Z",
-    status: "In Progress",
     files: 18,
   },
   {
@@ -19,7 +18,6 @@ const PROJECT_FOLDERS = [
     workflow: "image-to-site",
     owner: "Design Team",
     updatedAt: "2026-02-07T13:12:00.000Z",
-    status: "Review",
     files: 11,
   },
   {
@@ -28,7 +26,6 @@ const PROJECT_FOLDERS = [
     workflow: "inspire",
     owner: "Marketing",
     updatedAt: "2026-02-06T20:20:00.000Z",
-    status: "Draft",
     files: 7,
   },
   {
@@ -37,7 +34,6 @@ const PROJECT_FOLDERS = [
     workflow: "image-to-site",
     owner: "Product",
     updatedAt: "2026-02-05T16:35:00.000Z",
-    status: "In Progress",
     files: 24,
   },
   {
@@ -46,7 +42,6 @@ const PROJECT_FOLDERS = [
     workflow: "inspire",
     owner: "Growth",
     updatedAt: "2026-02-04T11:05:00.000Z",
-    status: "Review",
     files: 14,
   },
   {
@@ -55,7 +50,6 @@ const PROJECT_FOLDERS = [
     workflow: "image-to-site",
     owner: "Web Ops",
     updatedAt: "2026-02-03T08:22:00.000Z",
-    status: "Draft",
     files: 9,
   },
 ];
@@ -73,19 +67,15 @@ const formatUpdatedAt = (isoValue) => {
 };
 
 const toWorkflowLabel = (workflow) =>
-  workflow === "inspire" ? "Inspire" : "Translate";
+  workflow === "inspire" ? "inspire" : "translate";
 
-const toStatusClassName = (status) => {
-  if (status === "Review") {
-    return "is-review";
-  }
-  if (status === "In Progress") {
-    return "is-active";
-  }
-  return "is-draft";
-};
+const toWorkflowClassName = (workflow) =>
+  workflow === "inspire" ? "is-inspire" : "is-translate";
 
 const toFileCountLabel = (count) => `${count} ${count === 1 ? "file" : "files"}`;
+
+const toUpdatedBadgeLabel = (isoValue) =>
+  `updated ${formatUpdatedAt(isoValue).toLowerCase()}`;
 
 export default function WorkspaceHomeDashboard({
   onStartInspire,
@@ -104,7 +94,6 @@ export default function WorkspaceHomeDashboard({
         project.name,
         project.owner,
         toWorkflowLabel(project.workflow),
-        project.status,
         project.id,
       ].some((field) => field.toLowerCase().includes(query));
     });
@@ -119,33 +108,36 @@ export default function WorkspaceHomeDashboard({
       <div className="imageflow-panel workspace-home-panel">
         <ImageflowMenuBar />
         <section className="workspace-home-dashboard">
-          <div className="workspace-home-launch-column">
-            <button
-              className="workspace-home-launch-card is-inspire"
-              type="button"
-              onClick={onStartInspire}
-            >
-              <span className="workspace-home-launch-kicker">Start with style</span>
-              <h2>Inspire Workflow</h2>
-              <p>
-                Build from intent first. Generate structured directions, style
-                systems, and polished concepts.
-              </p>
-              <span className="workspace-home-launch-cta">Start Inspire</span>
-            </button>
-            <button
-              className="workspace-home-launch-card is-translate"
-              type="button"
-              onClick={onStartTranslate}
-            >
-              <span className="workspace-home-launch-kicker">Start from image</span>
-              <h2>Translate Workflow</h2>
-              <p>
-                Turn references into page structures, preview variants, and editable
-                layouts fast.
-              </p>
-              <span className="workspace-home-launch-cta">Start Translate</span>
-            </button>
+          <div className="workspace-home-left-column">
+            <div className="workspace-home-launch-row">
+              <button
+                className="workspace-home-launch-card is-inspire"
+                type="button"
+                onClick={onStartInspire}
+              >
+                <span className="workspace-home-launch-kicker">Start with style</span>
+                <h2>Inspire Workflow</h2>
+                <p>
+                  Build from intent first. Generate structured directions, style
+                  systems, and polished concepts.
+                </p>
+              </button>
+              <button
+                className="workspace-home-launch-card is-translate"
+                type="button"
+                onClick={onStartTranslate}
+              >
+                <span className="workspace-home-launch-kicker">
+                  Start from image
+                </span>
+                <h2>Translate Workflow</h2>
+                <p>
+                  Turn references into page structures, preview variants, and
+                  editable layouts fast.
+                </p>
+              </button>
+            </div>
+            <div className="workspace-home-launch-empty" aria-hidden="true" />
           </div>
 
           <div className="workspace-home-files">
@@ -178,15 +170,15 @@ export default function WorkspaceHomeDashboard({
                       <span>{project.id}</span>
                     </span>
                     <span className="workspace-home-list-badges">
-                      <span className="workspace-home-workflow-pill">
-                        {toWorkflowLabel(project.workflow)}
-                      </span>
                       <span
-                        className={`workspace-home-status-pill ${toStatusClassName(
-                          project.status
+                        className={`workspace-home-workflow-pill ${toWorkflowClassName(
+                          project.workflow
                         )}`}
                       >
-                        {project.status}
+                        {toWorkflowLabel(project.workflow)}
+                      </span>
+                      <span className="workspace-home-date-pill">
+                        {toUpdatedBadgeLabel(project.updatedAt)}
                       </span>
                     </span>
                   </span>
@@ -194,20 +186,11 @@ export default function WorkspaceHomeDashboard({
                     <span className="workspace-home-list-meta">
                       <span className="workspace-home-list-text">{project.owner}</span>
                       <span className="workspace-home-list-dot" aria-hidden="true">
-                        ·
+                        &middot;
                       </span>
                       <span className="workspace-home-list-text">
                         {toFileCountLabel(project.files)}
                       </span>
-                      <span className="workspace-home-list-dot" aria-hidden="true">
-                        ·
-                      </span>
-                      <time
-                        className="workspace-home-list-date"
-                        dateTime={project.updatedAt}
-                      >
-                        Updated {formatUpdatedAt(project.updatedAt)}
-                      </time>
                     </span>
                     <span className="workspace-home-list-actions">
                       <span className="workspace-home-open-button">Open</span>
