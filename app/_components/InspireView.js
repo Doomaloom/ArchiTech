@@ -16,6 +16,7 @@ import { useWorkflow } from "./../_context/workflow-context";
 import CodeEditorView from "./views/CodeEditorView";
 import BuilderView from "./views/BuilderView";
 import InspireRadialSelector from "./InspireRadialSelector";
+import InspireStyleEditor from "./InspireStyleEditor";
 
 const STYLE_PRESETS = [
   {
@@ -262,11 +263,11 @@ export default function InspireView() {
     derived: inspireDerived,
     actions: inspireActions,
   } = useInspire();
-  const [styleTab, setStyleTab] = useState("ai");
   const [brushSize, setBrushSize] = useState(18);
   const [clearTick, setClearTick] = useState(0);
   const brushRef = useRef(null);
   const isDescriptionStep = inspireStep === INSPIRE_STEPS.DESCRIPTION;
+  const isStyleStep = inspireStep === INSPIRE_STEPS.STYLE;
 
   useEffect(() => {
     if (inspireStep === INSPIRE_STEPS.BUILDER && imageState.viewMode !== "builder") {
@@ -359,7 +360,9 @@ export default function InspireView() {
       : inspireStep === INSPIRE_STEPS.CODE
       ? " is-code"
       : ""
-  }${isDescriptionStep ? " is-preview-only" : ""}`;
+  }${isDescriptionStep ? " is-preview-only" : ""}${
+    isStyleStep ? " is-style-editor" : ""
+  }`;
 
   const treePages = useMemo(() => {
     return inspireDerived.treeNodes.filter((node) => node.depth === 1);
@@ -377,11 +380,6 @@ export default function InspireView() {
       plan: null,
     }));
   }, [inspireState.previewCount, inspireState.previewItems]);
-
-  const handleContinueToTree = () => {
-    setInspireStep(INSPIRE_STEPS.TREE);
-    inspireActions.generateTree();
-  };
 
   const handleContinueToPreviews = () => {
     setInspireStep(INSPIRE_STEPS.PREVIEWS);
@@ -646,95 +644,13 @@ export default function InspireView() {
     }
     if (inspireStep === INSPIRE_STEPS.STYLE) {
       return (
-        <div className="inspire-style">
-          <div className="imageflow-panel-switch" role="tablist">
-            <button
-              type="button"
-              className={`imageflow-switch-button${
-                styleTab === "ai" ? " is-active" : ""
-              }`}
-              onClick={() => setStyleTab("ai")}
-              role="tab"
-              aria-selected={styleTab === "ai"}
-            >
-              AI Style Ideas
-            </button>
-            <button
-              type="button"
-              className={`imageflow-switch-button${
-                styleTab === "presets" ? " is-active" : ""
-              }`}
-              onClick={() => setStyleTab("presets")}
-              role="tab"
-              aria-selected={styleTab === "presets"}
-            >
-              Inspiration
-            </button>
-          </div>
-          {inspireState.styleError ? (
-            <div className="inspire-style-error" role="status">
-              {inspireState.styleError}
-            </div>
-          ) : null}
-          {styleTab === "ai" ? (
-            <div className="inspire-style-grid">
-              {inspireState.isGeneratingStyles &&
-              !inspireState.styleIdeas.length ? (
-                <div className="inspire-style-loading">
-                  Generating style ideas...
-                </div>
-              ) : null}
-              {inspireState.styleIdeas.map((style) => (
-                <button
-                  key={style.id}
-                  type="button"
-                  className={`inspire-style-card${
-                    selectedStyle?.id === style.id ? " is-selected" : ""
-                  }`}
-                  onClick={() => inspireActions.selectStyle(style)}
-                >
-                  <div className="inspire-style-card-header">
-                    <h3>{style.title}</h3>
-                    <span>{style.summary}</span>
-                  </div>
-                  <div className="inspire-style-palette">
-                    {style.palette.map((color) => (
-                      <span key={color} style={{ background: color }} />
-                    ))}
-                  </div>
-                  <div className="inspire-style-tags">
-                    {style.tags.map((tag) => (
-                      <span key={tag}>{tag}</span>
-                    ))}
-                  </div>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="inspire-preset-grid">
-              {STYLE_PRESETS.map((style) => (
-                <button
-                  key={style.id}
-                  type="button"
-                  className={`inspire-preset-card${
-                    selectedStyle?.id === style.id ? " is-selected" : ""
-                  }`}
-                  onClick={() => inspireActions.selectStyle(style)}
-                >
-                  <div className="inspire-preset-cover">
-                    {style.palette.map((color) => (
-                      <span key={color} style={{ background: color }} />
-                    ))}
-                  </div>
-                  <div className="inspire-preset-meta">
-                    <h3>{style.title}</h3>
-                    <span>{style.tags.join(" - ")}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <InspireStyleEditor
+          styleError={inspireState.styleError}
+          isGeneratingStyles={inspireState.isGeneratingStyles}
+          styleIdeas={inspireState.styleIdeas}
+          selectedStyle={selectedStyle}
+          onSelectStyle={inspireActions.selectStyle}
+        />
       );
     }
     if (inspireStep === INSPIRE_STEPS.SETTINGS) {
@@ -967,46 +883,7 @@ export default function InspireView() {
       );
     }
     if (inspireStep === INSPIRE_STEPS.STYLE) {
-      return (
-        <aside className="imageflow-info inspire-info">
-          <div className="imageflow-info-header">
-            <p className="imageflow-info-kicker">Style direction</p>
-            <h1 className="imageflow-info-title">Choose a look</h1>
-            <p className="imageflow-info-subtitle">
-              Select a style to guide palettes, shapes, and components.
-            </p>
-          </div>
-          <div className="inspire-style-summary">
-            <span>Selected style</span>
-            <strong>{selectedStyle?.title || ""}</strong>
-            <div className="inspire-style-swatch-row">
-              {selectedStyle?.palette?.map((color) => (
-                <span key={color} style={{ background: color }} />
-              ))}
-            </div>
-          </div>
-          <div className="imageflow-info-fields">
-            <button
-              className="imageflow-generate-button"
-              type="button"
-              onClick={handleContinueToTree}
-              disabled={inspireState.isGeneratingTree}
-            >
-              Continue to project tree
-            </button>
-            <button
-              className="imageflow-generate-button"
-              type="button"
-              onClick={inspireActions.loadStyleIdeas}
-              disabled={inspireState.isGeneratingStyles}
-            >
-              {inspireState.isGeneratingStyles
-                ? "Generating styles..."
-                : "Regenerate styles"}
-            </button>
-          </div>
-        </aside>
-      );
+      return null;
     }
     if (inspireStep === INSPIRE_STEPS.SETTINGS) {
       return (
@@ -1051,11 +928,17 @@ export default function InspireView() {
         <ImageflowMenuBar />
         <ImageflowRulers />
         <div className={layoutClassName}>
-          <section className={dropzoneClassName}>
-            {renderMainPanel()}
-          </section>
-          {renderInfoPanel()}
-          {renderGalleryPanel()}
+          {isStyleStep ? (
+            renderMainPanel()
+          ) : (
+            <>
+              <section className={dropzoneClassName}>
+                {renderMainPanel()}
+              </section>
+              {renderInfoPanel()}
+              {renderGalleryPanel()}
+            </>
+          )}
         </div>
       </div>
     </div>
