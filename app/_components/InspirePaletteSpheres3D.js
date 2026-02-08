@@ -142,6 +142,13 @@ const formatHexColorValue = (color) => {
   return `#${normalizeHexColor(color).toUpperCase()}`;
 };
 
+const isMissingModuleError = (error) => {
+  const message = error?.message?.toString?.() || "";
+  return (
+    message.includes("Cannot find module") || message.includes("Cannot find package")
+  );
+};
+
 const InspirePaletteSpheres3D = forwardRef(function InspirePaletteSpheres3D(
   { title, colors, onSelectionStateChange, onColorChange },
   ref
@@ -604,10 +611,17 @@ const InspirePaletteSpheres3D = forwardRef(function InspirePaletteSpheres3D(
             loseContextExtension.loseContext();
           }
         };
-      } catch (_error) {
-        if (!isDisposed) {
-          setRenderError("3D preview is unavailable on this device.");
+      } catch (error) {
+        if (isDisposed) {
+          return;
         }
+        if (isMissingModuleError(error)) {
+          setRenderError(
+            "3D preview dependency is missing. Run npm install and restart."
+          );
+          return;
+        }
+        setRenderError("3D preview is unavailable on this device.");
       }
     };
 

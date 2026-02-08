@@ -1,5 +1,6 @@
 "use client";
 
+import { useImageToSite } from "../_context/image-to-site-context";
 import { useWorkflow } from "../_context/workflow-context";
 
 const ICONS = {
@@ -238,7 +239,15 @@ const BUTTON_SETS = {
 export default function SidebarRail() {
   const { workflowMode, inspireStep, setWorkflowMode, setInspireStep } =
     useWorkflow();
+  const { actions: imageToSiteActions } = useImageToSite();
   const buttonSets = BUTTON_SETS;
+  const handleHomeClick = () => {
+    if (workflowMode === "inspire") {
+      setInspireStep("project-description");
+      return;
+    }
+    imageToSiteActions.setViewMode("start");
+  };
 
   return (
     <aside
@@ -246,7 +255,16 @@ export default function SidebarRail() {
       aria-label="Sidebar rail"
       data-workflow-mode={workflowMode}
     >
-      <div className="sidebar-header" />
+      <div className="sidebar-header">
+        <button
+          className="rail-button"
+          type="button"
+          onClick={handleHomeClick}
+          aria-label="Home"
+        >
+          {ICONS.home}
+        </button>
+      </div>
       <div className="sidebar-body">
         <div className="sidebar-nav">
           <div className="rail-buttons" data-workflow-group="image-to-site">

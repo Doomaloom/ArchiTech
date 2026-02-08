@@ -2,6 +2,7 @@
   --sidebar-width: 72px;
   --sidebar-padding: 16px;
   --sidebar-offset: 4px;
+  --sidebar-top-offset: 40px;
   --topbar-height: 56px;
   --sidebar-bg: #eef2f7;
   --sidebar-divider: transparent;
@@ -106,7 +107,8 @@ body:has(.imageflow-builder):has(#imageflow-sidebar-toggle:checked)
   left: var(--sidebar-offset);
   height: 100vh;
   background: transparent;
-  padding: var(--sidebar-padding);
+  padding: calc(var(--sidebar-padding) + var(--sidebar-top-offset))
+    var(--sidebar-padding) var(--sidebar-padding) var(--sidebar-padding);
   display: flex;
   flex-direction: column;
   gap: 8px;
