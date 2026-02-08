@@ -6451,6 +6451,9 @@ div {
 
 .translate-conversion-info {
   gap: 12px;
+  background: rgba(248, 250, 252, 0.62);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .translate-conversion-summary {
@@ -6486,6 +6489,7 @@ div {
   margin-top: auto;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 8px;
 }
 
@@ -6512,11 +6516,12 @@ div {
 }
 
 .translate-conversion-info .imageflow-generate-button {
+  align-self: center;
   border-radius: 14px;
   border: 1px solid rgba(234, 88, 12, 0.8);
   background: #f97316;
   color: #fff;
-  font-weight: 600;
+  font-weight: 400;
 }
 
 .translate-conversion-info .imageflow-generate-button:hover:not(:disabled) {
@@ -10095,6 +10100,16 @@ body:has(.inspire-shell)
 }
 
 .inspire-preview-info {
+  gap: 16px;
+  min-height: 100%;
+}
+
+.translate-preview-info {
+  --inspire-accent-rgb: 59, 130, 246;
+  --inspire-accent-strong-rgb: 29, 78, 216;
+  --inspire-accent-soft-rgb: 219, 234, 254;
+  --inspire-accent-text: #1e3a8a;
+  --inspire-accent-contrast: #eff6ff;
   gap: 16px;
   min-height: 100%;
 }

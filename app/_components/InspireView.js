@@ -406,7 +406,6 @@ export default function InspireView() {
   const [clearTick, setClearTick] = useState(0);
   const brushRef = useRef(null);
   const syncedTreeRef = useRef(null);
-  const syncingFromImageRef = useRef(false);
   const isDescriptionStep = inspireStep === INSPIRE_STEPS.DESCRIPTION;
   const isStyleStep = inspireStep === INSPIRE_STEPS.STYLE;
   const isTreeStep = inspireStep === INSPIRE_STEPS.TREE;
@@ -489,11 +488,6 @@ export default function InspireView() {
     if (inspireStep !== INSPIRE_STEPS.TREE || !inspireDerived.treeRoot) {
       return;
     }
-    if (syncingFromImageRef.current) {
-      syncedTreeRef.current = inspireDerived.treeRoot;
-      syncingFromImageRef.current = false;
-      return;
-    }
     if (syncedTreeRef.current !== inspireDerived.treeRoot) {
       imageActions.setStructureFlow(inspireDerived.treeRoot);
       syncedTreeRef.current = inspireDerived.treeRoot;
@@ -523,23 +517,6 @@ export default function InspireView() {
     imageState.selectedNodeId,
     inspireActions.setSelectedNodeId,
     inspireState.selectedNodeId,
-    inspireStep,
-  ]);
-
-  useEffect(() => {
-    if (
-      inspireStep !== INSPIRE_STEPS.TREE ||
-      !imageState.structureFlow ||
-      imageState.structureFlow === syncedTreeRef.current
-    ) {
-      return;
-    }
-    syncingFromImageRef.current = true;
-    inspireActions.setTree(imageState.structureFlow);
-    syncedTreeRef.current = imageState.structureFlow;
-  }, [
-    imageState.structureFlow,
-    inspireActions,
     inspireStep,
   ]);
 

@@ -84,9 +84,38 @@ export default function InfoPanel() {
   const hasTitle = Boolean(state.title?.trim());
   const hasName = Boolean(state.name?.trim());
   const hasDetails = Boolean(state.details?.trim());
+  const selectedPreview =
+    state.previewItems?.[state.selectedPreviewIndex] || null;
+  const selectedPreviewNumber = state.previewItems?.length
+    ? String(state.selectedPreviewIndex + 1).padStart(2, "0")
+    : null;
+  const selectedPreviewLabel =
+    selectedPreview?.plan?.title ||
+    (selectedPreviewNumber ? `Option ${selectedPreviewNumber}` : "No option selected");
+  const readyPreviewCount = Array.isArray(state.previewItems)
+    ? state.previewItems.reduce(
+        (total, preview) => (preview?.imageUrl || preview?.html ? total + 1 : total),
+        0
+      )
+    : 0;
+  const selectedPreviewState =
+    selectedPreview?.status === "loading"
+      ? "Generating"
+      : selectedPreview?.renderError || selectedPreview?.error
+      ? "Issue"
+      : selectedPreview?.imageUrl || selectedPreview?.html
+      ? "Ready"
+      : "Pending";
+  const selectedPreviewMode =
+    selectedPreview?.imageUrl && !selectedPreview?.html ? "Image" : "HTML";
+  const canOpenWorkspace = Boolean(selectedPreview?.html);
 
   const infoClassName = `imageflow-info translate-info-panel${
-    !isCodeView ? " translate-glass-info" : ""
+    !isCodeView
+      ? isPreviewView
+        ? " inspire-glass-info translate-preview-info"
+        : " translate-glass-info"
+      : ""
   }${isNodesView ? " translate-nodes-info" : ""}${
     isConversionView ? " translate-conversion-info" : ""
   }`;
@@ -214,10 +243,10 @@ export default function InfoPanel() {
               </>
             ) : isPreviewView ? (
               <>
-                <p className="imageflow-info-kicker">Preview selection</p>
-                <h1 className="imageflow-info-title">Choose a preview</h1>
+                <p className="imageflow-info-kicker">Inspire</p>
+                <h1 className="imageflow-info-title">Select a preview</h1>
                 <p className="imageflow-info-subtitle">
-                  Click a layout to make it the main panel.
+                  Pick the strongest direction and move it into workspace editing.
                 </p>
               </>
             ) : (
@@ -284,18 +313,73 @@ export default function InfoPanel() {
               />
             </>
           ) : isPreviewView ? (
-            <div className="imageflow-info-fields">
-              <button
-                className="imageflow-generate-button"
-                type="button"
-                onClick={actions.handleGeneratePreviews}
-                disabled={state.isGeneratingPreviews}
-              >
-                {state.isGeneratingPreviews
-                  ? "Generating previews..."
-                  : "Regenerate previews"}
-              </button>
-            </div>
+            <>
+              <div className="inspire-preview-metrics" aria-label="Preview summary">
+                <div className="inspire-preview-metric">
+                  <span>Ready</span>
+                  <strong>
+                    {readyPreviewCount}/{state.previewItems?.length || 0}
+                  </strong>
+                </div>
+                <div className="inspire-preview-metric">
+                  <span>Selected</span>
+                  <strong>{selectedPreviewNumber ? `#${selectedPreviewNumber}` : "--"}</strong>
+                </div>
+                <div className="inspire-preview-metric">
+                  <span>Mode</span>
+                  <strong>{selectedPreviewMode}</strong>
+                </div>
+              </div>
+              <div className="inspire-info-summary inspire-preview-selection">
+                <div className="inspire-preview-selection-head">
+                  <span>Active option</span>
+                  <span
+                    className={`inspire-preview-selection-state is-${selectedPreviewState.toLowerCase()}`}
+                  >
+                    {selectedPreviewState}
+                  </span>
+                </div>
+                <strong>{selectedPreviewLabel}</strong>
+              </div>
+              <div className="imageflow-panel-switch inspire-preview-mode-switch">
+                <span
+                  className={`imageflow-switch-button inspire-preview-mode-button${
+                    selectedPreviewMode === "Image" ? " is-active" : ""
+                  }`}
+                  role="status"
+                  aria-live="polite"
+                >
+                  Image
+                </span>
+                <span
+                  className={`imageflow-switch-button inspire-preview-mode-button${
+                    selectedPreviewMode === "HTML" ? " is-active" : ""
+                  }`}
+                  role="status"
+                  aria-live="polite"
+                >
+                  HTML
+                </span>
+              </div>
+              <div className="imageflow-info-fields inspire-preview-actions">
+                <button
+                  className="imageflow-generate-button inspire-preview-action is-primary"
+                  type="button"
+                  onClick={actions.handleGeneratePreviews}
+                  disabled={state.isGeneratingPreviews}
+                >
+                  {state.isGeneratingPreviews ? "Generating..." : "Regenerate"}
+                </button>
+                <button
+                  className="imageflow-generate-button inspire-preview-action is-ghost"
+                  type="button"
+                  onClick={actions.handleIteratePreview}
+                  disabled={state.isGeneratingPreviews || !canOpenWorkspace}
+                >
+                  Open workspace
+                </button>
+              </div>
+            </>
           ) : (
             <>
               <div className="translate-conversion-summary" role="note">
@@ -371,7 +455,7 @@ export default function InfoPanel() {
                 >
                   {state.isGeneratingStructure
                     ? "Generating Structure..."
-                    : "Generate Website Structure"}
+                    : "GENERATE"}
                 </button>
                 {state.generationError ? (
                   <p className="imageflow-error">{state.generationError}</p>
