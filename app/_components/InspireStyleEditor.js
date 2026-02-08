@@ -15,7 +15,6 @@ const FALLBACK_PALETTE = [
 ];
 
 const COLOR_OPTION_ITEMS = [
-  { id: "balanced", label: "Keep balanced" },
   { id: "cooler", label: "Make it cooler" },
   { id: "warmer", label: "Make it warmer" },
   { id: "muted", label: "Make it softer" },
@@ -34,7 +33,28 @@ const FONT_SAMPLE_ROWS = [
   { id: "verdana", fontFamily: "Verdana, Geneva, sans-serif" },
   { id: "tahoma", fontFamily: "Tahoma, Geneva, sans-serif" },
   { id: "impact", fontFamily: 'Impact, "Arial Black", sans-serif' },
+  { id: "palatino", fontFamily: '"Palatino Linotype", Palatino, serif' },
+  { id: "bookman", fontFamily: '"Bookman Old Style", Bookman, serif' },
+  { id: "garamond", fontFamily: 'Garamond, "Times New Roman", serif' },
+  { id: "didot", fontFamily: 'Didot, "Bodoni MT", serif' },
+  { id: "optima", fontFamily: "Optima, Candara, sans-serif" },
+  { id: "century-gothic", fontFamily: '"Century Gothic", Futura, sans-serif' },
+  { id: "avant-garde", fontFamily: '"Avant Garde", "Century Gothic", sans-serif' },
+  { id: "calibri", fontFamily: "Calibri, Candara, Segoe, sans-serif" },
+  { id: "cambria", fontFamily: "Cambria, Cochin, Georgia, serif" },
+  { id: "rockwell", fontFamily: "Rockwell, 'Courier Bold', serif" },
+  { id: "consolas", fontFamily: "Consolas, Menlo, Monaco, monospace" },
+  { id: "monaco", fontFamily: "Monaco, Consolas, monospace" },
+  { id: "candara", fontFamily: "Candara, Calibri, Segoe, sans-serif" },
+  { id: "hoefler", fontFamily: '"Hoefler Text", Garamond, serif' },
+  { id: "segoe-print", fontFamily: '"Segoe Print", "Comic Sans MS", cursive' },
+  { id: "papyrus", fontFamily: "Papyrus, fantasy" },
 ];
+const FONT_OPTIONS = FONT_SAMPLE_ROWS.map((row) => ({
+  id: row.id,
+  label: row.id.replace(/[-_]/g, " ").replace(/\b\w/g, (char) => char.toUpperCase()),
+  fontFamily: row.fontFamily,
+}));
 
 const MIN_LIBRARY_COUNT = 4;
 const MAX_LIBRARY_COUNT = 12;
@@ -166,7 +186,7 @@ const normalizeHue = (value) => {
 };
 
 const transformColorByOption = (color, optionId) => {
-  if (optionId === "balanced") {
+  if (optionId === "none") {
     return color;
   }
   const hsl = rgbToHsl(hexToRgb(color));
@@ -228,7 +248,8 @@ export default function InspireStyleEditor({
   const palette = selectedStyle?.palette ?? [];
   const displayPalette = palette.length ? palette : FALLBACK_PALETTE;
   const [libraryCount, setLibraryCount] = useState(6);
-  const [activeColorOption, setActiveColorOption] = useState("balanced");
+  const [activeColorOption, setActiveColorOption] = useState("none");
+  const [selectedFontId, setSelectedFontId] = useState(FONT_OPTIONS[0]?.id ?? "times");
   const paletteRef = useRef(null);
   const [paletteSelection, setPaletteSelection] = useState({
     hasSelection: false,
@@ -244,6 +265,11 @@ export default function InspireStyleEditor({
   const libraryColors = useMemo(() => {
     return buildLibraryColors(transformedPalette, libraryCount);
   }, [transformedPalette, libraryCount]);
+  const selectedFont = useMemo(() => {
+    return (
+      FONT_OPTIONS.find((option) => option.id === selectedFontId) ?? FONT_OPTIONS[0]
+    );
+  }, [selectedFontId]);
 
   const handleTogglePaletteLock = useCallback(() => {
     paletteRef.current?.toggleSelectedSphereLock?.();
@@ -348,6 +374,21 @@ export default function InspireStyleEditor({
                     />
                   </div>
                 </div>
+                <label className="inspire-style-select-row">
+                  <span className="inspire-style-select-label">Font</span>
+                  <select
+                    className="inspire-style-select"
+                    value={selectedFontId}
+                    onChange={(event) => setSelectedFontId(event.target.value)}
+                    aria-label="Select font"
+                  >
+                    {FONT_OPTIONS.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
               </div>
             </div>
             <div className="inspire-style-placeholders">
@@ -368,15 +409,26 @@ export default function InspireStyleEditor({
           </div>
           <div className="inspire-style-panel is-empty inspire-style-type-showcase">
             <div className="inspire-style-type-header">Type Preview</div>
+            <p
+              className="inspire-style-type-active"
+              style={{ fontFamily: selectedFont?.fontFamily }}
+            >
+              Quick brown fox jumps over the lazy dog
+            </p>
             <div className="inspire-style-type-rows">
               {FONT_SAMPLE_ROWS.map((row) => (
-                <p
+                <button
                   key={row.id}
-                  className="inspire-style-type-row"
+                  type="button"
+                  className={`inspire-style-type-row${
+                    selectedFontId === row.id ? " is-selected" : ""
+                  }`}
                   style={{ fontFamily: row.fontFamily }}
+                  onClick={() => setSelectedFontId(row.id)}
+                  aria-pressed={selectedFontId === row.id}
                 >
                   Quick brown fox jumps over the lazy dog
-                </p>
+                </button>
               ))}
             </div>
           </div>
