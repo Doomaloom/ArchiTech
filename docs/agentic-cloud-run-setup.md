@@ -15,6 +15,8 @@ CLOUD_TASKS_VALIDATE_QUEUE="app-gen-validate"
 CLOUD_TASKS_VALIDATE_URL="https://<app-domain>/api/agentic/tasks/validate"
 CLOUD_TASKS_FIX_QUEUE="app-gen-fix"
 CLOUD_TASKS_FIX_URL="https://<app-domain>/api/agentic/tasks/fix"
+CLOUD_TASKS_PACKAGE_QUEUE="app-gen-package"
+CLOUD_TASKS_PACKAGE_URL="https://<app-domain>/api/agentic/tasks/package"
 # Shared dispatch token checked by orchestrator callback route
 AGENTIC_ORCHESTRATOR_TOKEN="<long-random-token>"
 # Optional but recommended for private Cloud Run target auth
@@ -39,5 +41,6 @@ Notes:
 - `POST /api/agentic/tasks/integrate` handles integration-stage callbacks (currently scaffold behavior).
 - `POST /api/agentic/tasks/validate` runs `npm install` and `npm run build`; on build failure it queues fix tasks up to max rounds.
 - `POST /api/agentic/tasks/fix` currently performs scaffold fix handling and re-queues validation attempts.
+- `POST /api/agentic/tasks/package` zips workspace output, uploads to `generated-apps`, records `app_generation_artifacts`, and finalizes job status.
 - If enqueue fails, the job and initial task are marked `failed` with error details.
-- After validation succeeds, the pipeline currently stops at the package boundary until package stage wiring is implemented.
+- Completed jobs expose artifacts via `POST /api/agentic/jobs/:jobId/download`.

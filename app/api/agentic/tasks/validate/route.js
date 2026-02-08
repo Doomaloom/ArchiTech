@@ -1,6 +1,6 @@
 import { access } from "node:fs/promises";
 import { NextResponse } from "next/server";
-import { enqueueFixTask } from "../../../../_lib/gcp/cloud-tasks";
+import { enqueueFixTask, enqueuePackageTask } from "../../../../_lib/gcp/cloud-tasks";
 import { resolveWorkspaceDir, runCommand } from "../../../../_lib/agentic/runner";
 import { createSupabaseAdminClient } from "../../../../_lib/supabase/admin";
 
@@ -78,6 +78,48 @@ async function resolveOrCreateFixTask(admin, job, attemptNumber) {
 
   if (fetchError || !existing) {
     throw fetchError || new Error("Failed to resolve existing fix task.");
+  }
+
+  return existing;
+}
+
+async function resolveOrCreatePackageTask(admin, job) {
+  const { data: inserted, error: insertError } = await admin
+    .from("app_generation_tasks")
+    .insert({
+      job_id: job.id,
+      owner_id: job.owner_id,
+      task_type: "package",
+      task_key: "root",
+      status: "queued",
+      attempt_number: 1,
+      payload: {
+        stage: "zip-and-upload",
+        requestedBy: "validate",
+      },
+    })
+    .select("*")
+    .single();
+
+  if (!insertError && inserted) {
+    return inserted;
+  }
+
+  if (!isUniqueViolation(insertError)) {
+    throw insertError;
+  }
+
+  const { data: existing, error: fetchError } = await admin
+    .from("app_generation_tasks")
+    .select("*")
+    .eq("job_id", job.id)
+    .eq("task_type", "package")
+    .eq("task_key", "root")
+    .eq("attempt_number", 1)
+    .maybeSingle();
+
+  if (fetchError || !existing) {
+    throw fetchError || new Error("Failed to resolve existing package task.");
   }
 
   return existing;
@@ -285,8 +327,13 @@ export async function POST(request) {
 
     if (buildResult.ok) {
       const finishedAt = toIsoNow();
-      const packagePendingMessage =
-        "Validation succeeded. Package stage queueing is not wired yet.";
+      const packageTask = await resolveOrCreatePackageTask(admin, job);
+      const queueResult = await enqueuePackageTask({
+        type: "package",
+        jobId: job.id,
+        taskId: packageTask.id,
+        requestedAt: toIsoNow(),
+      });
 
       await admin
         .from("app_generation_tasks")
@@ -304,17 +351,33 @@ export async function POST(request) {
               ok: true,
               code: buildResult.code,
             },
+            packageTaskId: packageTask.id,
           },
         })
         .eq("id", taskId);
 
       await admin
+        .from("app_generation_tasks")
+        .update({
+          status: "queued",
+          error_message: null,
+          finished_at: null,
+          result: {
+            ...(packageTask.result || {}),
+            queueProvider: "cloud-tasks",
+            queuePath: queueResult.queuePath,
+            queueTaskName: queueResult.taskName,
+            scheduleTime: queueResult.scheduleTime,
+          },
+        })
+        .eq("id", packageTask.id);
+
+      await admin
         .from("app_generation_jobs")
         .update({
-          status: "failed",
-          current_stage: "package-pending",
-          error_message: packagePendingMessage,
-          finished_at: finishedAt,
+          status: "running",
+          current_stage: "package-queued",
+          error_message: null,
         })
         .eq("id", jobId);
 
@@ -322,16 +385,19 @@ export async function POST(request) {
         job_id: jobId,
         task_id: taskId,
         owner_id: job.owner_id,
-        level: "warn",
+        level: "info",
         stage: "validate",
-        message: packagePendingMessage,
-        meta: {},
+        message: "Validation succeeded; package task queued.",
+        meta: {
+          packageTaskId: packageTask.id,
+          queueTaskName: queueResult.taskName,
+        },
       });
 
       return NextResponse.json({
         ok: true,
-        status: "failed",
-        reason: "package-stage-not-wired",
+        status: "package-queued",
+        packageTaskId: packageTask.id,
       });
     }
 

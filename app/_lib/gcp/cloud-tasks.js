@@ -126,6 +126,27 @@ function getFixTaskUrl() {
   return url;
 }
 
+function getPackageQueueName() {
+  const queueName = firstDefinedValue([
+    process.env.CLOUD_TASKS_PACKAGE_QUEUE,
+    process.env.CLOUD_TASKS_ORCHESTRATOR_QUEUE,
+  ]);
+  if (!queueName) {
+    throw new Error(
+      "Missing CLOUD_TASKS_PACKAGE_QUEUE or CLOUD_TASKS_ORCHESTRATOR_QUEUE."
+    );
+  }
+  return queueName;
+}
+
+function getPackageTaskUrl() {
+  const url = firstDefinedValue([process.env.CLOUD_TASKS_PACKAGE_URL]);
+  if (!url) {
+    throw new Error("Missing CLOUD_TASKS_PACKAGE_URL.");
+  }
+  return url;
+}
+
 async function getGoogleAccessToken() {
   const explicitAccessToken = firstDefinedValue([process.env.GOOGLE_CLOUD_ACCESS_TOKEN]);
   if (explicitAccessToken) {
@@ -261,5 +282,13 @@ export async function enqueueFixTask(payload) {
     payload,
     queueName: getFixQueueName(),
     targetUrl: getFixTaskUrl(),
+  });
+}
+
+export async function enqueuePackageTask(payload) {
+  return enqueueTask({
+    payload,
+    queueName: getPackageQueueName(),
+    targetUrl: getPackageTaskUrl(),
   });
 }
