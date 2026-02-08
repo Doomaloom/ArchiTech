@@ -9,6 +9,8 @@ CLOUD_TASKS_ORCHESTRATOR_QUEUE="app-gen-orchestrator"
 CLOUD_TASKS_ORCHESTRATOR_URL="https://<app-domain>/api/agentic/tasks/orchestrate"
 CLOUD_TASKS_PAGE_QUEUE="app-gen-page"
 CLOUD_TASKS_PAGE_URL="https://<app-domain>/api/agentic/tasks/page"
+CLOUD_TASKS_INTEGRATE_QUEUE="app-gen-integrate"
+CLOUD_TASKS_INTEGRATE_URL="https://<app-domain>/api/agentic/tasks/integrate"
 # Shared dispatch token checked by orchestrator callback route
 AGENTIC_ORCHESTRATOR_TOKEN="<long-random-token>"
 # Optional but recommended for private Cloud Run target auth
@@ -30,5 +32,6 @@ Notes:
 - `POST /api/agentic/tasks/orchestrate` validates this token and handles idempotent callbacks.
 - Orchestrator now fans out one `page` task per page via Cloud Tasks.
 - `POST /api/agentic/tasks/page` executes a scaffold page step and updates aggregated page state.
+- `POST /api/agentic/tasks/integrate` handles integration-stage callbacks (currently scaffold behavior).
 - If enqueue fails, the job and initial task are marked `failed` with error details.
-- After all page tasks succeed, the job currently fails at the integration boundary until integration worker stages are implemented.
+- After all page tasks succeed, integration tasks are queued; current integration endpoint still stops at the validation boundary until validate/fix/package stages are implemented.

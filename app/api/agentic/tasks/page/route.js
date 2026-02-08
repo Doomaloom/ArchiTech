@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { enqueueIntegrateTask } from "../../../../_lib/gcp/cloud-tasks";
 import { createSupabaseAdminClient } from "../../../../_lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -32,6 +33,51 @@ function isDispatchAuthorized(request) {
     return providedToken && providedToken === expectedToken;
   }
   return process.env.NODE_ENV !== "production";
+}
+
+function isUniqueViolation(error) {
+  return error?.code === "23505";
+}
+
+async function resolveOrCreateIntegrateTask(admin, job) {
+  const { data: inserted, error: insertError } = await admin
+    .from("app_generation_tasks")
+    .insert({
+      job_id: job.id,
+      owner_id: job.owner_id,
+      task_type: "integrate",
+      task_key: "root",
+      status: "queued",
+      attempt_number: 1,
+      payload: {
+        stage: "integrate-routes",
+      },
+    })
+    .select("*")
+    .single();
+
+  if (!insertError && inserted) {
+    return inserted;
+  }
+
+  if (!isUniqueViolation(insertError)) {
+    throw insertError;
+  }
+
+  const { data: existing, error: fetchError } = await admin
+    .from("app_generation_tasks")
+    .select("*")
+    .eq("job_id", job.id)
+    .eq("task_type", "integrate")
+    .eq("task_key", "root")
+    .eq("attempt_number", 1)
+    .maybeSingle();
+
+  if (fetchError || !existing) {
+    throw fetchError || new Error("Failed to resolve existing integrate task.");
+  }
+
+  return existing;
 }
 
 export async function POST(request) {
@@ -206,27 +252,78 @@ export async function POST(request) {
         meta: {},
       });
     } else if (allSucceeded) {
-      const message =
-        "All page tasks completed. Integration stage is not implemented yet.";
-      await admin
-        .from("app_generation_jobs")
-        .update({
-          status: "failed",
-          current_stage: "integration-pending",
-          error_message: message,
-          finished_at: toIsoNow(),
-        })
-        .eq("id", jobId);
+      try {
+        const integrateTask = await resolveOrCreateIntegrateTask(admin, job);
+        const queueResult = await enqueueIntegrateTask({
+          type: "integrate",
+          jobId: job.id,
+          taskId: integrateTask.id,
+          requestedAt: toIsoNow(),
+        });
 
-      await admin.from("app_generation_logs").insert({
-        job_id: jobId,
-        task_id: taskId,
-        owner_id: job.owner_id,
-        level: "warn",
-        stage: "page",
-        message,
-        meta: {},
-      });
+        await admin
+          .from("app_generation_tasks")
+          .update({
+            status: "queued",
+            error_message: null,
+            finished_at: null,
+            result: {
+              ...(integrateTask.result || {}),
+              queueProvider: "cloud-tasks",
+              queuePath: queueResult.queuePath,
+              queueTaskName: queueResult.taskName,
+              scheduleTime: queueResult.scheduleTime,
+            },
+          })
+          .eq("id", integrateTask.id);
+
+        await admin
+          .from("app_generation_jobs")
+          .update({
+            status: "running",
+            current_stage: "integration-queued",
+            error_message: null,
+          })
+          .eq("id", jobId);
+
+        await admin.from("app_generation_logs").insert({
+          job_id: jobId,
+          task_id: taskId,
+          owner_id: job.owner_id,
+          level: "info",
+          stage: "page",
+          message: "All page tasks completed; integration task queued.",
+          meta: {
+            integrateTaskId: integrateTask.id,
+            queueTaskName: queueResult.taskName,
+          },
+        });
+      } catch (integrationQueueError) {
+        const message =
+          integrationQueueError?.message ||
+          "Failed to queue integration task after page completion.";
+        await admin
+          .from("app_generation_jobs")
+          .update({
+            status: "failed",
+            current_stage: "integration-queue-failed",
+            error_message: message,
+            finished_at: toIsoNow(),
+          })
+          .eq("id", jobId);
+
+        await admin.from("app_generation_logs").insert({
+          job_id: jobId,
+          task_id: taskId,
+          owner_id: job.owner_id,
+          level: "error",
+          stage: "page",
+          message: "Page stage completed but integration queue dispatch failed.",
+          meta: {
+            error: message,
+          },
+        });
+      }
     } else {
       await admin
         .from("app_generation_jobs")

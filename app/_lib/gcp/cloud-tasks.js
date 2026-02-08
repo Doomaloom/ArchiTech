@@ -63,6 +63,27 @@ function getPageTaskUrl() {
   return url;
 }
 
+function getIntegrateQueueName() {
+  const queueName = firstDefinedValue([
+    process.env.CLOUD_TASKS_INTEGRATE_QUEUE,
+    process.env.CLOUD_TASKS_ORCHESTRATOR_QUEUE,
+  ]);
+  if (!queueName) {
+    throw new Error(
+      "Missing CLOUD_TASKS_INTEGRATE_QUEUE or CLOUD_TASKS_ORCHESTRATOR_QUEUE."
+    );
+  }
+  return queueName;
+}
+
+function getIntegrateTaskUrl() {
+  const url = firstDefinedValue([process.env.CLOUD_TASKS_INTEGRATE_URL]);
+  if (!url) {
+    throw new Error("Missing CLOUD_TASKS_INTEGRATE_URL.");
+  }
+  return url;
+}
+
 async function getGoogleAccessToken() {
   const explicitAccessToken = firstDefinedValue([process.env.GOOGLE_CLOUD_ACCESS_TOKEN]);
   if (explicitAccessToken) {
@@ -174,5 +195,13 @@ export async function enqueuePageTask(payload) {
     payload,
     queueName: getPageQueueName(),
     targetUrl: getPageTaskUrl(),
+  });
+}
+
+export async function enqueueIntegrateTask(payload) {
+  return enqueueTask({
+    payload,
+    queueName: getIntegrateQueueName(),
+    targetUrl: getIntegrateTaskUrl(),
   });
 }
