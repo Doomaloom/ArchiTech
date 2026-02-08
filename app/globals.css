@@ -3906,17 +3906,6 @@ div {
   width: 38px;
   height: 166px;
   border-radius: 999px;
-  border: 1px solid rgba(var(--slider-accent-rgb), 0.24);
-  background: linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.62) 0%,
-      rgba(255, 255, 255, 0.28) 100%
-    ),
-    linear-gradient(
-      180deg,
-      rgba(var(--slider-track-rgb), 0.72) 0%,
-      rgba(var(--slider-accent-rgb), 0.18) 100%
-    );
   backdrop-filter: blur(10px);
   touch-action: none;
 }
@@ -3928,16 +3917,7 @@ div {
   bottom: 10px;
   width: 6px;
   border: 1px solid rgba(var(--slider-accent-rgb), 0.2);
-  background: linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.5) 0%,
-      rgba(255, 255, 255, 0.2) 100%
-    ),
-    linear-gradient(
-      180deg,
-      rgba(var(--slider-accent-rgb), 0.3) 0%,
-      rgba(var(--slider-accent-strong-rgb), 0.52) 100%
-    );
+  background: white;
   border-radius: 999px;
   transform: translateX(-50%);
 }
@@ -8932,7 +8912,7 @@ body:has(.inspire-shell) .imageflow-tree .react-flow__node-default.selected {
   border-radius: 12px;
   overflow: hidden;
   border: 1px solid rgba(161, 161, 170, 0.32);
-  background: rgba(244, 246, 250, 0.9);
+  background: rgb(239, 246, 255);
 }
 
 body:has(.inspire-shell) .inspire-style-slider input[type="range"],
