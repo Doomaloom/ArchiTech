@@ -802,15 +802,57 @@ body:has(.imageflow-builder):has(#imageflow-sidebar-toggle:checked)
 .workspace-home-contrib-header-icon {
   width: 22px;
   height: 22px;
+  position: relative;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(15, 23, 42, 0.34);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background: linear-gradient(
+    160deg,
+    rgba(255, 255, 255, 0.62),
+    rgba(255, 255, 255, 0.26)
+  );
+  color: rgba(15, 23, 42, 0.48);
   font-size: 9px;
   font-weight: 400;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.workspace-home-contrib-header-icon::after {
+  content: attr(data-contributor);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%) translateY(4px);
+  opacity: 0;
+  pointer-events: none;
+  white-space: nowrap;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.56) 0%,
+    rgba(255, 255, 255, 0.28) 100%
+  );
+  color: rgba(15, 23, 42, 0.72);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  padding: 6px 8px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+  transition: opacity 140ms ease, transform 140ms ease;
+  z-index: 3;
+}
+
+.workspace-home-contrib-header-icon:hover::after,
+.workspace-home-contrib-header-icon:focus-visible::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }
 
 .workspace-home-contrib-header-icon + .workspace-home-contrib-header-icon {
@@ -1019,22 +1061,6 @@ body:has(.imageflow-builder):has(#imageflow-sidebar-toggle:checked)
   gap: 8px;
 }
 
-.workspace-home-files-kicker {
-  margin: 0 0 4px;
-  font-size: 11px;
-  text-transform: none;
-  letter-spacing: 0;
-  color: #64748b;
-  font-weight: 400;
-}
-
-.workspace-home-files-sort {
-  margin: 2px 0 0;
-  font-size: 11px;
-  color: #64748b;
-  font-weight: 400;
-}
-
 .workspace-home-files-header h3 {
   margin: 0;
   font-size: 20px;
@@ -1046,8 +1072,14 @@ body:has(.imageflow-builder):has(#imageflow-sidebar-toggle:checked)
 .workspace-home-search {
   width: min(320px, 100%);
   border-radius: 999px;
-  border: 1px solid rgba(15, 23, 42, 0.18);
-  background: rgba(255, 255, 255, 0.54);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.44) 0%,
+    rgba(255, 255, 255, 0.18) 100%
+  );
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   padding: 8px 12px;
   font-size: 12px;
   color: #0f172a;
@@ -1057,8 +1089,8 @@ body:has(.imageflow-builder):has(#imageflow-sidebar-toggle:checked)
 
 .workspace-home-search:focus {
   outline: none;
-  border-color: rgba(14, 116, 144, 0.58);
-  box-shadow: 0 0 0 3px rgba(14, 116, 144, 0.15);
+  border-color: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.22);
 }
 
 .workspace-home-list {
@@ -1121,6 +1153,11 @@ body:has(.imageflow-builder):has(#imageflow-sidebar-toggle:checked)
   border-color: rgba(255, 255, 255, 0.9);
   transform: none;
   background: rgba(255, 255, 255, 0.18);
+}
+
+.workspace-home-list-item.is-selected {
+  border-color: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.26);
 }
 
 .workspace-home-list-top,

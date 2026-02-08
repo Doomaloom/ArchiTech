@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -63,30 +63,78 @@ const PROJECT_FOLDERS = [
   },
 ];
 
-const CONTRIBUTION_TIMELINE_DATA = [
-  { year: "2017", concept: 52, production: 94, quality: 136 },
-  { year: "2018", concept: 68, production: 104, quality: 148 },
-  { year: "2019", concept: 74, production: 116, quality: 132 },
-  { year: "2020", concept: 60, production: 96, quality: 156 },
-  { year: "2021", concept: 82, production: 90, quality: 126 },
-  { year: "2022", concept: 92, production: 110, quality: 144 },
-  { year: "2023", concept: 88, production: 124, quality: 138 },
-  { year: "2024", concept: 108, production: 132, quality: 166 },
-];
+const TIMELINE_YEARS = ["2017", "2018", "2019", "2020", "2021", "2022", "2023", "2024"];
 
-const CONTRIBUTOR_ICONS = [
+const CONTRIBUTOR_POOL = [
   { id: "ys", name: "Yassine", initials: "YS" },
   { id: "dk", name: "Dina", initials: "DK" },
   { id: "jt", name: "Jules", initials: "JT" },
   { id: "mk", name: "Mika", initials: "MK" },
   { id: "al", name: "Alex", initials: "AL" },
+  { id: "rp", name: "Rafa", initials: "RP" },
+  { id: "sn", name: "Sana", initials: "SN" },
+  { id: "lb", name: "Liam", initials: "LB" },
 ];
 
-const CONTRIBUTION_STATS = [
-  { label: "Commits", value: "146", delta: "+18%" },
-  { label: "Velocity", value: "24.8", delta: "+9%" },
-  { label: "Reviews", value: "39", delta: "+12%" },
-];
+const toWorkflowBoost = (workflow) => (workflow === "inspire" ? 8 : 12);
+
+const toProjectSeed = (projectId) =>
+  projectId.split("").reduce((total, char) => total + char.charCodeAt(0), 0);
+
+const buildContributionTimeline = (project) => {
+  const seed = toProjectSeed(project.id);
+  const fileBase = project.files * 2;
+  const workflowBoost = toWorkflowBoost(project.workflow);
+  const conceptAmplitude = 8 + (seed % 11);
+  const productionAmplitude = 12 + (seed % 7);
+  const qualityAmplitude = 16 + (seed % 9);
+  const conceptPhase = seed % 3;
+  const productionPhase = (seed + 1) % 4;
+  const qualityPhase = (seed + 2) % 5;
+  return TIMELINE_YEARS.map((year, index) => {
+    const indexBoost = index * (3 + (seed % 3));
+    const conceptWave = ((index + conceptPhase) % 2 === 0 ? 1 : -1) * conceptAmplitude;
+    const productionWave =
+      ((index + productionPhase) % 3 === 0 ? 1 : -1) * productionAmplitude;
+    const qualityWave =
+      ((index + qualityPhase) % 4 < 2 ? 1 : -1) * qualityAmplitude;
+    return {
+      year,
+      concept: 50 + fileBase + indexBoost + conceptWave,
+      production: 76 + fileBase + workflowBoost + indexBoost + productionWave,
+      quality: 104 + fileBase + workflowBoost + indexBoost + qualityWave,
+    };
+  });
+};
+
+const buildContributionStats = (project) => {
+  const workflowBoost = toWorkflowBoost(project.workflow);
+  const commits = project.files * 6 + workflowBoost;
+  const velocity = (project.files * 1.2 + workflowBoost / 2).toFixed(1);
+  const reviews = Math.max(12, Math.round(project.files * 1.7 + workflowBoost));
+  return [
+    { label: "Commits", value: String(commits), delta: `+${14 + project.files}%` },
+    { label: "Velocity", value: velocity, delta: `+${7 + workflowBoost / 2}%` },
+    { label: "Reviews", value: String(reviews), delta: `+${9 + Math.round(project.files / 3)}%` },
+  ];
+};
+
+const buildContributors = (project) => {
+  const charCodeSum = project.id
+    .split("")
+    .reduce((total, char) => total + char.charCodeAt(0), 0);
+  const startIndex = charCodeSum % CONTRIBUTOR_POOL.length;
+  const contributorCount = 2 + (charCodeSum % 4);
+  return Array.from({ length: contributorCount }, (_, offset) => {
+    const contributor = CONTRIBUTOR_POOL[
+      (startIndex + offset) % CONTRIBUTOR_POOL.length
+    ];
+    return {
+      ...contributor,
+      projectScopedId: `${project.id}-${contributor.id}`,
+    };
+  });
+};
 
 const formatUpdatedAt = (isoValue) => {
   const date = new Date(isoValue);
@@ -128,6 +176,7 @@ export default function WorkspaceHomeDashboard({
   onOpenProject,
 }) {
   const [searchValue, setSearchValue] = useState("");
+  const [selectedProjectId, setSelectedProjectId] = useState(PROJECT_FOLDERS[0].id);
 
   const filteredProjects = useMemo(() => {
     const query = searchValue.trim().toLowerCase();
@@ -146,6 +195,41 @@ export default function WorkspaceHomeDashboard({
         new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime()
     );
   }, [searchValue]);
+
+  useEffect(() => {
+    if (!filteredProjects.length) {
+      return;
+    }
+    const hasSelected = filteredProjects.some(
+      (project) => project.id === selectedProjectId
+    );
+    if (!hasSelected) {
+      setSelectedProjectId(filteredProjects[0].id);
+    }
+  }, [filteredProjects, selectedProjectId]);
+
+  const selectedProject = useMemo(
+    () =>
+      filteredProjects.find((project) => project.id === selectedProjectId) ??
+      PROJECT_FOLDERS.find((project) => project.id === selectedProjectId) ??
+      PROJECT_FOLDERS[0],
+    [filteredProjects, selectedProjectId]
+  );
+
+  const contributionTimelineData = useMemo(
+    () => buildContributionTimeline(selectedProject),
+    [selectedProject]
+  );
+
+  const contributionStats = useMemo(
+    () => buildContributionStats(selectedProject),
+    [selectedProject]
+  );
+
+  const projectContributors = useMemo(
+    () => buildContributors(selectedProject),
+    [selectedProject]
+  );
 
   return (
     <div className="imageflow-shell workspace-home-shell">
@@ -187,12 +271,14 @@ export default function WorkspaceHomeDashboard({
                 <div className="workspace-home-contrib-people" aria-label="Contributors">
                   <span className="workspace-home-contrib-people-label">Contributors</span>
                   <span className="workspace-home-contrib-header-icons">
-                    {CONTRIBUTOR_ICONS.map((contributor) => (
+                    {projectContributors.map((contributor) => (
                       <span
-                        key={contributor.id}
+                        key={contributor.projectScopedId}
                         className="workspace-home-contrib-header-icon"
+                        data-contributor={contributor.name}
                         title={contributor.name}
                         aria-label={contributor.name}
+                        tabIndex={0}
                       >
                         {contributor.initials}
                       </span>
@@ -206,21 +292,24 @@ export default function WorkspaceHomeDashboard({
                   <div className="workspace-home-time-graph" role="img" aria-label="Contribution timeline area chart">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart
-                        data={CONTRIBUTION_TIMELINE_DATA}
+                        data={contributionTimelineData}
                         margin={{ top: 18, right: 14, left: 0, bottom: 16 }}
                       >
                         <defs>
                           <linearGradient id="glassConceptFill" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="rgba(255,255,255,0.36)" />
-                            <stop offset="100%" stopColor="rgba(255,255,255,0.08)" />
+                            <stop offset="0%" stopColor="rgba(255,255,255,0.62)" />
+                            <stop offset="55%" stopColor="rgba(255,255,255,0.34)" />
+                            <stop offset="100%" stopColor="rgba(255,255,255,0.14)" />
                           </linearGradient>
                           <linearGradient id="glassProductionFill" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="rgba(255,255,255,0.28)" />
+                            <stop offset="0%" stopColor="rgba(255,255,255,0.34)" />
+                            <stop offset="55%" stopColor="rgba(255,255,255,0.18)" />
                             <stop offset="100%" stopColor="rgba(255,255,255,0.06)" />
                           </linearGradient>
                           <linearGradient id="glassQualityFill" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="rgba(255,255,255,0.22)" />
-                            <stop offset="100%" stopColor="rgba(255,255,255,0.05)" />
+                            <stop offset="0%" stopColor="rgba(255,255,255,0.16)" />
+                            <stop offset="55%" stopColor="rgba(255,255,255,0.08)" />
+                            <stop offset="100%" stopColor="rgba(255,255,255,0.02)" />
                           </linearGradient>
                         </defs>
                         <CartesianGrid stroke="rgba(255,255,255,0.22)" strokeDasharray="2 6" vertical={false} />
@@ -270,7 +359,7 @@ export default function WorkspaceHomeDashboard({
                 </div>
 
                 <div className="workspace-home-contrib-stats" role="list">
-                  {CONTRIBUTION_STATS.map((stat) => (
+                  {contributionStats.map((stat) => (
                     <div key={stat.label} className="workspace-home-contrib-stat" role="listitem">
                       <span className="workspace-home-contrib-stat-label">{stat.label}</span>
                       <strong className="workspace-home-contrib-stat-value">{stat.value}</strong>
@@ -285,9 +374,7 @@ export default function WorkspaceHomeDashboard({
           <div className="workspace-home-files">
             <div className="workspace-home-files-header">
               <div>
-                <p className="workspace-home-files-kicker">Existing files</p>
                 <h3>Recent projects</h3>
-                <p className="workspace-home-files-sort">Newest updates first</p>
               </div>
               <input
                 className="workspace-home-search"
@@ -301,10 +388,14 @@ export default function WorkspaceHomeDashboard({
               {filteredProjects.map((project) => (
                 <button
                   key={project.id}
-                  className="workspace-home-list-item"
+                  className={`workspace-home-list-item${
+                    project.id === selectedProjectId ? " is-selected" : ""
+                  }`}
                   type="button"
-                  onClick={() => onOpenProject?.(project)}
+                  onClick={() => setSelectedProjectId(project.id)}
+                  onDoubleClick={() => onOpenProject?.(project)}
                   role="listitem"
+                  title="Click to drive stats, double-click to open project"
                 >
                   <span className="workspace-home-list-top">
                     <span className="workspace-home-project-cell">
