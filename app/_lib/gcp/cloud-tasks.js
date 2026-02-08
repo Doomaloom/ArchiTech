@@ -42,6 +42,27 @@ function getOrchestratorUrl() {
   return url;
 }
 
+function getPageQueueName() {
+  const queueName = firstDefinedValue([
+    process.env.CLOUD_TASKS_PAGE_QUEUE,
+    process.env.CLOUD_TASKS_ORCHESTRATOR_QUEUE,
+  ]);
+  if (!queueName) {
+    throw new Error(
+      "Missing CLOUD_TASKS_PAGE_QUEUE or CLOUD_TASKS_ORCHESTRATOR_QUEUE."
+    );
+  }
+  return queueName;
+}
+
+function getPageTaskUrl() {
+  const url = firstDefinedValue([process.env.CLOUD_TASKS_PAGE_URL]);
+  if (!url) {
+    throw new Error("Missing CLOUD_TASKS_PAGE_URL.");
+  }
+  return url;
+}
+
 async function getGoogleAccessToken() {
   const explicitAccessToken = firstDefinedValue([process.env.GOOGLE_CLOUD_ACCESS_TOKEN]);
   if (explicitAccessToken) {
@@ -76,18 +97,16 @@ function buildQueuePath(projectId, location, queueName) {
   return `projects/${projectId}/locations/${location}/queues/${queueName}`;
 }
 
-export async function enqueueOrchestratorTask(payload) {
+async function enqueueTask({ payload, queueName, targetUrl }) {
   const projectId = getCloudProjectId();
   const location = getCloudTasksLocation();
-  const queueName = getOrchestratorQueueName();
-  const orchestratorUrl = getOrchestratorUrl();
   const serviceAccountEmail = firstDefinedValue([
     process.env.CLOUD_TASKS_SERVICE_ACCOUNT_EMAIL,
   ]);
   const dispatchToken = firstDefinedValue([process.env.AGENTIC_ORCHESTRATOR_TOKEN]);
   const oidcAudience = firstDefinedValue([
     process.env.CLOUD_TASKS_OIDC_AUDIENCE,
-    orchestratorUrl,
+    targetUrl,
   ]);
 
   const queuePath = buildQueuePath(projectId, location, queueName);
@@ -96,7 +115,7 @@ export async function enqueueOrchestratorTask(payload) {
 
   const httpRequest = {
     httpMethod: "POST",
-    url: orchestratorUrl,
+    url: targetUrl,
     headers: {
       "Content-Type": "application/json",
       ...(dispatchToken ? { "X-Agentic-Token": dispatchToken } : {}),
@@ -140,4 +159,20 @@ export async function enqueueOrchestratorTask(payload) {
     queuePath,
     scheduleTime: payloadResponse?.scheduleTime || null,
   };
+}
+
+export async function enqueueOrchestratorTask(payload) {
+  return enqueueTask({
+    payload,
+    queueName: getOrchestratorQueueName(),
+    targetUrl: getOrchestratorUrl(),
+  });
+}
+
+export async function enqueuePageTask(payload) {
+  return enqueueTask({
+    payload,
+    queueName: getPageQueueName(),
+    targetUrl: getPageTaskUrl(),
+  });
 }

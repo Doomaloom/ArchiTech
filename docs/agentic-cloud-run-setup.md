@@ -7,6 +7,8 @@ GCP_PROJECT_ID="<gcp-project-id>"
 CLOUD_TASKS_LOCATION="<region>"
 CLOUD_TASKS_ORCHESTRATOR_QUEUE="app-gen-orchestrator"
 CLOUD_TASKS_ORCHESTRATOR_URL="https://<app-domain>/api/agentic/tasks/orchestrate"
+CLOUD_TASKS_PAGE_QUEUE="app-gen-page"
+CLOUD_TASKS_PAGE_URL="https://<app-domain>/api/agentic/tasks/page"
 # Shared dispatch token checked by orchestrator callback route
 AGENTIC_ORCHESTRATOR_TOKEN="<long-random-token>"
 # Optional but recommended for private Cloud Run target auth
@@ -26,5 +28,7 @@ Notes:
 - `POST /api/agentic/jobs` now creates DB records and enqueues one orchestrator task in Cloud Tasks.
 - Queue dispatch adds `X-Agentic-Token` if `AGENTIC_ORCHESTRATOR_TOKEN` is set.
 - `POST /api/agentic/tasks/orchestrate` validates this token and handles idempotent callbacks.
+- Orchestrator now fans out one `page` task per page via Cloud Tasks.
+- `POST /api/agentic/tasks/page` executes a scaffold page step and updates aggregated page state.
 - If enqueue fails, the job and initial task are marked `failed` with error details.
-- Current orchestrator endpoint is scaffold-only and marks the job failed with a clear not-implemented message after callback receipt.
+- After all page tasks succeed, the job currently fails at the integration boundary until integration worker stages are implemented.
