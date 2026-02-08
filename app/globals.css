@@ -425,9 +425,9 @@ body:has(.imageflow-builder):not(:has(#imageflow-sidebar-toggle:checked))
   width: 34px;
   height: 18px;
   border-radius: 999px;
-  border: 1px solid rgba(251, 146, 60, 0.34);
-  background: rgba(255, 237, 213, 0.66);
-  box-shadow: 0 8px 16px rgba(194, 65, 12, 0.08);
+  border: 1px solid rgba(var(--slider-accent-rgb), 0.34);
+  background: rgba(var(--slider-track-rgb), 0.66);
+  box-shadow: 0 8px 16px rgba(var(--slider-accent-strong-rgb), 0.08);
   position: relative;
   align-items: center;
   justify-content: center;
@@ -467,8 +467,8 @@ body:has(.imageflow-builder):not(:has(#imageflow-sidebar-toggle:checked))
   left: 1px;
   width: 14px;
   border-radius: 999px;
-  background: rgba(255, 247, 237, 0.94);
-  border: 1px solid rgba(251, 146, 60, 0.46);
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(var(--slider-accent-rgb), 0.46);
   transition: transform 180ms ease;
 }
 
@@ -478,7 +478,7 @@ body:has(.imageflow-builder):not(:has(#imageflow-sidebar-toggle:checked))
 }
 
 .imageflow-sidebar-toggle-input:focus-visible + .imageflow-sidebar-toggle-track {
-  outline: 2px solid rgba(251, 146, 60, 0.36);
+  outline: 2px solid rgba(var(--slider-accent-rgb), 0.36);
   outline-offset: 2px;
 }
 
@@ -486,7 +486,7 @@ body:has(.imageflow-builder):not(:has(#imageflow-sidebar-toggle:checked))
   width: 6px;
   height: 6px;
   border-radius: 999px;
-  background: rgba(234, 88, 12, 0.52);
+  background: rgba(var(--slider-accent-strong-rgb), 0.52);
 }
 
 .imageflow-sidebar-toggle-block {
@@ -638,7 +638,7 @@ body:has(.workspace-home-shell)
   font-weight: 600;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: rgba(180, 83, 9, 0.9);
+  color: rgba(var(--slider-text-rgb), 0.9);
 }
 
 .imageflow-sidebar-toggle-label .is-tools,
@@ -8261,16 +8261,6 @@ body:has(.inspire-shell) {
 body:has(.inspire-shell) .rail-button.is-active {
   border-color: rgba(var(--inspire-accent-rgb), 0.5);
   color: rgb(var(--inspire-accent-strong-rgb));
-}
-
-body:has(.inspire-shell) .imageflow-sidebar-toggle {
-  border-color: rgba(var(--inspire-accent-rgb), 0.34);
-  background: rgba(var(--inspire-accent-soft-rgb), 0.66);
-  box-shadow: 0 8px 16px rgba(var(--inspire-accent-strong-rgb), 0.08);
-}
-
-body:has(.inspire-shell) .imageflow-sidebar-toggle-dot {
-  background: rgba(var(--inspire-accent-strong-rgb), 0.52);
 }
 
 body:has(.inspire-shell) .imageflow-tree-toggle input {
