@@ -4,11 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const navItems = [
-  { label: "Image to Site", href: "/image-to-site" },
-  { label: "Tech Stack", href: "/" },
-  { label: "Architecture", href: "/page2" },
-  { label: "UML", href: "/page3" },
-  { label: "Code", href: "/page4" },
+  { label: "Workspace", href: "/" },
+  { label: "Build", href: "/build" },
 ];
 
 const isActiveRoute = (pathname, href) => {

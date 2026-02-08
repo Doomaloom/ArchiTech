@@ -977,6 +977,168 @@ body:has(.imageflow-builder):has(#imageflow-sidebar-toggle:checked)
   font-size: 12px;
 }
 
+.build-shell {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  min-height: calc(100vh - 160px);
+  padding: 18px;
+}
+
+.build-panel {
+  width: min(1120px, 100%);
+  border-radius: 20px;
+  border: 1px solid rgba(99, 116, 165, 0.38);
+  background: linear-gradient(150deg, rgba(27, 34, 54, 0.94), rgba(20, 26, 43, 0.92));
+  box-shadow: 0 22px 56px rgba(5, 7, 15, 0.32);
+  padding: 22px;
+  display: grid;
+  gap: 16px;
+}
+
+.build-header h1 {
+  margin: 6px 0 8px;
+  font-size: 24px;
+  line-height: 1.25;
+  color: rgba(244, 248, 255, 0.95);
+}
+
+.build-header p {
+  margin: 0;
+  color: rgba(194, 204, 230, 0.88);
+  font-size: 14px;
+}
+
+.build-kicker {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(142, 167, 232, 0.95);
+}
+
+.build-page-list {
+  display: grid;
+  gap: 12px;
+}
+
+.build-page-card {
+  border: 1px solid rgba(97, 114, 168, 0.34);
+  border-radius: 14px;
+  padding: 14px;
+  background: rgba(19, 24, 39, 0.82);
+  display: grid;
+  gap: 10px;
+}
+
+.build-page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.build-page-head strong {
+  display: block;
+  font-size: 15px;
+  color: rgba(242, 247, 255, 0.94);
+}
+
+.build-page-head span {
+  font-size: 12px;
+  color: rgba(154, 172, 221, 0.9);
+}
+
+.build-page-meta {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(183, 196, 228, 0.9);
+}
+
+.build-select {
+  border-radius: 10px;
+  border: 1px solid rgba(93, 113, 170, 0.48);
+  background: rgba(23, 31, 53, 0.9);
+  color: rgba(235, 243, 255, 0.95);
+  font-size: 13px;
+  padding: 8px 10px;
+  min-width: 210px;
+}
+
+.build-preview-wrap {
+  border: 1px solid rgba(84, 104, 160, 0.33);
+  border-radius: 10px;
+  overflow: hidden;
+  min-height: 220px;
+  background: rgba(10, 14, 25, 0.88);
+}
+
+.build-preview-frame {
+  width: 100%;
+  height: 260px;
+  border: 0;
+  background: #fff;
+}
+
+.build-preview-empty {
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+  color: rgba(170, 184, 221, 0.78);
+  font-size: 13px;
+}
+
+.build-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.build-button {
+  border: 1px solid rgba(99, 121, 183, 0.5);
+  border-radius: 11px;
+  background: linear-gradient(135deg, rgba(77, 111, 220, 0.92), rgba(88, 127, 238, 0.88));
+  color: #f6f9ff;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 9px 14px;
+  cursor: pointer;
+}
+
+.build-button.is-secondary {
+  background: rgba(33, 47, 81, 0.9);
+}
+
+.build-button:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.build-job-card {
+  border-radius: 12px;
+  border: 1px solid rgba(95, 112, 160, 0.38);
+  background: rgba(18, 24, 41, 0.85);
+  padding: 12px;
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+  color: rgba(189, 201, 232, 0.92);
+}
+
+.build-status {
+  margin: 0;
+  color: rgba(150, 182, 240, 0.94);
+  font-size: 13px;
+}
+
+.build-error {
+  margin: 0;
+  color: rgba(255, 153, 153, 0.95);
+  font-size: 13px;
+}
+
 .landing-shell {
   min-height: 100vh;
   display: grid;
