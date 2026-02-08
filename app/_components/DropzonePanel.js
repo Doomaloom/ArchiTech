@@ -1,5 +1,4 @@
 import { useImageToSite } from "./../_context/image-to-site-context";
-import MediaControls from "./MediaControls";
 import CodeEditorView from "./views/CodeEditorView";
 import IterateView from "./views/IterateView";
 import NodesView from "./views/NodesView";
@@ -30,9 +29,6 @@ export default function DropzonePanel() {
         <BuilderView />
       ) : (
         <>
-          {derived.isIterationMode || state.viewMode === "nodes" ? null : (
-            <MediaControls showZoomControl={!derived.isPreviewMode} />
-          )}
           {state.viewMode === "nodes" ? (
             <NodesView />
           ) : state.viewMode === "preview" ? (
