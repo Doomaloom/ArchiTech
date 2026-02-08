@@ -1,15 +1,23 @@
-"use client";
+import AppShell from "./components/app-shell";
+import LandingPage from "./_components/landing-page";
+import WorkspaceHome from "./_components/workspace-home";
+import { createServerSupabaseClient } from "./_lib/supabase/server";
 
-import InspireView from "./_components/InspireView";
-import ImageToSiteView from "./_components/ImageToSiteView";
-import { useWorkflow } from "./_context/workflow-context";
+export const dynamic = "force-dynamic";
 
-export default function ImageToSitePage() {
-  const { workflowMode } = useWorkflow();
+export default async function HomePage() {
+  const supabase = await createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (workflowMode === "inspire") {
-    return <InspireView />;
+  if (!user) {
+    return <LandingPage />;
   }
 
-  return <ImageToSiteView />;
+  return (
+    <AppShell>
+      <WorkspaceHome />
+    </AppShell>
+  );
 }

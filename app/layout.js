@@ -1,6 +1,5 @@
 import "./globals.css";
 import { Sora } from "next/font/google";
-import AppShell from "./components/app-shell";
 
 const sora = Sora({
   subsets: ["latin"],
@@ -16,9 +15,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className={sora.className}>
-        <AppShell>{children}</AppShell>
-      </body>
+      <body className={sora.className}>{children}</body>
     </html>
   );
 }

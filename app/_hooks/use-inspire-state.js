@@ -516,6 +516,77 @@ export default function useInspireState() {
     treeRoot,
   ]);
 
+  const hydrateWorkspace = useCallback((snapshot = {}) => {
+    if (!snapshot || typeof snapshot !== "object") {
+      return;
+    }
+
+    const nextBrief = snapshot.brief && typeof snapshot.brief === "object"
+      ? snapshot.brief
+      : DEFAULT_BRIEF;
+    setBrief({
+      title: nextBrief.title?.toString() || "",
+      name: nextBrief.name?.toString() || "",
+      details: nextBrief.details?.toString() || "",
+      audience: nextBrief.audience?.toString() || "",
+      goals: nextBrief.goals?.toString() || "",
+    });
+
+    const nextIdeas = Array.isArray(snapshot.styleIdeas)
+      ? snapshot.styleIdeas.map(normalizeStyleIdea)
+      : [];
+    setStyleIdeas(nextIdeas);
+
+    const selectedFromSnapshot = snapshot.selectedStyle
+      ? normalizeStyleIdea(snapshot.selectedStyle, 0)
+      : null;
+    if (selectedFromSnapshot) {
+      setSelectedStyle(selectedFromSnapshot);
+    } else if (nextIdeas.length) {
+      setSelectedStyle(nextIdeas[0]);
+    } else {
+      setSelectedStyle(null);
+    }
+
+    setTree(snapshot.tree ?? null);
+    setSelectedNodeId(snapshot.selectedNodeId?.toString() || null);
+
+    const nextPreviewCount = clampNumber(Number(snapshot.previewCount) || 3, 1, 6);
+    setPreviewCount(nextPreviewCount);
+    const nextPreviewItems = Array.isArray(snapshot.previewItems)
+      ? snapshot.previewItems.slice(0, nextPreviewCount)
+      : [];
+    setPreviewItems(nextPreviewItems);
+    setSelectedPreviewIndex(
+      clampNumber(
+        Number(snapshot.selectedPreviewIndex) || 0,
+        0,
+        Math.max(nextPreviewItems.length - 1, 0)
+      )
+    );
+
+    setPreviewMode(snapshot.previewMode === "html" ? "html" : "image");
+    setModelQuality(snapshot.modelQuality === "pro" ? "pro" : "flash");
+    setCreativityValue(
+      clampNumber(Number(snapshot.creativityValue) || 45, 0, 100)
+    );
+    setWorkspaceNote(snapshot.workspaceNote?.toString() || "");
+    setWorkspaceMask(
+      snapshot.workspaceMask && typeof snapshot.workspaceMask === "object"
+        ? snapshot.workspaceMask
+        : null
+    );
+
+    setPreviewError("");
+    setStyleError("");
+    setTreeError("");
+    setIsGeneratingStyles(false);
+    setIsGeneratingTree(false);
+    setIsGeneratingPreviews(false);
+    setIsApplyingMaskEdit(false);
+    setIsFinalizingPreview(false);
+  }, []);
+
   const actions = useMemo(
     () => ({
       updateBrief,
@@ -534,6 +605,7 @@ export default function useInspireState() {
       setWorkspaceNote,
       setWorkspaceMask,
       setSelectedStyle,
+      hydrateWorkspace,
     }),
     [
       applyMaskEdit,
@@ -551,6 +623,7 @@ export default function useInspireState() {
       setSelectedStyle,
       setWorkspaceMask,
       setWorkspaceNote,
+      hydrateWorkspace,
       updateBrief,
     ]
   );
