@@ -77,6 +77,7 @@ export default function useProjectAutosave({
       },
       inspire: {
         brief: inspireState.brief ?? null,
+        ideaContext: inspireState.ideaContext ?? null,
         styleIdeas: Array.isArray(inspireState.styleIdeas)
           ? inspireState.styleIdeas
           : [],
@@ -109,6 +110,7 @@ export default function useProjectAutosave({
       imageState.title,
       imageState.viewMode,
       inspireState.brief,
+      inspireState.ideaContext,
       inspireState.creativityValue,
       inspireState.modelQuality,
       inspireState.previewCount,

@@ -118,7 +118,8 @@ export const getTextSnapshot = (element) => {
     lineHeight: roundValue(lineHeight),
     letterSpacing: roundValue(letterSpacing),
     fontWeight: computed.fontWeight || "500",
-    fontFamily: computed.fontFamily || "system-ui, sans-serif",
+    fontFamily:
+      computed.fontFamily || "Arial, 'Helvetica Neue', Helvetica, sans-serif",
     textAlign: computed.textAlign || "left",
     textTransform: computed.textTransform || "none",
     color: normalizeColor(computed.color),

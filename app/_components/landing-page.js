@@ -4,11 +4,11 @@ export default function LandingPage() {
   return (
     <main className="landing-shell">
       <section className="landing-panel">
-        <p className="landing-kicker">ArchiTech</p>
+        <p className="landing-kicker proto-wordmark">ProtoBop</p>
         <h1>Turn visual ideas into production-ready site flows.</h1>
         <p>
           Generate structure, preview variants, iterate in the visual editor, and
-          ship code with a private project history.
+          ship code with private project history in ProtoBop.
         </p>
         <div className="landing-actions">
           <Link className="landing-button" href="/login">

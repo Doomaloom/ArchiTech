@@ -21,9 +21,9 @@ export default async function LoginPage({ searchParams }) {
   return (
     <main className="landing-shell">
       <section className="landing-panel">
-        <p className="landing-kicker">Welcome back</p>
-        <h1>Sign in to continue.</h1>
-        <p>Google OAuth is required to access your private projects.</p>
+        <p className="landing-kicker proto-wordmark">ProtoBop</p>
+        <h1>Sign in to ProtoBop.</h1>
+        <p>Continue with Google to access your private ProtoBop projects.</p>
         {error ? <p className="landing-error">{error}</p> : null}
         <div className="landing-actions">
           <Link
@@ -33,7 +33,7 @@ export default async function LoginPage({ searchParams }) {
             Continue with Google
           </Link>
           <Link className="landing-link" href="/">
-            Back to landing
+            Back to ProtoBop
           </Link>
         </div>
       </section>

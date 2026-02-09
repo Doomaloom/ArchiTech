@@ -1,5 +1,5 @@
 export const DEMO_PAGES = [
-  { id: "page-home", label: "Google Home", position: { x: 260, y: 20 } },
+  { id: "page-home", label: "ProtoBop Home", position: { x: 260, y: 20 } },
   { id: "page-search", label: "Search Results", position: { x: 40, y: 140 } },
   { id: "page-images", label: "Images", position: { x: 260, y: 140 } },
   { id: "page-maps", label: "Maps", position: { x: 480, y: 140 } },

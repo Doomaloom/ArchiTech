@@ -1,7 +1,7 @@
 /** @type {import("./code-types").CodeFileGroup[]} */
 export const CODE_FILE_GROUPS = [
   {
-    label: "gem-studio",
+    label: "protobop",
     items: [
       { id: "src/app/layout.tsx", label: "layout.tsx", language: "typescript" },
       { id: "src/app/page.tsx", label: "page.tsx", language: "typescript" },
@@ -23,7 +23,7 @@ export const CODE_FILE_GROUPS = [
 /** @type {Record<string, string>} */
 export const INITIAL_CODE_CONTENTS = {
   "src/app/layout.tsx": `export const metadata = {
-  title: "Gem Studio",
+  title: "ProtoBop",
   description: "Generated from your upload.",
 };
 
@@ -50,7 +50,7 @@ export default function Page() {
 export function Hero() {
   return (
     <section className="hero">
-      <h1>Build faster with Gem Studio</h1>
+      <h1>Build faster with ProtoBop</h1>
       <p>Convert layouts into clean, production-ready UI.</p>
       <Button>Start building</Button>
     </section>
@@ -79,7 +79,7 @@ export function Hero() {
 
 body {
   margin: 0;
-  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
   background: #f8fafc;
   color: #0f172a;
 }
@@ -97,7 +97,7 @@ body {
 }
 `,
   "config/site.json": `{
-  "brand": "Gem Studio",
+  "brand": "ProtoBop",
   "cta": "Start building",
   "layout": "landing"
 }
@@ -109,11 +109,17 @@ body {
 }
 `,
   "public/logo.svg": `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="32" cy="32" r="28" fill="#f97316" />
-  <path d="M20 36l8-16 8 16 8-16" fill="none" stroke="#fff7ed" stroke-width="4" />
+  <defs>
+    <linearGradient id="pb" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#f97316" />
+    </linearGradient>
+  </defs>
+  <circle cx="32" cy="32" r="28" fill="url(#pb)" />
+  <path d="M20 36l8-16 8 16 8-16" fill="none" stroke="#ffffff" stroke-width="4" />
 </svg>
 `,
-  "README.md": `# Gem Studio
+  "README.md": `# ProtoBop
 
 Sample project with a nested tree to preview file navigation.
 `,

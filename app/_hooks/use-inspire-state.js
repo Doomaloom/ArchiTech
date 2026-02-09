@@ -11,6 +11,15 @@ const DEFAULT_BRIEF = {
   goals: "",
 };
 
+const DEFAULT_IDEA_CONTEXT = {
+  category: "",
+  audience: "",
+  coreValue: "",
+  heroSection: "",
+  primaryConversion: "",
+  answers: [],
+};
+
 const clampNumber = (value, min, max) =>
   Math.min(Math.max(value, min), max);
 
@@ -25,6 +34,42 @@ const normalizeList = (value) => {
   }
   const text = value.toString().trim();
   return text ? [text] : [];
+};
+
+const normalizeIdeaAnswer = (answer, index) => {
+  if (!answer || typeof answer !== "object") {
+    return null;
+  }
+  const questionId = answer.questionId?.toString().trim();
+  const question = answer.question?.toString().trim();
+  const answerId = answer.answerId?.toString().trim();
+  const answerLabel = answer.answerLabel?.toString().trim();
+  if (!question && !answerLabel) {
+    return null;
+  }
+  return {
+    id: answer.id?.toString().trim() || `answer-${index + 1}`,
+    questionId: questionId || "",
+    question: question || "",
+    answerId: answerId || "",
+    answerLabel: answerLabel || "",
+  };
+};
+
+const normalizeIdeaContext = (value) => {
+  if (!value || typeof value !== "object") {
+    return { ...DEFAULT_IDEA_CONTEXT };
+  }
+  return {
+    category: value.category?.toString().trim() || "",
+    audience: value.audience?.toString().trim() || "",
+    coreValue: value.coreValue?.toString().trim() || "",
+    heroSection: value.heroSection?.toString().trim() || "",
+    primaryConversion: value.primaryConversion?.toString().trim() || "",
+    answers: Array.isArray(value.answers)
+      ? value.answers.map(normalizeIdeaAnswer).filter(Boolean)
+      : [],
+  };
 };
 
 const normalizeStyleIdea = (style, index) => {
@@ -141,7 +186,7 @@ const toNodeSnapshot = (node) => {
 
 const buildNodeContextFromTree = (root, nodeId) => {
   if (!root || !nodeId) {
-    return { node: null, parent: null, children: [], path: [] };
+    return { node: null, parent: null, children: [], siblings: [], path: [] };
   }
   let found = null;
   let foundParent = null;
@@ -169,13 +214,19 @@ const buildNodeContextFromTree = (root, nodeId) => {
 
   walk(root, null, []);
   if (!found) {
-    return { node: null, parent: null, children: [], path: [] };
+    return { node: null, parent: null, children: [], siblings: [], path: [] };
   }
+  const nodeSnapshot = toNodeSnapshot(found);
   const children = getTreeChildren(found).map(toNodeSnapshot).filter(Boolean);
+  const siblings = getTreeChildren(foundParent)
+    .map(toNodeSnapshot)
+    .filter(Boolean)
+    .filter((entry) => entry.id !== nodeSnapshot?.id);
   return {
-    node: toNodeSnapshot(found),
+    node: nodeSnapshot,
     parent: toNodeSnapshot(foundParent),
     children,
+    siblings,
     path: foundPath.map(toNodeSnapshot).filter(Boolean),
   };
 };
@@ -235,6 +286,7 @@ const resolveDefaultSelectedNodeId = (root) => {
 export default function useInspireState() {
   const initialOfflineTreeRef = useRef(createOfflineTree());
   const [brief, setBrief] = useState(DEFAULT_BRIEF);
+  const [ideaContext, setIdeaContext] = useState(DEFAULT_IDEA_CONTEXT);
   const [styleIdeas, setStyleIdeas] = useState([]);
   const [selectedStyle, setSelectedStyle] = useState(null);
   const [isGeneratingStyles, setIsGeneratingStyles] = useState(false);
@@ -374,7 +426,7 @@ export default function useInspireState() {
       setPreviewError("");
       handleSetSelectedNodeId(resolveDefaultSelectedNodeId(fallbackRoot));
       const reason = error?.message ?? "AI structure generation unavailable.";
-      setTreeError(`Loaded fallback Google structure. ${reason}`);
+      setTreeError(`Loaded fallback ProtoBop structure. ${reason}`);
     } finally {
       setIsGeneratingTree(false);
     }
@@ -426,6 +478,7 @@ export default function useInspireState() {
           previewMode,
           nodeContext,
           brief,
+          ideaContext,
           style: selectedStyle,
           workspace: {
             note: workspaceNote,
@@ -470,6 +523,7 @@ export default function useInspireState() {
     }
   }, [
     brief,
+    ideaContext,
     creativityValue,
     isGeneratingPreviews,
     modelQuality,
@@ -639,6 +693,7 @@ export default function useInspireState() {
       audience: nextBrief.audience?.toString() || "",
       goals: nextBrief.goals?.toString() || "",
     });
+    setIdeaContext(normalizeIdeaContext(snapshot.ideaContext));
 
     const nextIdeas = Array.isArray(snapshot.styleIdeas)
       ? snapshot.styleIdeas.map(normalizeStyleIdea)
@@ -733,6 +788,7 @@ export default function useInspireState() {
       applyMaskEdit,
       finalizeToHtml,
       setSelectedNodeId: handleSetSelectedNodeId,
+      setIdeaContext,
       setPreviewCount,
       setModelQuality,
       setCreativityValue,
@@ -752,6 +808,7 @@ export default function useInspireState() {
       handleSetSelectedNodeId,
       handleSelectStyle,
       loadStyleIdeas,
+      setIdeaContext,
       setCreativityValue,
       setModelQuality,
       setPreviewCount,
@@ -769,6 +826,7 @@ export default function useInspireState() {
   return {
     state: {
       brief,
+      ideaContext,
       styleIdeas,
       selectedStyle,
       isGeneratingStyles,

@@ -61,7 +61,7 @@ const DEFAULT_HTML = `<!DOCTYPE html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ResumeBuilder - Template Gallery</title>
+    <title>ProtoBop - Template Gallery</title>
     <style>
         :root {
             --primary: #6366f1;
@@ -86,7 +86,7 @@ const DEFAULT_HTML = `<!DOCTYPE html>
             height: 100%;
             margin: 0;
             padding: 0;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
             background-color: var(--bg);
             color: var(--text-main);
             overflow-x: hidden;
@@ -122,8 +122,14 @@ const DEFAULT_HTML = `<!DOCTYPE html>
             gap: 10px;
             font-weight: 800;
             font-size: 20px;
-            color: var(--primary);
             text-decoration: none;
+        }
+
+        .logo-text {
+            background: linear-gradient(120deg, #2563eb, #f97316);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
         }
 
         .logo-icon {
@@ -483,7 +489,7 @@ const DEFAULT_HTML = `<!DOCTYPE html>
             <div class="logo-icon">
                 <svg class="icon" style="color: white;" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
             </div>
-            ResumeBuilder
+            <span class="logo-text">ProtoBop</span>
         </a>
         <nav>
             <a href="#" class="active">Templates</a>

@@ -1,21 +1,19 @@
 export const STARTER_HTML = `
   <header>
     <div class="header-links">
-      <a href="#">Gmail</a>
-      <a href="#">Images</a>
+      <a href="#">Docs</a>
+      <a href="#">Templates</a>
       <div class="icon-btn">
         <svg viewBox="0 0 24 24" width="24" height="24" fill="#5f6368">
           <path d="M6 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6 0c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6 0c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM6 14c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6 0c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6 0c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM6 20c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6 0c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6 0c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z"></path>
         </svg>
       </div>
-      <div class="profile-pic">D</div>
+      <div class="profile-pic">P</div>
     </div>
   </header>
 
   <main>
-    <div class="logo">
-      <span>G</span><span>o</span><span>o</span><span>g</span><span>l</span><span>e</span>
-    </div>
+    <div class="logo">ProtoBop</div>
 
     <div class="search-wrapper">
       <div class="search-bar">
@@ -40,26 +38,26 @@ export const STARTER_HTML = `
     </div>
 
     <div class="button-group">
-      <button class="btn">Google Search</button>
-      <button class="btn">I'm Feeling Lucky</button>
+      <button class="btn">Start building</button>
+      <button class="btn">Explore variants</button>
     </div>
   </main>
 
   <footer>
     <div class="footer-top">
-      United Kingdom
+      ProtoBop Workspace
     </div>
     <div class="footer-bottom">
       <div class="footer-links">
         <a href="#">About</a>
-        <a href="#">Advertising</a>
-        <a href="#">Business</a>
-        <a href="#">How Search works</a>
+        <a href="#">Pricing</a>
+        <a href="#">Enterprise</a>
+        <a href="#">How it works</a>
       </div>
       <div class="footer-links">
         <a href="#">Privacy</a>
         <a href="#">Terms</a>
-        <a href="#">Settings</a>
+        <a href="#">Contact</a>
       </div>
     </div>
   </footer>
@@ -155,26 +153,23 @@ export const STARTER_STYLES = `
   }
 
   .logo {
-    display: flex;
+    display: inline-flex;
     font-size: 90px;
-    font-weight: 500;
-    letter-spacing: -4px;
+    font-weight: 700;
+    letter-spacing: -2px;
     margin-bottom: 28px;
     user-select: none;
     animation: fadeIn 0.8s ease-out;
+    background: linear-gradient(120deg, #2563eb, #f97316);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
 
   @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
   }
-
-  .logo span:nth-child(1) { color: var(--blue); }
-  .logo span:nth-child(2) { color: var(--red); }
-  .logo span:nth-child(3) { color: var(--yellow); }
-  .logo span:nth-child(4) { color: var(--blue); }
-  .logo span:nth-child(5) { color: var(--green); }
-  .logo span:nth-child(6) { color: var(--red); }
 
   .search-wrapper {
     width: 100%;

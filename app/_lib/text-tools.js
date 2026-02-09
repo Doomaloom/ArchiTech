@@ -1,7 +1,7 @@
 export const TEXT_TOOL_FONTS = [
   {
-    label: "Space Grotesk",
-    value: "\"Space Grotesk\", \"SF Pro Display\", system-ui, sans-serif",
+    label: "Arial Modern",
+    value: "Arial, \"Helvetica Neue\", Helvetica, sans-serif",
   },
   {
     label: "General Sans",

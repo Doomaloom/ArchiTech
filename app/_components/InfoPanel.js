@@ -151,7 +151,7 @@ export default function InfoPanel() {
           {state.codePanelMode === "agent" ? (
             <>
               <div className="imageflow-agent-header">
-                <p className="imageflow-info-kicker">Gem Code Agent</p>
+                <p className="imageflow-info-kicker">ProtoBop Code Agent</p>
                 <h1 className="imageflow-info-title">Code assistant</h1>
                 <p className="imageflow-info-subtitle">
                   Ask for refactors, new components, or layout conversions.

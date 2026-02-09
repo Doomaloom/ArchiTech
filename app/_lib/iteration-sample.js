@@ -1,7 +1,7 @@
 export const ITERATION_SAMPLE = {
   html: `<main class="iteration-site">
   <header class="iteration-header">
-    <div class="iteration-logo" data-gem-id="logo">Gem Studio</div>
+    <div class="iteration-logo proto-wordmark" data-gem-id="logo">ProtoBop</div>
     <nav class="iteration-nav">
       <span data-gem-id="nav-overview">Overview</span>
       <span data-gem-id="nav-preview">Preview</span>
@@ -63,7 +63,7 @@ export const ITERATION_SAMPLE = {
   display: flex;
   flex-direction: column;
   gap: 28px;
-  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
   color: #0f172a;
 }
 
@@ -78,6 +78,10 @@ export const ITERATION_SAMPLE = {
   font-weight: 700;
   font-size: 16px;
   letter-spacing: -0.02em;
+  background: linear-gradient(120deg, #2563eb 0%, #f97316 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .iteration-nav {

@@ -1,8 +1,8 @@
 const IterationSampleSite = ({ showLinkHint = true }) => (
   <main className="iteration-site">
     <header className="iteration-header">
-      <div className="iteration-logo" data-gem-id="logo">
-        Gem Studio
+      <div className="iteration-logo proto-wordmark" data-gem-id="logo">
+        ProtoBop
       </div>
       <nav className="iteration-nav">
         <span data-gem-id="nav-overview">Overview</span>

@@ -9,7 +9,7 @@ const FLASH_MODEL =
   "gemini-3-flash-preview";
 const PRO_MODEL = process.env.GEMINI_PRO_MODEL || "gemini-3-pro-preview";
 const IDEOGRAM_ENDPOINT =
-  "https://api.ideogram.ai/v1/ideogram-v3/generate-transparent";
+  "https://api.ideogram.ai/v1/ideogram-v3/generate";
 const MAX_PREVIEWS = 6;
 
 const clampNumber = (value, min, max) =>
@@ -142,8 +142,94 @@ const formatWorkspace = (workspace) => {
     .join("\n");
 };
 
-const buildPlanPrompt = ({ count, nodeContext, brief, style, workspace }) => {
+const extractField = (text, label) => {
+  if (!text || !label) {
+    return "";
+  }
+  const matcher = new RegExp(`${label}:\\s*([^\\.\\n]+)`, "i");
+  const match = text.match(matcher);
+  return match?.[1]?.toString().trim() || "";
+};
+
+const normalizeIdeaAnswer = (answer, index) => {
+  if (!answer || typeof answer !== "object") {
+    return null;
+  }
+  const question = answer.question?.toString().trim() || "";
+  const answerLabel = answer.answerLabel?.toString().trim() || "";
+  if (!question || !answerLabel) {
+    return null;
+  }
+  return {
+    id: answer.id?.toString().trim() || `answer-${index + 1}`,
+    question,
+    answerLabel,
+  };
+};
+
+const normalizeIdeaContext = (ideaContext, brief) => {
+  const details = brief?.details?.toString().trim() || "";
+  if (!ideaContext || typeof ideaContext !== "object") {
+    return {
+      category: extractField(details, "Category"),
+      audience: brief?.audience?.toString().trim() || "",
+      coreValue: extractField(details, "Primary visitor value"),
+      heroSection: extractField(details, "Leading section"),
+      primaryConversion: extractField(details, "Main conversion"),
+      answers: [],
+    };
+  }
+  return {
+    category:
+      ideaContext.category?.toString().trim() || extractField(details, "Category"),
+    audience:
+      ideaContext.audience?.toString().trim() ||
+      brief?.audience?.toString().trim() ||
+      "",
+    coreValue:
+      ideaContext.coreValue?.toString().trim() ||
+      extractField(details, "Primary visitor value"),
+    heroSection:
+      ideaContext.heroSection?.toString().trim() ||
+      extractField(details, "Leading section"),
+    primaryConversion:
+      ideaContext.primaryConversion?.toString().trim() ||
+      extractField(details, "Main conversion"),
+    answers: Array.isArray(ideaContext.answers)
+      ? ideaContext.answers.map(normalizeIdeaAnswer).filter(Boolean)
+      : [],
+  };
+};
+
+const formatIdeaContext = (ideaContext, brief) => {
+  const normalized = normalizeIdeaContext(ideaContext, brief);
+  const answerLines = normalized.answers
+    .map((entry) => `${entry.question}: ${entry.answerLabel}`)
+    .filter(Boolean);
+  return [
+    normalized.category ? `Category: ${normalized.category}` : null,
+    normalized.audience ? `Audience: ${normalized.audience}` : null,
+    normalized.coreValue ? `Primary value: ${normalized.coreValue}` : null,
+    normalized.heroSection ? `Lead section: ${normalized.heroSection}` : null,
+    normalized.primaryConversion
+      ? `Primary conversion: ${normalized.primaryConversion}`
+      : null,
+    answerLines.length ? `Idea answers: ${answerLines.join(" | ")}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+};
+
+const buildPlanPrompt = ({
+  count,
+  nodeContext,
+  brief,
+  ideaContext,
+  style,
+  workspace,
+}) => {
   const workspaceText = formatWorkspace(workspace);
+  const ideaContextText = formatIdeaContext(ideaContext, brief);
   return [
     "You are a product designer generating layout concepts.",
     `Create ${count} distinct plans for the requested page/component.`,
@@ -168,6 +254,8 @@ const buildPlanPrompt = ({ count, nodeContext, brief, style, workspace }) => {
     "Project brief:",
     JSON.stringify(brief ?? {}, null, 2),
     "",
+    ideaContextText ? `Idea context:\n${ideaContextText}` : null,
+    "",
     "Selected style:",
     JSON.stringify(style ?? {}, null, 2),
     "",
@@ -180,8 +268,16 @@ const buildPlanPrompt = ({ count, nodeContext, brief, style, workspace }) => {
     .join("\n");
 };
 
-const buildHtmlPrompt = ({ plan, nodeContext, brief, style, workspace }) => {
+const buildHtmlPrompt = ({
+  plan,
+  nodeContext,
+  brief,
+  ideaContext,
+  style,
+  workspace,
+}) => {
   const workspaceText = formatWorkspace(workspace);
+  const ideaContextText = formatIdeaContext(ideaContext, brief);
   return [
     "You are an expert frontend designer.",
     "Create a complete HTML document (self-contained) that can be rendered in Chromium.",
@@ -196,6 +292,8 @@ const buildHtmlPrompt = ({ plan, nodeContext, brief, style, workspace }) => {
     "",
     "Project brief:",
     JSON.stringify(brief ?? {}, null, 2),
+    "",
+    ideaContextText ? `Idea context:\n${ideaContextText}` : null,
     "",
     "Selected style:",
     JSON.stringify(style ?? {}, null, 2),
@@ -212,7 +310,14 @@ const buildHtmlPrompt = ({ plan, nodeContext, brief, style, workspace }) => {
     .join("\n");
 };
 
-const buildIdeogramPrompt = ({ plan, nodeContext, brief, style, workspace }) => {
+const buildIdeogramPrompt = ({
+  plan,
+  nodeContext,
+  brief,
+  ideaContext,
+  style,
+  workspace,
+}) => {
   const node = nodeContext?.node ?? {};
   const parent = nodeContext?.parent ?? null;
   const requirements = Array.isArray(node?.requirements)
@@ -228,6 +333,10 @@ const buildIdeogramPrompt = ({ plan, nodeContext, brief, style, workspace }) => 
     ? style.palette.filter(Boolean)
     : [];
   const styleTags = Array.isArray(style?.tags) ? style.tags.filter(Boolean) : [];
+  const styleComponents = Array.isArray(style?.components)
+    ? style.components.filter(Boolean)
+    : [];
+  const stylePrompt = style?.stylePrompt?.toString().trim() || "";
   const pathLabels = Array.isArray(nodeContext?.path)
     ? nodeContext.path
         .map((entry) => entry?.label?.toString().trim())
@@ -238,17 +347,26 @@ const buildIdeogramPrompt = ({ plan, nodeContext, brief, style, workspace }) => 
         .map((entry) => entry?.label?.toString().trim())
         .filter(Boolean)
     : [];
+  const siblingLabels = Array.isArray(nodeContext?.siblings)
+    ? nodeContext.siblings
+        .map((entry) => entry?.label?.toString().trim())
+        .filter(Boolean)
+    : [];
   const workspaceText = formatWorkspace(workspace);
+  const ideaContextText = formatIdeaContext(ideaContext, brief);
 
   return [
-    "High-fidelity web UI composition on transparent background.",
-    "Show only UI layers and content blocks. No device frames or scene backgrounds.",
+    "High-fidelity website UI concept rendered as a full-page screenshot.",
+    "Use an intentional page background (solid, gradient, or texture) with no transparency.",
+    "No alpha channel, no cutout elements, and no checkerboard/transparent canvas.",
+    "Avoid device frames and avoid stock photography scenes.",
     "Design direction should match the selected style and plan details.",
     node?.label ? `Page: ${node.label}` : null,
     node?.description ? `Page description: ${node.description}` : null,
     parent?.label ? `Parent section: ${parent.label}` : null,
     pathLabels.length ? `App path: ${pathLabels.join(" > ")}` : null,
     childLabels.length ? `Child sections: ${childLabels.join(", ")}` : null,
+    siblingLabels.length ? `Sibling pages: ${siblingLabels.join(", ")}` : null,
     requirements.length ? `Requirements: ${requirements.join("; ")}` : null,
     plan?.title ? `Concept: ${plan.title}` : null,
     plan?.summary ? `Concept summary: ${plan.summary}` : null,
@@ -259,15 +377,20 @@ const buildIdeogramPrompt = ({ plan, nodeContext, brief, style, workspace }) => 
     style?.summary ? `Style summary: ${style.summary}` : null,
     stylePalette.length ? `Palette: ${stylePalette.join(", ")}` : null,
     styleTags.length ? `Style tags: ${styleTags.join(", ")}` : null,
+    styleComponents.length
+      ? `Style components: ${styleComponents.join(", ")}`
+      : null,
+    stylePrompt ? `Style direction: ${stylePrompt}` : null,
     brief?.title ? `Project title: ${brief.title}` : null,
     brief?.name ? `Product name: ${brief.name}` : null,
     brief?.details ? `Project details: ${brief.details}` : null,
     brief?.audience ? `Audience: ${brief.audience}` : null,
     brief?.goals ? `Goals: ${brief.goals}` : null,
+    ideaContextText ? ideaContextText : null,
     workspaceText ? workspaceText : null,
     "Landscape composition similar to 1280x900.",
     "Strong hierarchy, clear typography, legible copy.",
-    "Avoid watermarks, low-res text, blurry output, people, scenery.",
+    "Avoid watermarks, low-res text, blurry output, people, scenery, and transparent backgrounds.",
   ]
     .filter(Boolean)
     .join("\n");
@@ -308,7 +431,7 @@ const requestIdeogramImage = async ({ prompt, apiKey }) => {
   formData.append("upscale_factor", "X2");
   formData.append(
     "negative_prompt",
-    "people, portraits, scenery, device mockups, watermark, low resolution, unreadable text, blurry text"
+    "people, portraits, scenery, device mockups, watermark, low resolution, unreadable text, blurry text, transparent background, alpha channel, checkerboard background, cutout UI"
   );
 
   const response = await fetch(IDEOGRAM_ENDPOINT, {
@@ -347,6 +470,7 @@ const generateIdeogramImages = async ({
   plans,
   nodeContext,
   brief,
+  ideaContext,
   style,
   workspace,
   apiKey,
@@ -354,7 +478,14 @@ const generateIdeogramImages = async ({
   const results = await Promise.allSettled(
     plans.map(async (plan) => {
       const imageUrl = await requestIdeogramImage({
-        prompt: buildIdeogramPrompt({ plan, nodeContext, brief, style, workspace }),
+        prompt: buildIdeogramPrompt({
+          plan,
+          nodeContext,
+          brief,
+          ideaContext,
+          style,
+          workspace,
+        }),
         apiKey,
       });
       return downloadImageAsDataUrl(imageUrl);
@@ -386,6 +517,7 @@ const generateHtmlPreviews = async ({
   plans,
   nodeContext,
   brief,
+  ideaContext,
   style,
   workspace,
 }) => {
@@ -402,6 +534,7 @@ const generateHtmlPreviews = async ({
                   plan,
                   nodeContext,
                   brief,
+                  ideaContext,
                   style,
                   workspace,
                 }),
@@ -453,6 +586,7 @@ export async function POST(request) {
     const temperature = roundValue(0.2 + (creativity / 100) * 1.0);
     const nodeContext = payload?.nodeContext ?? null;
     const brief = payload?.brief ?? {};
+    const ideaContext = normalizeIdeaContext(payload?.ideaContext ?? null, brief);
     const style = payload?.style ?? {};
     const workspace = payload?.workspace ?? null;
 
@@ -477,6 +611,7 @@ export async function POST(request) {
       count,
       nodeContext,
       brief,
+      ideaContext,
       style,
       workspace,
     });
@@ -516,6 +651,7 @@ export async function POST(request) {
         plans,
         nodeContext,
         brief,
+        ideaContext,
         style,
         workspace,
       });
@@ -552,6 +688,7 @@ export async function POST(request) {
       plans,
       nodeContext,
       brief,
+      ideaContext,
       style,
       workspace,
       apiKey: ideogramApiKey,

@@ -1,7 +1,6 @@
 import { STARTER_STYLES } from "./grapes-default-template";
 
-const GOOGLE_LOGO_HTML =
-  '<div class="logo"><span>G</span><span>o</span><span>o</span><span>g</span><span>l</span><span>e</span></div>';
+const PROTOBOP_LOGO_HTML = '<div class="logo proto-logo-text">ProtoBop</div>';
 
 const buildQuickLinks = (links) => {
   if (!links.length) return "";
@@ -14,11 +13,11 @@ const buildQuickLinks = (links) => {
   return `<div class="quick-links">${items}</div>`;
 };
 
-const buildGoogleBody = ({
+const buildProtoBody = ({
   tagline = "",
   mainClass = "",
-  primaryLabel = "Google Search",
-  secondaryLabel = "I'm Feeling Lucky",
+  primaryLabel = "Start building",
+  secondaryLabel = "Explore variants",
   quickLinks = [],
 } = {}) => {
   const mainClassAttr = mainClass ? ` class="${mainClass}"` : "";
@@ -28,19 +27,19 @@ const buildGoogleBody = ({
   return `
     <header>
       <div class="header-links">
-        <a href="#">Gmail</a>
-        <a href="#">Images</a>
+        <a href="#">Docs</a>
+        <a href="#">Templates</a>
         <div class="icon-btn">
           <svg viewBox="0 0 24 24" width="24" height="24" fill="#5f6368">
             <path d="M6 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6 0c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6 0c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM6 14c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6 0c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6 0c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM6 20c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6 0c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6 0c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z"></path>
           </svg>
         </div>
-        <div class="profile-pic">D</div>
+        <div class="profile-pic">P</div>
       </div>
     </header>
 
     <main${mainClassAttr}>
-      ${GOOGLE_LOGO_HTML}
+      ${PROTOBOP_LOGO_HTML}
       ${taglineHtml}
 
       <div class="search-wrapper">
@@ -74,19 +73,19 @@ const buildGoogleBody = ({
 
     <footer>
       <div class="footer-top">
-        United Kingdom
+        ProtoBop Workspace
       </div>
       <div class="footer-bottom">
         <div class="footer-links">
           <a href="#">About</a>
-          <a href="#">Advertising</a>
-          <a href="#">Business</a>
-          <a href="#">How Search works</a>
+          <a href="#">Pricing</a>
+          <a href="#">Enterprise</a>
+          <a href="#">How it works</a>
         </div>
         <div class="footer-links">
           <a href="#">Privacy</a>
           <a href="#">Terms</a>
-          <a href="#">Settings</a>
+          <a href="#">Contact</a>
         </div>
       </div>
     </footer>
@@ -184,38 +183,38 @@ ${body}
 export const DEFAULT_PREVIEW_ITEMS = [
   {
     html: buildHtmlDocument({
-      title: "Google - Classic",
+      title: "ProtoBop - Classic",
       bodyClass: "theme-classic",
-      body: buildGoogleBody({
+      body: buildProtoBody({
         mainClass: "main--lifted",
-        primaryLabel: "Google Search",
-        secondaryLabel: "I'm Feeling Lucky",
+        primaryLabel: "Start building",
+        secondaryLabel: "Explore templates",
       }),
     }),
     plan: { title: "Classic" },
   },
   {
     html: buildHtmlDocument({
-      title: "Google - Calm",
+      title: "ProtoBop - Calm",
       bodyClass: "theme-calm",
-      body: buildGoogleBody({
+      body: buildProtoBody({
         mainClass: "main--airy",
-        tagline: "Search the world's information in seconds.",
-        primaryLabel: "Search the web",
-        secondaryLabel: "I'm Feeling Lucky",
+        tagline: "Shape ideas into launch-ready web flows in minutes.",
+        primaryLabel: "Create project",
+        secondaryLabel: "View showcase",
       }),
     }),
     plan: { title: "Calm" },
   },
   {
     html: buildHtmlDocument({
-      title: "Google - Bright",
+      title: "ProtoBop - Bright",
       bodyClass: "theme-bright",
-      body: buildGoogleBody({
+      body: buildProtoBody({
         mainClass: "main--tight",
-        primaryLabel: "Search",
-        secondaryLabel: "I'm Feeling Lucky",
-        quickLinks: ["Images", "Maps", "News", "Gmail"],
+        primaryLabel: "Open workspace",
+        secondaryLabel: "Generate options",
+        quickLinks: ["Library", "Projects", "Community", "Updates"],
       }),
     }),
     plan: { title: "Bright" },
@@ -224,7 +223,7 @@ export const DEFAULT_PREVIEW_ITEMS = [
 
 export const DEFAULT_STRUCTURE_FLOW = {
   id: "page-home",
-  label: "Google Home",
+  label: "ProtoBop Home",
   children: [
     {
       id: "page-search",

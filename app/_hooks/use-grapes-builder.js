@@ -715,11 +715,7 @@ export default function useGrapesBuilder({ onReady, htmlContent } = {}) {
       plugins: buildGrapesPlugins(),
       components: STARTER_HTML,
       style: STARTER_STYLES,
-      canvas: {
-        styles: [
-          "https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap",
-        ],
-      },
+      canvas: { styles: [] },
     });
     editorRef.current = editor;
     let cleanupToolbarFix = () => {};

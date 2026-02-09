@@ -1,4 +1,14 @@
 :root {
+  --brand-font: Arial, "Helvetica Neue", Helvetica, sans-serif;
+  --brand-blue: #2563eb;
+  --brand-orange: #f97316;
+  --brand-blue-rgb: 37, 99, 235;
+  --brand-orange-rgb: 249, 115, 22;
+  --brand-gradient: linear-gradient(
+    120deg,
+    var(--brand-blue) 0%,
+    var(--brand-orange) 100%
+  );
   --sidebar-width: 72px;
   --sidebar-padding: 16px;
   --sidebar-offset: 4px;
@@ -39,7 +49,7 @@
 *::before,
 *::after {
   box-sizing: border-box;
-  font-family: Arial, sans-serif;
+  font-family: var(--brand-font);
 }
 
 html,
@@ -57,7 +67,7 @@ body {
     var(--page-grad-bottom) 100%
   );
   color: #0f172a;
-  font-family: Arial, sans-serif;
+  font-family: var(--brand-font);
 }
 
 /* Remove all drop shadows across the app */
@@ -199,8 +209,7 @@ body:has(.imageflow-builder) .sidebar-footer {
 }
 
 .sidebar-header-text {
-  font-family: Inter, "SF Pro Display", system-ui, -apple-system, "Segoe UI",
-    Roboto, Arial, sans-serif;
+  font-family: var(--brand-font);
   font-weight: 600;
   font-size: 12px;
   letter-spacing: 0.2px;
@@ -3024,6 +3033,23 @@ div {
   min-width: 0;
 }
 
+.proto-app-mark {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: var(--brand-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  margin-right: 4px;
+  padding-right: 8px;
+  border-right: 1px solid rgba(var(--brand-blue-rgb), 0.22);
+}
+
 .imageflow-menu {
   position: relative;
 }
@@ -4851,7 +4877,7 @@ div {
   display: flex;
   flex-direction: column;
   gap: 28px;
-  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-family: var(--brand-font);
   color: #0f172a;
 }
 
@@ -4866,6 +4892,10 @@ div {
   font-weight: 700;
   font-size: 16px;
   letter-spacing: -0.02em;
+  background: var(--brand-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .iteration-nav {
@@ -10542,4 +10572,11 @@ body:has(.inspire-shell)
 
 .translate-info-panel.translate-nodes-info .imageflow-slider {
   opacity: 0.68;
+}
+
+.proto-wordmark {
+  background: var(--brand-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }

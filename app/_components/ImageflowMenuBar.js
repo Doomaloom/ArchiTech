@@ -46,6 +46,9 @@ export default function ImageflowMenuBar() {
   return (
     <div className="imageflow-menu-bar" role="menubar" aria-label="Menu">
       <div className="imageflow-menu-group">
+        <span className="proto-app-mark" aria-label="ProtoBop">
+          ProtoBop
+        </span>
         {MENU_ITEMS.map((menu) => (
           <details className="imageflow-menu" key={menu.label}>
             <summary className="imageflow-menu-trigger">{menu.label}</summary>

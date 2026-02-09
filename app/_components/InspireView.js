@@ -91,7 +91,7 @@ const getSelectionLabel = (questions, selections, questionId) => {
   return selectedOption?.label?.toString().trim() || "";
 };
 
-const buildBriefFromSelections = (questions, selections) => {
+const extractIdeaSelections = (questions, selections) => {
   const category = getSelectionLabel(
     questions,
     selections,
@@ -102,17 +102,38 @@ const buildBriefFromSelections = (questions, selections) => {
     selections,
     BRIEF_QUESTION_IDS.AUDIENCE
   );
-  const value = getSelectionLabel(questions, selections, BRIEF_QUESTION_IDS.VALUE);
-  const section = getSelectionLabel(
+  const coreValue = getSelectionLabel(
+    questions,
+    selections,
+    BRIEF_QUESTION_IDS.VALUE
+  );
+  const heroSection = getSelectionLabel(
     questions,
     selections,
     BRIEF_QUESTION_IDS.SECTION
   );
-  const conversion = getSelectionLabel(
+  const primaryConversion = getSelectionLabel(
     questions,
     selections,
     BRIEF_QUESTION_IDS.CONVERSION
   );
+  return {
+    category,
+    audience,
+    coreValue,
+    heroSection,
+    primaryConversion,
+  };
+};
+
+const buildBriefFromSelections = (questions, selections) => {
+  const {
+    category,
+    audience,
+    coreValue: value,
+    heroSection: section,
+    primaryConversion: conversion,
+  } = extractIdeaSelections(questions, selections);
 
   const title = category ? `${category} website concept` : "";
   const name = [category, value].filter(Boolean).join(" - ");
@@ -132,6 +153,39 @@ const buildBriefFromSelections = (questions, selections) => {
     details,
     audience,
     goals,
+  };
+};
+
+const buildIdeaContextFromSelections = (questions, selections) => {
+  const base = extractIdeaSelections(questions, selections);
+  const answers = Array.isArray(questions)
+    ? questions
+        .map((question, index) => {
+          const questionId = question?.id?.toString().trim() || "";
+          const selectedId = questionId ? selections?.[questionId] : null;
+          if (!selectedId) {
+            return null;
+          }
+          const selectedOption = question?.options?.find(
+            (entry) => entry?.id === selectedId
+          );
+          const answerLabel = selectedOption?.label?.toString().trim();
+          if (!answerLabel) {
+            return null;
+          }
+          return {
+            id: `${questionId || "question"}-${index + 1}`,
+            questionId,
+            question: question?.prompt?.toString().trim() || "",
+            answerId: selectedId?.toString().trim() || "",
+            answerLabel,
+          };
+        })
+        .filter(Boolean)
+    : [];
+  return {
+    ...base,
+    answers,
   };
 };
 
@@ -416,11 +470,16 @@ export default function InspireView() {
         return;
       }
       const nextBrief = buildBriefFromSelections(resolvedQuestions, selections);
+      const nextIdeaContext = buildIdeaContextFromSelections(
+        resolvedQuestions,
+        selections
+      );
       inspireActions.updateBrief("title", nextBrief.title);
       inspireActions.updateBrief("name", nextBrief.name);
       inspireActions.updateBrief("details", nextBrief.details);
       inspireActions.updateBrief("audience", nextBrief.audience);
       inspireActions.updateBrief("goals", nextBrief.goals);
+      inspireActions.setIdeaContext(nextIdeaContext);
     },
     [inspireActions]
   );
