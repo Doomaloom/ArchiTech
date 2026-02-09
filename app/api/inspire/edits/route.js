@@ -6,6 +6,7 @@ const IDEOGRAM_EDIT_ENDPOINT = "https://api.ideogram.ai/v1/ideogram-v3/edit";
 let sharpPromise = null;
 const MIN_MASK_COVERAGE = 0.0015;
 const MAX_MASK_COVERAGE = 0.95;
+const MASK_ALPHA_THRESHOLD = 10;
 
 const isFileLike = (value) =>
   value && typeof value === "object" && typeof value.arrayBuffer === "function";
@@ -106,9 +107,11 @@ const buildEditPrompt = ({ prompt, plan, brief, style, nodeContext }) => {
     : [];
 
   return [
-    "Update the existing web UI composition using the provided mask.",
-    "Only change masked regions and preserve unmasked layout and style.",
-    note ? `Requested change: ${note}` : null,
+    "Edit the existing web UI image using the provided mask.",
+    "Treat the mask as a strict boundary: change only masked regions.",
+    "Keep all unmasked regions visually unchanged.",
+    note ? `User request (highest priority): ${note}` : null,
+    note ? "Implement the user request faithfully with concrete visual changes." : null,
     planTitle ? `Concept: ${planTitle}` : null,
     planSummary ? `Concept summary: ${planSummary}` : null,
     sections.length ? `Sections: ${sections.join(", ")}` : null,
@@ -118,6 +121,8 @@ const buildEditPrompt = ({ prompt, plan, brief, style, nodeContext }) => {
     pageLabel ? `Page: ${pageLabel}` : null,
     pageDescription ? `Page description: ${pageDescription}` : null,
     goals ? `Goals: ${goals}` : null,
+    "Preserve overall style continuity with the existing composition.",
+    "If the user asks for specific text, render that exact wording legibly.",
     "Return a polished transparent-background UI image.",
     "Keep text legible and avoid watermarks or blurry details.",
   ]
@@ -200,12 +205,8 @@ const buildIdeogramMask = async ({ sharp, maskBuffer }) => {
 
   for (let index = 0; index < totalPixels; index += 1) {
     const offset = index * info.channels;
-    const red = data[offset] ?? 0;
-    const green = data[offset + 1] ?? 0;
-    const blue = data[offset + 2] ?? 0;
     const alpha = data[offset + 3] ?? 255;
-    const luminance = red * 0.299 + green * 0.587 + blue * 0.114;
-    const isEdited = alpha > 24 && luminance < 245;
+    const isEdited = alpha >= MASK_ALPHA_THRESHOLD;
 
     monoMask[index] = isEdited ? 0 : 255;
     if (isEdited) {
@@ -240,6 +241,7 @@ export async function POST(request) {
     const payload = await parseRequestPayload(request);
     const imageInput = payload?.imageDataUrl ?? payload?.image;
     const maskInput = payload?.maskDataUrl ?? payload?.mask;
+    const promptText = payload?.prompt?.toString().trim() || "";
 
     if (!imageInput) {
       return NextResponse.json(
@@ -250,6 +252,15 @@ export async function POST(request) {
     if (!maskInput) {
       return NextResponse.json(
         { error: "maskDataUrl is required." },
+        { status: 400 }
+      );
+    }
+    if (!promptText) {
+      return NextResponse.json(
+        {
+          error:
+            "prompt is required. Describe the exact change you want in the masked region.",
+        },
         { status: 400 }
       );
     }
@@ -297,7 +308,7 @@ export async function POST(request) {
       );
     }
     const prompt = buildEditPrompt({
-      prompt: payload?.prompt,
+      prompt: promptText,
       plan: payload?.plan,
       brief: payload?.brief,
       style: payload?.style,

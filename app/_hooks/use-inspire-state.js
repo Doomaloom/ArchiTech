@@ -310,6 +310,7 @@ export default function useInspireState() {
   const [selectedPreviewIndex, setSelectedPreviewIndex] = useState(0);
   const [workspaceNote, setWorkspaceNote] = useState("");
   const [workspaceMask, setWorkspaceMask] = useState(null);
+  const [workspaceStatusMessage, setWorkspaceStatusMessage] = useState("");
 
   const treeRoot = useMemo(() => normalizeTree(tree), [tree]);
   const treeNodes = useMemo(() => flattenTree(treeRoot), [treeRoot]);
@@ -321,6 +322,15 @@ export default function useInspireState() {
 
   const handleSetSelectedNodeId = useCallback((nodeId) => {
     setSelectedNodeId(nodeId == null ? null : nodeId.toString());
+  }, []);
+
+  const handleSetWorkspaceMask = useCallback((nextMask) => {
+    const normalizedMask =
+      nextMask && typeof nextMask === "object" ? nextMask : null;
+    setWorkspaceMask(normalizedMask);
+    if (normalizedMask?.dataUrl) {
+      setWorkspaceStatusMessage("");
+    }
   }, []);
 
   const updateBrief = useCallback((field, value) => {
@@ -342,6 +352,7 @@ export default function useInspireState() {
     setPreviewItems([]);
     setPreviewError("");
     setWorkspaceMask(null);
+    setWorkspaceStatusMessage("");
   }, [handleSetSelectedNodeId]);
 
   const loadStyleIdeas = useCallback(async () => {
@@ -437,6 +448,7 @@ export default function useInspireState() {
       return;
     }
     setPreviewError("");
+    setWorkspaceStatusMessage("");
     const activeNodeId = nodeId?.toString() || selectedNodeId;
     if (!treeRoot || !activeNodeId) {
       setPreviewError("Generate a tree and select a node first.");
@@ -541,6 +553,7 @@ export default function useInspireState() {
       return;
     }
     setPreviewError("");
+    setWorkspaceStatusMessage("");
     if (previewMode === "html") {
       setPreviewError("Mask edit is available only for image previews.");
       return;
@@ -551,6 +564,11 @@ export default function useInspireState() {
     }
     if (!workspaceMask?.dataUrl) {
       setPreviewError("Draw a mask before applying edits.");
+      return;
+    }
+    const promptText = workspaceNote?.toString().trim();
+    if (!promptText) {
+      setPreviewError("Describe the requested change before applying edits.");
       return;
     }
 
@@ -565,7 +583,7 @@ export default function useInspireState() {
         body: JSON.stringify({
           imageDataUrl: selectedPreview.imageUrl,
           maskDataUrl: workspaceMask.dataUrl,
-          prompt: workspaceNote,
+          prompt: promptText,
           plan: selectedPreview.plan,
           brief,
           style: selectedStyle,
@@ -593,7 +611,12 @@ export default function useInspireState() {
             : preview
         )
       );
+      setWorkspaceMask(null);
+      setWorkspaceStatusMessage(
+        "Mask edit complete. The mask was cleared for the next change."
+      );
     } catch (error) {
+      setWorkspaceStatusMessage("");
       setPreviewError(error?.message ?? "Failed to apply mask edit.");
     } finally {
       setIsApplyingMaskEdit(false);
@@ -748,6 +771,7 @@ export default function useInspireState() {
         ? snapshot.workspaceMask
         : null
     );
+    setWorkspaceStatusMessage("");
 
     setPreviewError("");
     setStyleError("");
@@ -776,6 +800,7 @@ export default function useInspireState() {
     });
     setPreviewItems([]);
     setPreviewError("");
+    setWorkspaceStatusMessage("");
   }, []);
 
   const actions = useMemo(
@@ -795,7 +820,7 @@ export default function useInspireState() {
       setPreviewMode,
       setSelectedPreviewIndex,
       setWorkspaceNote,
-      setWorkspaceMask,
+      setWorkspaceMask: handleSetWorkspaceMask,
       setSelectedStyle,
       setTree: setTreeFromExternal,
       hydrateWorkspace,
@@ -816,7 +841,7 @@ export default function useInspireState() {
       setSelectedPreviewIndex,
       setSelectedStyle,
       setTreeFromExternal,
-      setWorkspaceMask,
+      handleSetWorkspaceMask,
       setWorkspaceNote,
       hydrateWorkspace,
       updateBrief,
@@ -848,6 +873,7 @@ export default function useInspireState() {
       selectedPreviewIndex,
       workspaceNote,
       workspaceMask,
+      workspaceStatusMessage,
     },
     derived: {
       treeRoot,

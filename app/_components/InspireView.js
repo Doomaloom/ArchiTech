@@ -201,7 +201,7 @@ const getPointer = (event, element) => {
 };
 
 const InspireBrushCanvas = forwardRef(function InspireBrushCanvas(
-  { brushSize, clearSignal, onMaskChange },
+  { brushSize, maskOpacity, clearSignal, maskDataUrl, onMaskChange },
   ref
 ) {
   const canvasRef = useRef(null);
@@ -258,6 +258,22 @@ const InspireBrushCanvas = forwardRef(function InspireBrushCanvas(
   }, [clearSignal, onMaskChange]);
 
   useEffect(() => {
+    if (maskDataUrl) {
+      return;
+    }
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      return;
+    }
+    const context = canvas.getContext("2d");
+    if (!context) {
+      return;
+    }
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    boundsRef.current = null;
+  }, [maskDataUrl]);
+
+  useEffect(() => {
     const cursor = cursorRef.current;
     if (!cursor) {
       return;
@@ -267,6 +283,14 @@ const InspireBrushCanvas = forwardRef(function InspireBrushCanvas(
     cursor.style.marginLeft = `${Math.round(brushSize / -2)}px`;
     cursor.style.marginTop = `${Math.round(brushSize / -2)}px`;
   }, [brushSize]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      return;
+    }
+    canvas.style.opacity = String(maskOpacity);
+  }, [maskOpacity]);
 
   const moveCursor = (point) => {
     const cursor = cursorRef.current;
@@ -343,13 +367,14 @@ const InspireBrushCanvas = forwardRef(function InspireBrushCanvas(
     setCursorVisible(true);
     event.preventDefault();
     isDrawingRef.current = true;
-    context.strokeStyle = "rgba(59, 130, 246, 0.3)";
+    context.strokeStyle = "rgba(59, 130, 246, 1)";
     context.lineWidth = brushSize;
     context.lineCap = "round";
     context.lineJoin = "round";
     context.globalCompositeOperation = "source-over";
-    context.shadowBlur = 6;
-    context.shadowColor = "rgba(59, 130, 246, 0.2)";
+    context.globalAlpha = 1;
+    context.shadowBlur = 0;
+    context.shadowColor = "transparent";
     context.beginPath();
     context.moveTo(point.x, point.y);
     updateBounds(point);
@@ -457,6 +482,7 @@ export default function InspireView() {
     actions: inspireActions,
   } = useInspire();
   const [brushSize, setBrushSize] = useState(18);
+  const [maskOpacity, setMaskOpacity] = useState(0.3);
   const [clearTick, setClearTick] = useState(0);
   const brushRef = useRef(null);
   const syncedTreeRef = useRef(null);
@@ -814,6 +840,17 @@ export default function InspireView() {
                   onChange={(event) => setBrushSize(Number(event.target.value))}
                 />
               </label>
+              <label className="inspire-workspace-label">
+                Mask opacity
+                <input
+                  type="range"
+                  min="0.1"
+                  max="0.7"
+                  step="0.05"
+                  value={maskOpacity}
+                  onChange={(event) => setMaskOpacity(Number(event.target.value))}
+                />
+              </label>
               <button
                 className="inspire-workspace-clear"
                 type="button"
@@ -825,7 +862,13 @@ export default function InspireView() {
                 Clear mask
               </button>
             </div>
-            <div className="inspire-workspace-status">Mask edits only</div>
+            <div className="inspire-workspace-status">
+              {inspireState.isApplyingMaskEdit
+                ? "Applying changes"
+                : inspireState.workspaceStatusMessage
+                ? "Mask edit applied"
+                : "Mask edits only"}
+            </div>
           </div>
           <div className="inspire-workspace-stage">
             <div className="inspire-workspace-preview">
@@ -860,7 +903,9 @@ export default function InspireView() {
             <InspireBrushCanvas
               ref={brushRef}
               brushSize={brushSize}
+              maskOpacity={maskOpacity}
               clearSignal={clearTick}
+              maskDataUrl={inspireState.workspaceMask?.dataUrl}
               onMaskChange={inspireActions.setWorkspaceMask}
             />
           </div>
@@ -1142,7 +1187,11 @@ export default function InspireView() {
       const hasPreviewImage = Boolean(selectedPreview?.imageUrl);
       const hasMask = Boolean(inspireState.workspaceMask?.dataUrl);
       const hasFinalHtml = Boolean(selectedPreview?.html);
-      const isApplyReady = isImagePreviewMode && hasPreviewImage && hasMask;
+      const hasWorkspaceNote = Boolean(inspireState.workspaceNote?.trim());
+      const hasAppliedMaskEdit = Boolean(inspireState.workspaceStatusMessage);
+      const isApplyReady =
+        hasAppliedMaskEdit ||
+        (isImagePreviewMode && hasPreviewImage && hasMask && hasWorkspaceNote);
       const isConvertReady = isImagePreviewMode && hasPreviewImage;
       const isEditorReady = hasFinalHtml;
       return (
@@ -1175,6 +1224,7 @@ export default function InspireView() {
                 !isImagePreviewMode ||
                 !hasPreviewImage ||
                 !hasMask ||
+                !hasWorkspaceNote ||
                 inspireState.isApplyingMaskEdit
               }
             >
@@ -1185,6 +1235,11 @@ export default function InspireView() {
               </span>
               <span className="inspire-workspace-action-step">Step 1</span>
             </button>
+            {inspireState.workspaceStatusMessage ? (
+              <div className="inspire-preview-success" role="status">
+                {inspireState.workspaceStatusMessage}
+              </div>
+            ) : null}
             {!isImagePreviewMode ? (
               <div className="inspire-preview-error" role="status">
                 Mask edit is available only for image previews.
@@ -1222,7 +1277,7 @@ export default function InspireView() {
                     isApplyReady ? " is-ready" : ""
                   }`}
                 >
-                  1 Apply changes
+                  {hasAppliedMaskEdit ? "1 Changes applied" : "1 Apply changes"}
                 </span>
                 <span
                   className={`inspire-workspace-flow-chip${
