@@ -11,6 +11,8 @@ const PRO_MODEL = process.env.GEMINI_PRO_MODEL || "gemini-3-pro-preview";
 const IDEOGRAM_ENDPOINT =
   "https://api.ideogram.ai/v1/ideogram-v3/generate";
 const MAX_PREVIEWS = 6;
+const MAX_TEXT_LINES = 10;
+const MAX_TEXT_LINE_LENGTH = 72;
 
 const clampNumber = (value, min, max) =>
   Math.min(Math.max(value, min), max);
@@ -45,19 +47,100 @@ const extractJson = (text) => {
   return null;
 };
 
+const normalizeInlineText = (value, maxLength = 160) => {
+  if (value == null) {
+    return "";
+  }
+  const text = value
+    .toString()
+    .replace(/\s+/g, " ")
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .trim();
+  if (!text) {
+    return "";
+  }
+  if (text.length <= maxLength) {
+    return text;
+  }
+  return `${text.slice(0, Math.max(0, maxLength - 3)).trimEnd()}...`;
+};
+
+const normalizeStringList = (value) => {
+  if (Array.isArray(value)) {
+    return value.map((entry) => normalizeInlineText(entry)).filter(Boolean);
+  }
+  const text = normalizeInlineText(value);
+  return text ? [text] : [];
+};
+
+const flattenTextManifest = (value, lines = []) => {
+  if (value == null) {
+    return lines;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((entry) => flattenTextManifest(entry, lines));
+    return lines;
+  }
+  if (typeof value === "object") {
+    Object.values(value).forEach((entry) => flattenTextManifest(entry, lines));
+    return lines;
+  }
+  const text = normalizeInlineText(value, MAX_TEXT_LINE_LENGTH);
+  if (text) {
+    lines.push(text);
+  }
+  return lines;
+};
+
+const normalizeTextManifest = (value, maxItems = MAX_TEXT_LINES) => {
+  const lines = flattenTextManifest(value);
+  const seen = new Set();
+  return lines
+    .filter(
+      (line) =>
+        line &&
+        !/lorem ipsum|placeholder|sample text|dummy text|gibberish/i.test(line)
+    )
+    .filter((line) => {
+      const key = line.toLowerCase();
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    })
+    .slice(0, maxItems);
+};
+
 const normalizePlan = (plan, index) => {
   const safe = plan ?? {};
-  const toList = (value) =>
-    Array.isArray(value)
-      ? value.map((entry) => entry?.toString()).filter(Boolean)
-      : [];
+  const sections = normalizeStringList(safe.sections);
+  const styleKeywords = normalizeStringList(safe.styleKeywords);
+  const internalExperience = normalizeStringList(
+    safe.internalExperience ?? safe.internalFlow ?? safe.internalSections
+  );
+  const mustInclude = normalizeStringList(
+    safe.mustInclude ?? safe.components ?? safe.mustHaveElements
+  );
+  const textContent = normalizeTextManifest(
+    safe.textContent ?? safe.textManifest ?? safe.copyDeck ?? safe.copyLines
+  );
+
   return {
     id: safe.id?.toString() || `plan-${index + 1}`,
-    title: safe.title?.toString() || `Concept ${index + 1}`,
-    summary: safe.summary?.toString() || "",
-    layout: safe.layout?.toString() || "",
-    sections: toList(safe.sections),
-    styleKeywords: toList(safe.styleKeywords),
+    title: normalizeInlineText(safe.title) || `Concept ${index + 1}`,
+    summary: normalizeInlineText(safe.summary, 240),
+    layout: normalizeInlineText(safe.layout, 240),
+    visualDirection: normalizeInlineText(
+      safe.visualDirection ?? safe.visualBlueprint ?? safe.visualDescription,
+      680
+    ),
+    sections,
+    styleKeywords,
+    internalExperience,
+    mustInclude,
+    textContent,
   };
 };
 
@@ -157,12 +240,12 @@ const normalizeIdeaAnswer = (answer, index) => {
   }
   const question = answer.question?.toString().trim() || "";
   const answerLabel = answer.answerLabel?.toString().trim() || "";
-  if (!question || !answerLabel) {
+  if (!answerLabel) {
     return null;
   }
   return {
     id: answer.id?.toString().trim() || `answer-${index + 1}`,
-    question,
+    question: question || `Selection ${index + 1}`,
     answerLabel,
   };
 };
@@ -198,6 +281,51 @@ const normalizeIdeaContext = (ideaContext, brief) => {
     answers: Array.isArray(ideaContext.answers)
       ? ideaContext.answers.map(normalizeIdeaAnswer).filter(Boolean)
       : [],
+  };
+};
+
+const buildFallbackTextManifest = ({ plan, nodeContext, brief, ideaContext }) => {
+  const node = nodeContext?.node ?? {};
+  const parent = nodeContext?.parent ?? {};
+  const nodeRequirements = normalizeStringList(node.requirements).slice(0, 3);
+  const sectionLines = normalizeStringList(plan?.sections).slice(0, 4);
+  const answerLines = Array.isArray(ideaContext?.answers)
+    ? ideaContext.answers
+        .map((entry) => normalizeInlineText(entry?.answerLabel, MAX_TEXT_LINE_LENGTH))
+        .filter(Boolean)
+        .slice(0, 3)
+    : [];
+
+  return normalizeTextManifest([
+    normalizeInlineText(node.label, MAX_TEXT_LINE_LENGTH),
+    normalizeInlineText(plan?.title, MAX_TEXT_LINE_LENGTH),
+    normalizeInlineText(brief?.name, MAX_TEXT_LINE_LENGTH),
+    normalizeInlineText(ideaContext?.coreValue, MAX_TEXT_LINE_LENGTH),
+    normalizeInlineText(ideaContext?.primaryConversion, MAX_TEXT_LINE_LENGTH),
+    ...nodeRequirements,
+    ...sectionLines,
+    ...answerLines,
+    normalizeInlineText(parent.label, MAX_TEXT_LINE_LENGTH),
+  ]);
+};
+
+const resolvePlanTextManifest = ({ plan, nodeContext, brief, ideaContext }) => {
+  const planLines = normalizeTextManifest(plan?.textContent);
+  const fallbackLines = buildFallbackTextManifest({
+    plan,
+    nodeContext,
+    brief,
+    ideaContext,
+  });
+  return normalizeTextManifest([...planLines, ...fallbackLines]);
+};
+
+const enrichPlan = ({ plan, nodeContext, brief, ideaContext }) => {
+  return {
+    ...plan,
+    textContent: resolvePlanTextManifest({ plan, nodeContext, brief, ideaContext }),
+    internalExperience: normalizeStringList(plan?.internalExperience),
+    mustInclude: normalizeStringList(plan?.mustInclude),
   };
 };
 
@@ -239,17 +367,24 @@ const buildPlanPrompt = ({
     "    {",
     '      "id": "plan-1",',
     '      "title": "Concept name",',
-    '      "summary": "1-2 sentence overview",',
-    '      "layout": "Short description of layout strategy",',
+    '      "summary": "2-3 sentence overview tied to page purpose",',
+    '      "layout": "Concise layout strategy with hierarchy notes",',
+    '      "visualDirection": "4-6 sentences detailing hero, body, and internal page composition",',
     '      "sections": ["Section name", "Section name"],',
-    '      "styleKeywords": ["keyword", "keyword"]',
+    '      "styleKeywords": ["keyword", "keyword"],',
+    '      "internalExperience": ["What users see in each main page area"],',
+    '      "mustInclude": ["Concrete UI element that must be visible"],',
+    '      "textContent": ["Exact text string to appear visibly on the page"]',
     "    }",
     "  ]",
     "}",
     "Rules:",
-    "- Keep plans aligned with the selected style direction.",
-    "- Use the project brief to shape content hierarchy and CTAs.",
-    "- Keep the layout grounded in the node requirements.",
+    "- Keep plans tightly aligned with the selected idea answers and page requirements.",
+    "- Use the brief and idea context to shape realistic content hierarchy and CTAs.",
+    "- visualDirection must describe internal page structure, not just mood.",
+    "- mustInclude should list concrete UI blocks (listings grid, filters, map panel, etc.).",
+    "- textContent must be literal on-page copy. No lorem ipsum, placeholders, or gibberish.",
+    "- textContent should be concise and specific to this page's role in the tree.",
     "",
     "Project brief:",
     JSON.stringify(brief ?? {}, null, 2),
@@ -278,6 +413,12 @@ const buildHtmlPrompt = ({
 }) => {
   const workspaceText = formatWorkspace(workspace);
   const ideaContextText = formatIdeaContext(ideaContext, brief);
+  const textManifest = resolvePlanTextManifest({
+    plan,
+    nodeContext,
+    brief,
+    ideaContext,
+  });
   return [
     "You are an expert frontend designer.",
     "Create a complete HTML document (self-contained) that can be rendered in Chromium.",
@@ -289,6 +430,7 @@ const buildHtmlPrompt = ({
     "- Set html, body { width: 100%; height: 100%; margin: 0; }.",
     "- Use a visible background; avoid pure white.",
     "- Provide high contrast, clear hierarchy, and clean spacing.",
+    "- Use the provided text manifest exactly for visible copy (do not paraphrase).",
     "",
     "Project brief:",
     JSON.stringify(brief ?? {}, null, 2),
@@ -302,6 +444,10 @@ const buildHtmlPrompt = ({
     "",
     "Plan:",
     JSON.stringify(plan, null, 2),
+    "",
+    textManifest.length
+      ? `Text manifest (render verbatim):\n${JSON.stringify(textManifest, null, 2)}`
+      : null,
     "",
     "Node context:",
     JSON.stringify(nodeContext, null, 2),
@@ -354,6 +500,20 @@ const buildIdeogramPrompt = ({
     : [];
   const workspaceText = formatWorkspace(workspace);
   const ideaContextText = formatIdeaContext(ideaContext, brief);
+  const internalExperience = normalizeStringList(plan?.internalExperience);
+  const mustInclude = normalizeStringList(plan?.mustInclude);
+  const textManifest = resolvePlanTextManifest({
+    plan,
+    nodeContext,
+    brief,
+    ideaContext,
+  });
+  const textManifestBlock = textManifest.length
+    ? [
+        "Text manifest (render verbatim exactly as written):",
+        ...textManifest.map((line, index) => `${index + 1}. "${line}"`),
+      ].join("\n")
+    : "";
 
   return [
     "High-fidelity website UI concept rendered as a full-page screenshot.",
@@ -373,6 +533,11 @@ const buildIdeogramPrompt = ({
     plan?.layout ? `Layout strategy: ${plan.layout}` : null,
     sections.length ? `Sections: ${sections.join(", ")}` : null,
     styleKeywords.length ? `Plan style cues: ${styleKeywords.join(", ")}` : null,
+    plan?.visualDirection ? `Visual direction: ${plan.visualDirection}` : null,
+    internalExperience.length
+      ? `Internal experience: ${internalExperience.join(" | ")}`
+      : null,
+    mustInclude.length ? `Must include: ${mustInclude.join("; ")}` : null,
     style?.title ? `Style title: ${style.title}` : null,
     style?.summary ? `Style summary: ${style.summary}` : null,
     stylePalette.length ? `Palette: ${stylePalette.join(", ")}` : null,
@@ -388,6 +553,11 @@ const buildIdeogramPrompt = ({
     brief?.goals ? `Goals: ${brief.goals}` : null,
     ideaContextText ? ideaContextText : null,
     workspaceText ? workspaceText : null,
+    textManifestBlock || null,
+    "TEXT QUALITY RULES (highest priority):",
+    "- Render all manifest lines with exact spelling and casing.",
+    "- Do not invent extra words, pseudo letters, or decorative gibberish.",
+    "- If space is tight, reduce font size before changing the wording.",
     "Landscape composition similar to 1280x900.",
     "Strong hierarchy, clear typography, legible copy.",
     "Avoid watermarks, low-res text, blurry output, people, scenery, and transparent backgrounds.",
@@ -431,7 +601,7 @@ const requestIdeogramImage = async ({ prompt, apiKey }) => {
   formData.append("upscale_factor", "X2");
   formData.append(
     "negative_prompt",
-    "people, portraits, scenery, device mockups, watermark, low resolution, unreadable text, blurry text, transparent background, alpha channel, checkerboard background, cutout UI"
+    "people, portraits, scenery, device mockups, watermark, low resolution, unreadable text, blurry text, gibberish text, fake letters, lorem ipsum, transparent background, alpha channel, checkerboard background, cutout UI"
   );
 
   const response = await fetch(IDEOGRAM_ENDPOINT, {
@@ -615,7 +785,7 @@ export async function POST(request) {
       style,
       workspace,
     });
-    const planMaxTokens = Number(process.env.PREVIEW_PLAN_MAX_TOKENS) || 4096;
+    const planMaxTokens = Number(process.env.PREVIEW_PLAN_MAX_TOKENS) || 6144;
     const htmlMaxTokens = Number(process.env.PREVIEW_HTML_MAX_TOKENS) || 16384;
 
     const planResponse = await ai.models.generateContent({
@@ -634,13 +804,16 @@ export async function POST(request) {
     });
 
     const planText = planResponse?.text ?? "";
-    const plans = parsePlans(planText, count);
-    if (!plans.length) {
+    const parsedPlans = parsePlans(planText, count);
+    if (!parsedPlans.length) {
       return NextResponse.json(
         { error: "Failed to parse plan response.", raw: planText },
         { status: 502 }
       );
     }
+    const plans = parsedPlans.map((plan) =>
+      enrichPlan({ plan, nodeContext, brief, ideaContext })
+    );
 
     if (previewMode === "html") {
       const htmlResult = await generateHtmlPreviews({

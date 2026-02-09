@@ -409,6 +409,7 @@ export default function useInspireState() {
           details: brief.details,
           audience: brief.audience,
           goals: brief.goals,
+          ideaContext,
           style: selectedStyle,
         }),
       });
@@ -441,7 +442,13 @@ export default function useInspireState() {
     } finally {
       setIsGeneratingTree(false);
     }
-  }, [brief, handleSetSelectedNodeId, isGeneratingTree, selectedStyle]);
+  }, [
+    brief,
+    handleSetSelectedNodeId,
+    ideaContext,
+    isGeneratingTree,
+    selectedStyle,
+  ]);
 
   const generatePreviews = useCallback(async ({ nodeId } = {}) => {
     if (isGeneratingPreviews) {
@@ -586,6 +593,7 @@ export default function useInspireState() {
           prompt: promptText,
           plan: selectedPreview.plan,
           brief,
+          ideaContext,
           style: selectedStyle,
           nodeContext: nodeContext?.node ? nodeContext : null,
         }),
@@ -623,6 +631,7 @@ export default function useInspireState() {
     }
   }, [
     brief,
+    ideaContext,
     isApplyingMaskEdit,
     previewMode,
     selectedNodeId,

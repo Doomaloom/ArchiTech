@@ -39,6 +39,175 @@ const loadSharp = async () => {
   return sharpPromise;
 };
 
+const normalizeInlineText = (value, maxLength = 160) => {
+  if (value == null) {
+    return "";
+  }
+  const text = value
+    .toString()
+    .replace(/\s+/g, " ")
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .trim();
+  if (!text) {
+    return "";
+  }
+  if (text.length <= maxLength) {
+    return text;
+  }
+  return `${text.slice(0, Math.max(0, maxLength - 3)).trimEnd()}...`;
+};
+
+const normalizeStringList = (value) => {
+  if (Array.isArray(value)) {
+    return value.map((entry) => normalizeInlineText(entry)).filter(Boolean);
+  }
+  const text = normalizeInlineText(value);
+  return text ? [text] : [];
+};
+
+const flattenTextManifest = (value, lines = []) => {
+  if (value == null) {
+    return lines;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((entry) => flattenTextManifest(entry, lines));
+    return lines;
+  }
+  if (typeof value === "object") {
+    Object.values(value).forEach((entry) => flattenTextManifest(entry, lines));
+    return lines;
+  }
+  const text = normalizeInlineText(value, 72);
+  if (text) {
+    lines.push(text);
+  }
+  return lines;
+};
+
+const normalizeTextManifest = (value, maxItems = 10) => {
+  const lines = flattenTextManifest(value);
+  const seen = new Set();
+  return lines
+    .filter(
+      (line) =>
+        line &&
+        !/lorem ipsum|placeholder|sample text|dummy text|gibberish/i.test(line)
+    )
+    .filter((line) => {
+      const key = line.toLowerCase();
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    })
+    .slice(0, maxItems);
+};
+
+const extractField = (text, label) => {
+  if (!text || !label) {
+    return "";
+  }
+  const matcher = new RegExp(`${label}:\\s*([^\\.\\n]+)`, "i");
+  const match = text.match(matcher);
+  return match?.[1]?.toString().trim() || "";
+};
+
+const normalizeIdeaAnswer = (answer, index) => {
+  if (!answer || typeof answer !== "object") {
+    return null;
+  }
+  const question = normalizeInlineText(answer.question, 90);
+  const answerLabel = normalizeInlineText(answer.answerLabel, 90);
+  if (!answerLabel) {
+    return null;
+  }
+  return {
+    id: answer.id?.toString().trim() || `answer-${index + 1}`,
+    question: question || `Selection ${index + 1}`,
+    answerLabel,
+  };
+};
+
+const normalizeIdeaContext = (ideaContext, brief) => {
+  const details = brief?.details?.toString().trim() || "";
+  if (!ideaContext || typeof ideaContext !== "object") {
+    return {
+      category: extractField(details, "Category"),
+      audience: brief?.audience?.toString().trim() || "",
+      coreValue: extractField(details, "Primary visitor value"),
+      heroSection: extractField(details, "Leading section"),
+      primaryConversion: extractField(details, "Main conversion"),
+      answers: [],
+    };
+  }
+  return {
+    category:
+      ideaContext.category?.toString().trim() || extractField(details, "Category"),
+    audience:
+      ideaContext.audience?.toString().trim() ||
+      brief?.audience?.toString().trim() ||
+      "",
+    coreValue:
+      ideaContext.coreValue?.toString().trim() ||
+      extractField(details, "Primary visitor value"),
+    heroSection:
+      ideaContext.heroSection?.toString().trim() ||
+      extractField(details, "Leading section"),
+    primaryConversion:
+      ideaContext.primaryConversion?.toString().trim() ||
+      extractField(details, "Main conversion"),
+    answers: Array.isArray(ideaContext.answers)
+      ? ideaContext.answers.map(normalizeIdeaAnswer).filter(Boolean)
+      : [],
+  };
+};
+
+const formatIdeaContext = (ideaContext, brief) => {
+  const normalized = normalizeIdeaContext(ideaContext, brief);
+  const answerLines = normalized.answers
+    .map((entry) => `${entry.question}: ${entry.answerLabel}`)
+    .filter(Boolean);
+  return [
+    normalized.category ? `Category: ${normalized.category}` : null,
+    normalized.audience ? `Audience: ${normalized.audience}` : null,
+    normalized.coreValue ? `Primary value: ${normalized.coreValue}` : null,
+    normalized.heroSection ? `Lead section: ${normalized.heroSection}` : null,
+    normalized.primaryConversion
+      ? `Primary conversion: ${normalized.primaryConversion}`
+      : null,
+    answerLines.length ? `Idea answers: ${answerLines.join(" | ")}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+};
+
+const resolvePlanTextManifest = ({ plan, nodeContext, brief, ideaContext }) => {
+  const node = nodeContext?.node ?? {};
+  const nodeRequirements = normalizeStringList(node.requirements).slice(0, 3);
+  const sectionLines = normalizeStringList(plan?.sections).slice(0, 4);
+  const answerLines = Array.isArray(ideaContext?.answers)
+    ? ideaContext.answers
+        .map((entry) => normalizeInlineText(entry?.answerLabel, 72))
+        .filter(Boolean)
+        .slice(0, 3)
+    : [];
+  return normalizeTextManifest([
+    plan?.textContent,
+    plan?.textManifest,
+    plan?.copyDeck,
+    normalizeInlineText(node.label, 72),
+    normalizeInlineText(plan?.title, 72),
+    normalizeInlineText(brief?.name, 72),
+    normalizeInlineText(ideaContext?.coreValue, 72),
+    normalizeInlineText(ideaContext?.primaryConversion, 72),
+    ...nodeRequirements,
+    ...sectionLines,
+    ...answerLines,
+  ]);
+};
+
 const parseDataUrl = (value, label) => {
   if (typeof value !== "string" || !value.startsWith("data:")) {
     throw new Error(`${label} must be a valid data URL.`);
@@ -87,18 +256,41 @@ const parseRequestPayload = async (request) => {
     brief: parseJsonMaybe(formData.get("brief")?.toString()),
     style: parseJsonMaybe(formData.get("style")?.toString()),
     nodeContext: parseJsonMaybe(formData.get("nodeContext")?.toString()),
+    ideaContext: parseJsonMaybe(formData.get("ideaContext")?.toString()),
   };
 };
 
-const buildEditPrompt = ({ prompt, plan, brief, style, nodeContext }) => {
+const buildEditPrompt = ({
+  prompt,
+  plan,
+  brief,
+  style,
+  nodeContext,
+  ideaContext,
+}) => {
   const note = prompt?.toString().trim();
   const planTitle = plan?.title?.toString().trim();
   const planSummary = plan?.summary?.toString().trim();
+  const visualDirection = plan?.visualDirection?.toString().trim();
   const styleTitle = style?.title?.toString().trim();
   const styleSummary = style?.summary?.toString().trim();
   const pageLabel = nodeContext?.node?.label?.toString().trim();
   const pageDescription = nodeContext?.node?.description?.toString().trim();
   const goals = brief?.goals?.toString().trim();
+  const normalizedIdeaContext = normalizeIdeaContext(ideaContext, brief);
+  const ideaContextText = formatIdeaContext(normalizedIdeaContext, brief);
+  const textManifest = resolvePlanTextManifest({
+    plan,
+    nodeContext,
+    brief,
+    ideaContext: normalizedIdeaContext,
+  });
+  const textManifestBlock = textManifest.length
+    ? [
+        "Text manifest (allowed visible copy in edited region):",
+        ...textManifest.map((line, index) => `${index + 1}. "${line}"`),
+      ].join("\n")
+    : "";
   const sections = Array.isArray(plan?.sections)
     ? plan.sections.filter(Boolean)
     : [];
@@ -114,6 +306,7 @@ const buildEditPrompt = ({ prompt, plan, brief, style, nodeContext }) => {
     note ? "Implement the user request faithfully with concrete visual changes." : null,
     planTitle ? `Concept: ${planTitle}` : null,
     planSummary ? `Concept summary: ${planSummary}` : null,
+    visualDirection ? `Visual direction: ${visualDirection}` : null,
     sections.length ? `Sections: ${sections.join(", ")}` : null,
     styleKeywords.length ? `Plan style cues: ${styleKeywords.join(", ")}` : null,
     styleTitle ? `Style title: ${styleTitle}` : null,
@@ -121,9 +314,12 @@ const buildEditPrompt = ({ prompt, plan, brief, style, nodeContext }) => {
     pageLabel ? `Page: ${pageLabel}` : null,
     pageDescription ? `Page description: ${pageDescription}` : null,
     goals ? `Goals: ${goals}` : null,
+    ideaContextText ? `Idea context:\n${ideaContextText}` : null,
+    textManifestBlock || null,
     "Preserve overall style continuity with the existing composition.",
-    "If the user asks for specific text, render that exact wording legibly.",
-    "Return a polished transparent-background UI image.",
+    "If text appears in the edited area, keep it coherent and render exact wording only.",
+    "Never output gibberish, pseudo letters, placeholder copy, or watermarked text.",
+    "Return a polished full-page web UI image that matches the original background treatment.",
     "Keep text legible and avoid watermarks or blurry details.",
   ]
     .filter(Boolean)
@@ -313,6 +509,7 @@ export async function POST(request) {
       brief: payload?.brief,
       style: payload?.style,
       nodeContext: payload?.nodeContext,
+      ideaContext: payload?.ideaContext,
     });
 
     const formData = new FormData();

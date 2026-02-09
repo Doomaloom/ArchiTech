@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "../../_lib/supabase/server";
+import { BYPASS_AUTH } from "../../_lib/runtime-flags";
 
 function resolveNextPath(nextValue) {
   if (typeof nextValue !== "string") {
@@ -15,6 +16,9 @@ export async function GET(request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
   const nextPath = resolveNextPath(requestUrl.searchParams.get("next"));
+  if (BYPASS_AUTH) {
+    return NextResponse.redirect(new URL(nextPath, request.url));
+  }
   const fallbackRedirect = new URL("/login", request.url);
   fallbackRedirect.searchParams.set("next", nextPath);
 

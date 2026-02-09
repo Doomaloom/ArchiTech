@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import { getSupabasePublishableKey, getSupabaseUrl } from "./env";
+import { BYPASS_AUTH } from "../runtime-flags";
 
 const PUBLIC_PATHS = new Set([
   "/",
@@ -24,6 +25,9 @@ export async function updateSession(request) {
       headers: request.headers,
     },
   });
+  if (BYPASS_AUTH) {
+    return response;
+  }
 
   let url;
   let publishableKey;

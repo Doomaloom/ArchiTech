@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { DISABLE_PERSISTENCE } from "../_lib/runtime-flags";
 
 const VERSION_INTERVAL_MS = 20000;
 const AUTOSAVE_DEBOUNCE_MS = 1500;
@@ -131,6 +132,18 @@ export default function useProjectAutosave({
   const snapshotSignature = useMemo(() => JSON.stringify(snapshot), [snapshot]);
 
   useEffect(() => {
+    if (DISABLE_PERSISTENCE) {
+      isHydratingRef.current = false;
+      projectIdRef.current = null;
+      setStatus({
+        isHydrating: false,
+        projectId: null,
+        error: "",
+        lastSavedAt: null,
+      });
+      return undefined;
+    }
+
     let isCancelled = false;
 
     async function bootstrap() {
@@ -201,6 +214,9 @@ export default function useProjectAutosave({
   }, []);
 
   useEffect(() => {
+    if (DISABLE_PERSISTENCE) {
+      return;
+    }
     if (status.isHydrating || isHydratingRef.current) {
       return;
     }

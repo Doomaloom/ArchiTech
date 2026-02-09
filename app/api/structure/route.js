@@ -48,6 +48,68 @@ const normalizeImageDescriptions = (value) => {
   return text ? [text] : [];
 };
 
+const normalizeIdeaAnswer = (answer, index) => {
+  if (!answer || typeof answer !== "object") {
+    return null;
+  }
+  const question = answer.question?.toString().trim() || "";
+  const answerLabel = answer.answerLabel?.toString().trim() || "";
+  if (!answerLabel) {
+    return null;
+  }
+  return {
+    id: answer.id?.toString().trim() || `answer-${index + 1}`,
+    question: question || `Selection ${index + 1}`,
+    answerLabel,
+  };
+};
+
+const normalizeIdeaContext = (value) => {
+  if (!value || typeof value !== "object") {
+    return {
+      category: "",
+      audience: "",
+      coreValue: "",
+      heroSection: "",
+      primaryConversion: "",
+      answers: [],
+    };
+  }
+  return {
+    category: value.category?.toString().trim() || "",
+    audience: value.audience?.toString().trim() || "",
+    coreValue: value.coreValue?.toString().trim() || "",
+    heroSection: value.heroSection?.toString().trim() || "",
+    primaryConversion: value.primaryConversion?.toString().trim() || "",
+    answers: Array.isArray(value.answers)
+      ? value.answers.map(normalizeIdeaAnswer).filter(Boolean)
+      : [],
+  };
+};
+
+const formatIdeaContext = (ideaContext) => {
+  if (!ideaContext || typeof ideaContext !== "object") {
+    return "";
+  }
+  const answers = Array.isArray(ideaContext.answers)
+    ? ideaContext.answers
+        .map((entry) => `${entry.question}: ${entry.answerLabel}`)
+        .filter(Boolean)
+    : [];
+  return [
+    ideaContext.category ? `Category: ${ideaContext.category}` : null,
+    ideaContext.audience ? `Audience: ${ideaContext.audience}` : null,
+    ideaContext.coreValue ? `Primary value: ${ideaContext.coreValue}` : null,
+    ideaContext.heroSection ? `Lead section: ${ideaContext.heroSection}` : null,
+    ideaContext.primaryConversion
+      ? `Primary conversion: ${ideaContext.primaryConversion}`
+      : null,
+    answers.length ? `Idea answers: ${answers.join(" | ")}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+};
+
 const normalizeTreeNode = (node) => {
   if (!node || typeof node !== "object") {
     return node;
@@ -76,7 +138,15 @@ const normalizeTreePayload = (tree) => {
   return normalizeTreeNode(tree);
 };
 
-const buildPrompt = ({ title, name, details, audience, goals, style }) => {
+const buildPrompt = ({
+  title,
+  name,
+  details,
+  audience,
+  goals,
+  style,
+  ideaContext,
+}) => {
   const styleSection = [
     style?.title ? `Title: ${style.title}` : null,
     style?.summary ? `Summary: ${style.summary}` : null,
@@ -91,6 +161,7 @@ const buildPrompt = ({ title, name, details, audience, goals, style }) => {
       : null,
     style?.stylePrompt ? `Style prompt: ${style.stylePrompt}` : null,
   ].filter(Boolean);
+  const ideaSection = formatIdeaContext(ideaContext);
 
   return [
     "You are an information architect for web apps.",
@@ -117,8 +188,10 @@ const buildPrompt = ({ title, name, details, audience, goals, style }) => {
     "- 1 to 4 levels deep.",
     "- Prefer pages at depth 1, sections at depth 2, key components at depth 3+.",
     "- Every node (including root) must include description and requirements.",
-    "- Descriptions: 1-2 short sentences.",
-    "- Requirements: array of 2-5 short, concrete strings.",
+    "- Descriptions: 2-4 short sentences with concrete domain details.",
+    "- Requirements: array of 3-6 short, concrete strings tied to user tasks.",
+    "- Use the idea context answers to keep page purpose and terminology consistent.",
+    "- Internal pages must clearly reflect the selected product category and user journey.",
     "",
     "Brief:",
     `Title: ${title || "Untitled"}`,
@@ -126,6 +199,9 @@ const buildPrompt = ({ title, name, details, audience, goals, style }) => {
     `Details: ${details || "None provided."}`,
     audience ? `Audience: ${audience}` : null,
     goals ? `Goals: ${goals}` : null,
+    ideaSection ? "" : null,
+    ideaSection ? "Idea context:" : null,
+    ideaSection || null,
     styleSection.length ? "" : null,
     styleSection.length ? "Selected style:" : null,
     ...styleSection,
@@ -381,6 +457,7 @@ export async function POST(request) {
       : payload?.goals?.toString() ?? "";
     const style =
       payload?.style && typeof payload.style === "object" ? payload.style : null;
+    const ideaContext = normalizeIdeaContext(payload?.ideaContext);
     const ideogramKey = process.env.IDEOGRAM_API_KEY;
 
     if (
@@ -393,7 +470,15 @@ export async function POST(request) {
       );
     }
 
-    const prompt = buildPrompt({ title, name, details, audience, goals, style });
+    const prompt = buildPrompt({
+      title,
+      name,
+      details,
+      audience,
+      goals,
+      style,
+      ideaContext,
+    });
     const imageFiles = isMultipartRequest ? getFormImageFiles(formData) : [];
 
     const ai = new GoogleGenAI({ apiKey });

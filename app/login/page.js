@@ -1,22 +1,28 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "../_lib/supabase/server";
+import { BYPASS_AUTH } from "../_lib/runtime-flags";
 
 export const dynamic = "force-dynamic";
 
 export default async function LoginPage({ searchParams }) {
-  const supabase = await createServerSupabaseClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  if (!BYPASS_AUTH) {
+    const supabase = await createServerSupabaseClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  if (user) {
-    redirect("/");
+    if (user) {
+      redirect("/");
+    }
   }
 
   const params = await searchParams;
   const next = typeof params?.next === "string" ? params.next : "/";
   const error = typeof params?.error === "string" ? params.error : "";
+  const loginHref = BYPASS_AUTH
+    ? next
+    : `/auth/login?next=${encodeURIComponent(next)}`;
 
   return (
     <main className="landing-shell login-shell">
@@ -25,13 +31,14 @@ export default async function LoginPage({ searchParams }) {
         <h1>
           <span className="proto-wordmark">ProtoBop.</span>
         </h1>
-        <p>Continue with Google to access your private ProtoBop projects.</p>
+        <p>
+          {BYPASS_AUTH
+            ? "Auth bypass mode is enabled. Continue directly to the app."
+            : "Continue with Google to access your private ProtoBop projects."}
+        </p>
         {error ? <p className="landing-error">{error}</p> : null}
         <div className="landing-actions">
-          <Link
-            className="landing-button landing-button-google"
-            href={`/auth/login?next=${encodeURIComponent(next)}`}
-          >
+          <Link className="landing-button landing-button-google" href={loginHref}>
             <span className="landing-button-google-icon" aria-hidden="true">
               <svg viewBox="0 0 18 18" role="img" aria-label="Google">
                 <path
@@ -52,7 +59,7 @@ export default async function LoginPage({ searchParams }) {
                 />
               </svg>
             </span>
-            <span>Continue with Google</span>
+            <span>{BYPASS_AUTH ? "Enter app" : "Continue with Google"}</span>
           </Link>
           <Link className="landing-link" href="/">
             Back to ProtoBop
