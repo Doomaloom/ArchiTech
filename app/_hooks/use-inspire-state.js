@@ -633,9 +633,7 @@ export default function useInspireState() {
       );
       setWorkspaceMask(null);
       setWorkspaceStatusMessage(
-        payload?.debug?.maskPrompt
-          ? "Mask edit complete. Debug prompt logged to console."
-          : "Mask edit complete. The mask was cleared for the next change."
+        "Mask edit complete. The mask was cleared for the next change."
       );
     } catch (error) {
       setWorkspaceStatusMessage("");

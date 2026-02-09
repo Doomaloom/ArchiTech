@@ -9774,6 +9774,13 @@ body:has(.inspire-shell)
   transform: translateY(-1px);
 }
 
+.inspire-workspace-info .imageflow-generate-button:hover:not(:disabled),
+.inspire-workspace-info .imageflow-generate-button:focus-visible {
+  border-color: rgba(var(--inspire-accent-rgb), 0.56);
+  background: rgba(var(--inspire-accent-rgb), 0.14);
+  color: rgb(var(--inspire-accent-strong-rgb));
+}
+
 .inspire-workspace-action:disabled {
   opacity: 0.68;
   cursor: not-allowed;
