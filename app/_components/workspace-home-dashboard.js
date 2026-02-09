@@ -3,56 +3,7 @@
 import { useMemo, useState } from "react";
 import ImageflowMenuBar from "./ImageflowMenuBar";
 
-const PROJECT_FOLDERS = [
-  {
-    id: "proj-summit-banking",
-    name: "Summit Banking Redesign",
-    workflow: "inspire",
-    owner: "Yassine",
-    updatedAt: "2026-02-07T18:44:00.000Z",
-    files: 18,
-  },
-  {
-    id: "proj-aurora-launch",
-    name: "Aurora Launch Site",
-    workflow: "image-to-site",
-    owner: "Design Team",
-    updatedAt: "2026-02-07T13:12:00.000Z",
-    files: 11,
-  },
-  {
-    id: "proj-zen-garden",
-    name: "Zen Garden Mobile Landing",
-    workflow: "inspire",
-    owner: "Marketing",
-    updatedAt: "2026-02-06T20:20:00.000Z",
-    files: 7,
-  },
-  {
-    id: "proj-orbit-portal",
-    name: "Orbit SaaS Portal",
-    workflow: "image-to-site",
-    owner: "Product",
-    updatedAt: "2026-02-05T16:35:00.000Z",
-    files: 24,
-  },
-  {
-    id: "proj-lumen-commerce",
-    name: "Lumen Commerce Refresh",
-    workflow: "inspire",
-    owner: "Growth",
-    updatedAt: "2026-02-04T11:05:00.000Z",
-    files: 14,
-  },
-  {
-    id: "proj-vertex-pricing",
-    name: "Vertex Pricing Pages",
-    workflow: "image-to-site",
-    owner: "Web Ops",
-    updatedAt: "2026-02-03T08:22:00.000Z",
-    files: 9,
-  },
-];
+const DEFAULT_PROJECT_TITLE = "Untitled Project";
 
 const formatUpdatedAt = (isoValue) => {
   const date = new Date(isoValue);
@@ -77,22 +28,48 @@ const toFileCountLabel = (count) => `${count} ${count === 1 ? "file" : "files"}`
 const toUpdatedBadgeLabel = (isoValue) =>
   `updated ${formatUpdatedAt(isoValue).toLowerCase()}`;
 
+const toProjectName = (project) =>
+  project?.name?.toString().trim() || DEFAULT_PROJECT_TITLE;
+
+const normalizeProjects = (projects) => {
+  if (!Array.isArray(projects)) {
+    return [];
+  }
+  return projects.map((project) => ({
+    id: project?.id?.toString() || "",
+    name: toProjectName(project),
+    owner: project?.owner?.toString().trim() || "You",
+    workflow: project?.workflow === "inspire" ? "inspire" : "image-to-site",
+    updatedAt: project?.updatedAt || null,
+    files: Number(project?.files) > 0 ? Number(project.files) : 1,
+    description: project?.description?.toString() || "",
+  }));
+};
+
 export default function WorkspaceHomeDashboard({
+  projects,
+  onCreateProject,
   onStartInspire,
   onStartTranslate,
   onOpenProject,
 }) {
   const [searchValue, setSearchValue] = useState("");
+  const [isWorkflowPickerOpen, setIsWorkflowPickerOpen] = useState(false);
+  const [isCreatingProject, setIsCreatingProject] = useState(false);
+  const [createError, setCreateError] = useState("");
+
+  const allProjects = useMemo(() => normalizeProjects(projects), [projects]);
 
   const filteredProjects = useMemo(() => {
     const query = searchValue.trim().toLowerCase();
-    const matchingProjects = PROJECT_FOLDERS.filter((project) => {
+    const matchingProjects = allProjects.filter((project) => {
       if (!query) {
         return true;
       }
       return [
         project.name,
         project.owner,
+        project.description,
         toWorkflowLabel(project.workflow),
         project.id,
       ].some((field) => field.toLowerCase().includes(query));
@@ -101,7 +78,31 @@ export default function WorkspaceHomeDashboard({
       (left, right) =>
         new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime()
     );
-  }, [searchValue]);
+  }, [allProjects, searchValue]);
+
+  const handleToggleWorkflowPicker = () => {
+    if (isCreatingProject) {
+      return;
+    }
+    setCreateError("");
+    setIsWorkflowPickerOpen((current) => !current);
+  };
+
+  const handleCreateWithWorkflow = async (workflow) => {
+    if (!onCreateProject || isCreatingProject) {
+      return;
+    }
+    setIsCreatingProject(true);
+    setCreateError("");
+    try {
+      await onCreateProject(workflow);
+      setIsWorkflowPickerOpen(false);
+    } catch (error) {
+      setCreateError(error?.message || "Failed to create project.");
+    } finally {
+      setIsCreatingProject(false);
+    }
+  };
 
   return (
     <div className="imageflow-shell workspace-home-shell">
@@ -127,9 +128,7 @@ export default function WorkspaceHomeDashboard({
                 type="button"
                 onClick={onStartTranslate}
               >
-                <span className="workspace-home-launch-kicker">
-                  Start from image
-                </span>
+                <span className="workspace-home-launch-kicker">Start from image</span>
                 <h2>Translate Workflow</h2>
                 <p>
                   Turn references into page structures, preview variants, and
@@ -143,18 +142,57 @@ export default function WorkspaceHomeDashboard({
           <div className="workspace-home-files">
             <div className="workspace-home-files-header">
               <div>
-                <p className="workspace-home-files-kicker">Existing files</p>
+                <p className="workspace-home-files-kicker">Existing projects</p>
                 <h3>Recent projects</h3>
                 <p className="workspace-home-files-sort">Newest updates first</p>
               </div>
-              <input
-                className="workspace-home-search"
-                type="search"
-                placeholder="Search projects"
-                value={searchValue}
-                onChange={(event) => setSearchValue(event.target.value)}
-              />
+              <div className="workspace-home-files-actions">
+                <input
+                  className="workspace-home-search"
+                  type="search"
+                  placeholder="Search projects"
+                  value={searchValue}
+                  onChange={(event) => setSearchValue(event.target.value)}
+                />
+                <button
+                  className="workspace-home-create-button"
+                  type="button"
+                  onClick={handleToggleWorkflowPicker}
+                  disabled={isCreatingProject}
+                >
+                  {isWorkflowPickerOpen ? "Close" : "Create Project"}
+                </button>
+              </div>
             </div>
+
+            {isWorkflowPickerOpen ? (
+              <div className="workspace-home-create-picker" role="group">
+                <p>Choose a workflow for your new project.</p>
+                <div className="workspace-home-create-picker-actions">
+                  <button
+                    className="workspace-home-create-option is-inspire"
+                    type="button"
+                    onClick={() => handleCreateWithWorkflow("inspire")}
+                    disabled={isCreatingProject}
+                  >
+                    {isCreatingProject ? "Creating..." : "Inspire"}
+                  </button>
+                  <button
+                    className="workspace-home-create-option is-translate"
+                    type="button"
+                    onClick={() => handleCreateWithWorkflow("image-to-site")}
+                    disabled={isCreatingProject}
+                  >
+                    {isCreatingProject ? "Creating..." : "Translate"}
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
+            {createError ? (
+              <p className="workspace-home-create-error">{createError}</p>
+            ) : null}
+
             <div className="workspace-home-list" role="list">
               {filteredProjects.map((project) => (
                 <button
@@ -199,8 +237,13 @@ export default function WorkspaceHomeDashboard({
                 </button>
               ))}
             </div>
+
             {!filteredProjects.length ? (
-              <div className="workspace-home-empty">No projects matched your search.</div>
+              <div className="workspace-home-empty">
+                {allProjects.length
+                  ? "No projects matched your search."
+                  : "No projects yet. Create a project to get started."}
+              </div>
             ) : null}
           </div>
         </section>

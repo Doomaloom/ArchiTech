@@ -26,6 +26,7 @@ const prunePreviewItem = (preview) => {
 };
 
 export default function useProjectAutosave({
+  activeProjectId,
   workflowMode,
   inspireStep,
   setWorkflowMode,
@@ -142,8 +143,18 @@ export default function useProjectAutosave({
         isHydrating: true,
         error: "",
       }));
+      isHydratingRef.current = true;
+      projectIdRef.current = null;
       try {
-        const response = await fetch("/api/projects/bootstrap", {
+        const params = new URLSearchParams();
+        if (activeProjectId) {
+          params.set("projectId", activeProjectId);
+        }
+        const queryString = params.toString();
+        const endpoint = queryString
+          ? `/api/projects/bootstrap?${queryString}`
+          : "/api/projects/bootstrap";
+        const response = await fetch(endpoint, {
           method: "GET",
           cache: "no-store",
         });
@@ -151,12 +162,19 @@ export default function useProjectAutosave({
           window.location.assign("/login?next=%2F");
           return;
         }
+
+        const payload = await response.json().catch(() => ({}));
+
+        if (response.status === 404) {
+          throw new Error(payload?.error || "Project not found.");
+        }
         if (!response.ok) {
           throw new Error("Failed to bootstrap project state.");
         }
-        const payload = await response.json();
+
         const projectId = payload?.project?.id ?? null;
         projectIdRef.current = projectId;
+        lastVersionAtRef.current = 0;
 
         const dbSnapshot = payload?.snapshot;
         if (dbSnapshot && typeof dbSnapshot === "object") {
@@ -173,6 +191,8 @@ export default function useProjectAutosave({
           controls.imageHydrate(dbSnapshot.imageToSite ?? {});
           controls.inspireHydrate(dbSnapshot.inspire ?? {});
           lastSignatureRef.current = JSON.stringify(dbSnapshot);
+        } else {
+          lastSignatureRef.current = "";
         }
 
         if (!isCancelled) {
@@ -187,9 +207,11 @@ export default function useProjectAutosave({
       } catch (error) {
         if (!isCancelled) {
           isHydratingRef.current = false;
+          projectIdRef.current = null;
           setStatus((current) => ({
             ...current,
             isHydrating: false,
+            projectId: null,
             error: error?.message ?? "Failed to bootstrap project.",
           }));
         }
@@ -201,7 +223,7 @@ export default function useProjectAutosave({
     return () => {
       isCancelled = true;
     };
-  }, []);
+  }, [activeProjectId]);
 
   useEffect(() => {
     if (status.isHydrating || isHydratingRef.current) {

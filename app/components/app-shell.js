@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { ImageToSiteProvider } from "../_context/image-to-site-context";
 import { InspireProvider } from "../_context/inspire-context";
 import { WorkflowProvider } from "../_context/workflow-context";
@@ -12,11 +13,14 @@ import useInspireState from "../_hooks/use-inspire-state";
 import SidebarRail from "./sidebar-rail";
 
 function AppShellFrame({ children }) {
+  const searchParams = useSearchParams();
+  const activeProjectId = searchParams.get("projectId");
   const { workflowMode, inspireStep, setWorkflowMode, setInspireStep } =
     useWorkflow();
   const { state: imageState, actions: imageActions } = useImageToSite();
   const { state: inspireState, actions: inspireActions } = useInspire();
   useProjectAutosave({
+    activeProjectId,
     workflowMode,
     inspireStep,
     setWorkflowMode,
