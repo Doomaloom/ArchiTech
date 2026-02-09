@@ -12,6 +12,11 @@ const prunePreviewItem = (preview) => {
   }
   return {
     id: preview.id ?? null,
+    pageId: typeof preview.pageId === "string" ? preview.pageId : null,
+    pageName: typeof preview.pageName === "string" ? preview.pageName : null,
+    route: typeof preview.route === "string" ? preview.route : null,
+    notes: typeof preview.notes === "string" ? preview.notes : null,
+    actions: Array.isArray(preview.actions) ? preview.actions : null,
     plan: preview.plan ?? null,
     html: typeof preview.html === "string" ? preview.html : null,
     imageUrl: typeof preview.imageUrl === "string" ? preview.imageUrl : null,

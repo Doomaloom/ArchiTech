@@ -25,6 +25,7 @@ const VALID_VIEW_MODES = new Set([
   "iterate",
   "builder",
   "code",
+  "build-app",
 ]);
 
 const clampValue = (value, min, max) => Math.min(Math.max(value, min), max);
@@ -116,6 +117,48 @@ const normalizePreviewItems = (items, count) => {
   return next;
 };
 
+const normalizeText = (value, fallback = "") => {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+  const trimmed = value.trim();
+  return trimmed || fallback;
+};
+
+const slugify = (value, fallback = "page") => {
+  const slug = normalizeText(value, fallback)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || fallback;
+};
+
+const collectStructurePages = (root) => {
+  if (!root || typeof root !== "object") {
+    return [];
+  }
+  const topLevel = resolveChildren(root);
+  const pageNodes = topLevel.length ? topLevel : [root];
+  return pageNodes.map((node, index) => {
+    const pageId = normalizeText(node?.id?.toString(), `page-${index + 1}`);
+    const pageName = normalizeText(
+      node?.label?.toString() || node?.name?.toString(),
+      `Page ${index + 1}`
+    );
+    const route = normalizeText(
+      node?.route?.toString(),
+      index === 0 ? "/" : `/${slugify(pageId || pageName, `page-${index + 1}`)}`
+    );
+    const notes = normalizeText(node?.description?.toString(), "");
+    const actions = Array.isArray(node?.requirements)
+      ? node.requirements
+          .map((entry) => normalizeText(entry))
+          .filter(Boolean)
+      : [];
+    return { pageId, pageName, route, notes, actions };
+  });
+};
+
 export default function useImageToSiteState() {
   const viewMode = useViewMode();
   const previewSettings = usePreviewSettings({
@@ -193,16 +236,6 @@ export default function useImageToSiteState() {
     () => buildStructureIndex(structureRoot),
     [structureRoot]
   );
-  const selectedNodeContext = useMemo(
-    () =>
-      buildNodeContext({
-        nodesById: structureIndex?.nodesById ?? null,
-        parentById: structureIndex?.parentById ?? null,
-        selectedNodeId: nodeGraph.state.selectedNodeId,
-      }),
-    [nodeGraph.state.selectedNodeId, structureIndex]
-  );
-
   const handlePreviewZoomOut = useCallback(() => {
     setPreviewZoom((current) =>
       clampValue(current - PREVIEW_ZOOM_STEP, PREVIEW_ZOOM_MIN, PREVIEW_ZOOM_MAX)
@@ -258,50 +291,129 @@ export default function useImageToSiteState() {
   ]);
 
   const handleGeneratePreviews = useCallback(async () => {
-    if (!selectedNodeContext?.node) {
-      setPreviewError("Select a node before generating previews.");
+    if (!structureRoot || !structureIndex?.nodesById) {
+      setPreviewError("Generate a structure before creating previews.");
       return;
     }
+    const pages = collectStructurePages(structureRoot);
+    if (!pages.length) {
+      setPreviewError("No pages found in the structure.");
+      return;
+    }
+
     setIsGeneratingPreviews(true);
     setPreviewError("");
+    previewSettings.actions.setPreviewCount(pages.length);
+    setPreviewItems(
+      pages.map((page, index) => ({
+        id: `${page.pageId || `page-${index + 1}`}-preview`,
+        pageId: page.pageId,
+        pageName: page.pageName,
+        route: page.route,
+        notes: page.notes,
+        actions: page.actions,
+        status: "loading",
+        imageUrl: null,
+        html: null,
+        plan: null,
+        renderError: null,
+      }))
+    );
+
     try {
-      const response = await fetch("/api/previews", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          count: previewSettings.state.previewCount,
-          quality: modelQuality,
-          creativity: creativityValue,
-          renderMode: "html",
-          nodeContext: selectedNodeContext,
-        }),
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        setPreviewError(
-          payload?.error || payload?.message || "Failed to generate previews."
-        );
-        const fallback = normalizePreviewItems(
-          payload?.previews ?? [],
-          previewSettings.state.previewCount
-        );
-        setPreviewItems(fallback);
+      const results = await Promise.all(
+        pages.map(async (page, index) => {
+          const nodeContext = buildNodeContext({
+            nodesById: structureIndex?.nodesById ?? null,
+            parentById: structureIndex?.parentById ?? null,
+            selectedNodeId: page.pageId,
+          });
+          if (!nodeContext?.node) {
+            return {
+              id: `${page.pageId || `page-${index + 1}`}-preview`,
+              pageId: page.pageId,
+              pageName: page.pageName,
+              route: page.route,
+              notes: page.notes,
+              actions: page.actions,
+              status: "empty",
+              imageUrl: null,
+              html: null,
+              plan: null,
+              renderError: "Page node was not found in the structure.",
+            };
+          }
+          try {
+            const response = await fetch("/api/previews", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                count: 1,
+                quality: modelQuality,
+                creativity: creativityValue,
+                renderMode: "html",
+                nodeContext,
+              }),
+            });
+            const payload = await response.json().catch(() => ({}));
+            const preview = Array.isArray(payload?.previews)
+              ? payload.previews[0] || null
+              : null;
+            const errorMessage =
+              payload?.error ||
+              payload?.message ||
+              preview?.renderError ||
+              (!preview?.html ? "Preview HTML was not returned." : "");
+            return {
+              id: preview?.id?.toString() || `${page.pageId}-preview`,
+              pageId: page.pageId,
+              pageName: page.pageName,
+              route: page.route,
+              notes: page.notes,
+              actions: page.actions,
+              status: preview?.html ? "ready" : "empty",
+              imageUrl: null,
+              html: preview?.html ?? null,
+              plan: preview?.plan ?? null,
+              renderError: !response.ok || !preview?.html ? errorMessage : null,
+            };
+          } catch (error) {
+            return {
+              id: `${page.pageId || `page-${index + 1}`}-preview`,
+              pageId: page.pageId,
+              pageName: page.pageName,
+              route: page.route,
+              notes: page.notes,
+              actions: page.actions,
+              status: "empty",
+              imageUrl: null,
+              html: null,
+              plan: null,
+              renderError: error?.message || "Failed to generate preview.",
+            };
+          }
+        })
+      );
+
+      setPreviewItems(results);
+      const firstReadyIndex = results.findIndex((entry) => entry?.html);
+      const selectedIndex = firstReadyIndex >= 0 ? firstReadyIndex : 0;
+      previewSettings.actions.setSelectedPreviewIndex(selectedIndex);
+      const generatedHtml = results[selectedIndex]?.html || "";
+      setBuilderHtml(generatedHtml);
+      const successCount = results.filter((entry) => entry?.html).length;
+      if (!successCount) {
+        setPreviewError("Failed to generate page previews.");
         return;
       }
-      const normalized = normalizePreviewItems(
-        payload?.previews ?? [],
-        previewSettings.state.previewCount
-      );
-      setPreviewItems(normalized);
-      previewSettings.actions.setSelectedPreviewIndex(0);
-      const generatedHtml =
-        normalized.find((preview) => preview?.html)?.html || "";
-      setBuilderHtml(generatedHtml);
+      if (successCount < results.length) {
+        setPreviewError(`Generated ${successCount}/${results.length} page previews.`);
+      }
       viewMode.setViewMode("preview");
     } catch (error) {
-      setPreviewError(error?.message ?? "Failed to generate previews.");
+      setPreviewError(error?.message ?? "Failed to generate page previews.");
     } finally {
       setIsGeneratingPreviews(false);
     }
@@ -309,8 +421,8 @@ export default function useImageToSiteState() {
     creativityValue,
     modelQuality,
     previewSettings.actions,
-    previewSettings.state.previewCount,
-    selectedNodeContext,
+    structureIndex,
+    structureRoot,
     viewMode,
   ]);
 

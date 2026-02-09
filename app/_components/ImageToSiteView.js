@@ -7,7 +7,8 @@ import { useImageToSite } from "./../_context/image-to-site-context";
 
 export default function ImageToSiteView() {
   const { state, derived } = useImageToSite();
-  const isBuilder = state.viewMode === "builder";
+  const isBuilder =
+    state.viewMode === "builder" || state.viewMode === "build-app";
   const hideSidePanels = state.viewMode === "code" || isBuilder;
   const layoutClassName = `imageflow-layout${
     isBuilder ? " is-builder" : hideSidePanels ? " is-code" : ""

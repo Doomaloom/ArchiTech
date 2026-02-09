@@ -1,8 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useImageToSite } from "../_context/image-to-site-context";
+import { useInspire } from "../_context/inspire-context";
+import { useWorkflow } from "../_context/workflow-context";
 
 const ACTIVE_JOB_STATUSES = new Set(["queued", "running", "fixing"]);
+
+function redirectToLogin() {
+  if (typeof window === "undefined") {
+    return;
+  }
+  const next = encodeURIComponent(window.location.pathname || "/");
+  window.location.assign(`/login?next=${next}`);
+}
 
 function normalizeText(value, fallback = "") {
   if (typeof value !== "string") {
@@ -10,6 +21,117 @@ function normalizeText(value, fallback = "") {
   }
   const trimmed = value.trim();
   return trimmed || fallback;
+}
+
+function isPlainObject(value) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function countHtmlPreviews(previewItems) {
+  if (!Array.isArray(previewItems)) {
+    return 0;
+  }
+  return previewItems.filter((entry) => normalizeText(entry?.html || "")).length;
+}
+
+function pickPreferredPreviewItems(serverItems, localItems) {
+  const serverCount = countHtmlPreviews(serverItems);
+  const localCount = countHtmlPreviews(localItems);
+  if (localCount >= serverCount) {
+    return Array.isArray(localItems) ? localItems : [];
+  }
+  return Array.isArray(serverItems) ? serverItems : [];
+}
+
+function scoreBrief(brief) {
+  if (!isPlainObject(brief)) {
+    return 0;
+  }
+  const keys = ["title", "name", "details", "audience", "goals"];
+  return keys.reduce(
+    (score, key) => score + (normalizeText(brief[key] || "") ? 1 : 0),
+    0
+  );
+}
+
+function scoreStyle(style) {
+  if (!isPlainObject(style)) {
+    return 0;
+  }
+  let score = 0;
+  if (normalizeText(style.title || "")) {
+    score += 1;
+  }
+  if (normalizeText(style.summary || "")) {
+    score += 1;
+  }
+  if (Array.isArray(style.palette) && style.palette.length) {
+    score += 1;
+  }
+  if (Array.isArray(style.tags) && style.tags.length) {
+    score += 1;
+  }
+  return score;
+}
+
+function mergeSnapshotSources(serverSnapshot, localSnapshot) {
+  const serverImage = isPlainObject(serverSnapshot?.imageToSite)
+    ? serverSnapshot.imageToSite
+    : {};
+  const localImage = isPlainObject(localSnapshot?.imageToSite)
+    ? localSnapshot.imageToSite
+    : {};
+  const serverInspire = isPlainObject(serverSnapshot?.inspire)
+    ? serverSnapshot.inspire
+    : {};
+  const localInspire = isPlainObject(localSnapshot?.inspire)
+    ? localSnapshot.inspire
+    : {};
+
+  const mergedImage = {
+    ...serverImage,
+    ...localImage,
+    previewItems: pickPreferredPreviewItems(
+      serverImage.previewItems,
+      localImage.previewItems
+    ),
+    structureFlow: localImage.structureFlow || serverImage.structureFlow || null,
+    builderHtml:
+      normalizeText(localImage.builderHtml || "") ||
+      normalizeText(serverImage.builderHtml || ""),
+  };
+
+  const localBriefScore = scoreBrief(localInspire.brief);
+  const serverBriefScore = scoreBrief(serverInspire.brief);
+  const localStyleScore = scoreStyle(localInspire.selectedStyle);
+  const serverStyleScore = scoreStyle(serverInspire.selectedStyle);
+
+  const mergedInspire = {
+    ...serverInspire,
+    ...localInspire,
+    previewItems: pickPreferredPreviewItems(
+      serverInspire.previewItems,
+      localInspire.previewItems
+    ),
+    tree: localInspire.tree || serverInspire.tree || null,
+    brief:
+      localBriefScore >= serverBriefScore
+        ? localInspire.brief || {}
+        : serverInspire.brief || {},
+    selectedStyle:
+      localStyleScore >= serverStyleScore
+        ? localInspire.selectedStyle || {}
+        : serverInspire.selectedStyle || {},
+    workspaceNote:
+      normalizeText(localInspire.workspaceNote || "") ||
+      normalizeText(serverInspire.workspaceNote || ""),
+  };
+
+  return {
+    ...serverSnapshot,
+    imageToSite: mergedImage,
+    inspire: mergedInspire,
+  };
 }
 
 function slugify(value, fallback = "page") {
@@ -96,162 +218,253 @@ function dedupePages(pages) {
   return deduped;
 }
 
-function collectPreviewOptions(snapshot) {
-  const options = [];
-  const pushPreview = (preview, source, index) => {
-    const html = normalizeText(preview?.html);
-    if (!html) {
-      return;
-    }
-    options.push({
-      id: `${source}-${index + 1}`,
-      label: `${source} preview ${index + 1}`,
-      html,
-      source,
-    });
-  };
+function collectPagesForWorkflow(snapshot, workflowMode) {
+  const preferInspire = workflowMode === "inspire";
+  const inspireRoot = normalizeTreeRoot(snapshot?.inspire?.tree);
+  const imageRoot = normalizeTreeRoot(snapshot?.imageToSite?.structureFlow);
 
+  const primary = preferInspire
+    ? collectPagesFromTree(inspireRoot, "inspire")
+    : collectPagesFromTree(imageRoot, "image-to-site");
+  if (primary.length) {
+    return dedupePages(primary);
+  }
+
+  const fallback = preferInspire
+    ? collectPagesFromTree(imageRoot, "image-to-site")
+    : collectPagesFromTree(inspireRoot, "inspire");
+  return dedupePages(fallback);
+}
+
+function collectHtmlPreviews(snapshot) {
   const imagePreviews = Array.isArray(snapshot?.imageToSite?.previewItems)
     ? snapshot.imageToSite.previewItems
     : [];
   const inspirePreviews = Array.isArray(snapshot?.inspire?.previewItems)
     ? snapshot.inspire.previewItems
     : [];
+  const builderHtml = normalizeText(snapshot?.imageToSite?.builderHtml || "");
 
+  const candidates = [];
+  const pushPreview = (preview, source, index) => {
+    const html = normalizeText(preview?.html || "");
+    if (!html) {
+      return;
+    }
+    candidates.push({
+      id: normalizeText(preview?.id?.toString(), `${source}-${index + 1}`),
+      source,
+      html,
+      pageId: normalizeText(preview?.pageId?.toString(), ""),
+      route: normalizeText(preview?.route?.toString(), ""),
+      pageName: normalizeText(
+        preview?.pageName?.toString() || preview?.name?.toString(),
+        ""
+      ),
+      notes: normalizeText(preview?.notes?.toString(), ""),
+      actions: Array.isArray(preview?.actions) ? preview.actions : [],
+    });
+  };
+
+  inspirePreviews.forEach((preview, index) =>
+    pushPreview(preview, "inspire", index)
+  );
   imagePreviews.forEach((preview, index) => pushPreview(preview, "image", index));
-  inspirePreviews.forEach((preview, index) => pushPreview(preview, "inspire", index));
 
-  const builderHtml = normalizeText(snapshot?.imageToSite?.builderHtml);
   if (builderHtml) {
-    options.push({
+    candidates.push({
       id: "builder-html",
-      label: "Builder HTML",
-      html: builderHtml,
       source: "builder",
+      html: builderHtml,
+      pageId: "",
+      route: "",
+      pageName: "",
+      notes: "",
+      actions: [],
     });
   }
 
-  return options;
+  return candidates;
 }
 
-function buildGenerationPages(pages, selectedPreviewByPage, previewOptionsById) {
-  return pages.map((page, index) => {
-    const selectedPreviewId = selectedPreviewByPage[page.pageId];
-    const selectedPreview = previewOptionsById[selectedPreviewId];
-    const html = selectedPreview?.html || "";
-    return {
-      pageId: page.pageId || `page-${index + 1}`,
-      route: page.route || (index === 0 ? "/" : `/page-${index + 1}`),
-      name: page.name || `Page ${index + 1}`,
-      treeNode: page.treeNode || null,
-      selectedPreviewHtml: html,
-      actions: Array.isArray(page.actions) ? page.actions : [],
-      notes: page.notes || "",
+function buildPagePreviewMap(pages, snapshot) {
+  const candidates = collectHtmlPreviews(snapshot).map((entry, index) => ({
+    ...entry,
+    candidateIndex: index,
+  }));
+  const used = new Set();
+  const map = {};
+
+  const pick = (predicate) => {
+    const match = candidates.find(
+      (candidate) =>
+        !used.has(candidate.candidateIndex) && predicate(candidate)
+    );
+    if (!match) {
+      return null;
+    }
+    used.add(match.candidateIndex);
+    return match;
+  };
+
+  pages.forEach((page) => {
+    let matched =
+      pick((candidate) => candidate.pageId && candidate.pageId === page.pageId) ||
+      pick((candidate) => candidate.route && candidate.route === page.route) ||
+      pick(
+        (candidate) =>
+          candidate.pageName &&
+          candidate.pageName.toLowerCase() === page.name.toLowerCase()
+      ) ||
+      pick(() => true);
+
+    if (!matched) {
+      map[page.pageId] = null;
+      return;
+    }
+
+    map[page.pageId] = {
+      ...matched,
+      pageId: page.pageId,
+      route: page.route,
+      pageName: page.name,
+      notes: page.notes,
+      actions: page.actions,
     };
   });
+
+  return map;
+}
+
+function buildGenerationPages(pages, pagePreviewMap) {
+  return pages.map((page, index) => ({
+    pageId: page.pageId || `page-${index + 1}`,
+    route: page.route || (index === 0 ? "/" : `/page-${index + 1}`),
+    name: page.name || `Page ${index + 1}`,
+    treeNode: page.treeNode || null,
+    selectedPreviewHtml: pagePreviewMap?.[page.pageId]?.html || "",
+    actions: Array.isArray(page.actions) ? page.actions : [],
+    notes: page.notes || "",
+  }));
 }
 
 export default function BuildFlow() {
+  const { workflowMode, setInspireStep } = useWorkflow();
+  const { state: imageState, actions: imageActions } = useImageToSite();
+  const { state: inspireState, actions: inspireActions } = useInspire();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [serverSnapshot, setServerSnapshot] = useState({});
   const [projectId, setProjectId] = useState("");
-  const [brief, setBrief] = useState({});
-  const [style, setStyle] = useState({});
-  const [globalNotes, setGlobalNotes] = useState("");
-  const [pages, setPages] = useState([]);
-  const [previewOptions, setPreviewOptions] = useState([]);
-  const [selectedPreviewByPage, setSelectedPreviewByPage] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [jobId, setJobId] = useState("");
   const [job, setJob] = useState(null);
   const [jobError, setJobError] = useState("");
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
 
-  const previewOptionsById = useMemo(() => {
-    return previewOptions.reduce((accumulator, option) => {
-      accumulator[option.id] = option;
-      return accumulator;
-    }, {});
-  }, [previewOptions]);
+  const localSnapshot = useMemo(
+    () => ({
+      imageToSite: {
+        previewItems: Array.isArray(imageState.previewItems)
+          ? imageState.previewItems
+          : [],
+        structureFlow: imageState.structureFlow || null,
+        builderHtml: normalizeText(imageState.builderHtml || ""),
+      },
+      inspire: {
+        previewItems: Array.isArray(inspireState.previewItems)
+          ? inspireState.previewItems
+          : [],
+        tree: inspireState.tree || null,
+        brief: inspireState.brief || {},
+        selectedStyle: inspireState.selectedStyle || {},
+        workspaceNote: normalizeText(inspireState.workspaceNote || ""),
+      },
+    }),
+    [
+      imageState.builderHtml,
+      imageState.previewItems,
+      imageState.structureFlow,
+      inspireState.brief,
+      inspireState.previewItems,
+      inspireState.selectedStyle,
+      inspireState.tree,
+      inspireState.workspaceNote,
+    ]
+  );
+
+  const effectiveSnapshot = useMemo(
+    () => mergeSnapshotSources(serverSnapshot, localSnapshot),
+    [localSnapshot, serverSnapshot]
+  );
+
+  const brief = useMemo(
+    () => (isPlainObject(effectiveSnapshot?.inspire?.brief) ? effectiveSnapshot.inspire.brief : {}),
+    [effectiveSnapshot]
+  );
+  const style = useMemo(
+    () =>
+      isPlainObject(effectiveSnapshot?.inspire?.selectedStyle)
+        ? effectiveSnapshot.inspire.selectedStyle
+        : {},
+    [effectiveSnapshot]
+  );
+  const globalNotes = useMemo(
+    () => normalizeText(effectiveSnapshot?.inspire?.workspaceNote || ""),
+    [effectiveSnapshot]
+  );
+  const pages = useMemo(() => {
+    const inferredPages = collectPagesForWorkflow(effectiveSnapshot, workflowMode);
+    if (inferredPages.length) {
+      return inferredPages;
+    }
+    return [
+      {
+        pageId: "home",
+        name: "Home",
+        route: "/",
+        notes: "",
+        actions: [],
+        treeNode: null,
+        source: "fallback",
+      },
+    ];
+  }, [effectiveSnapshot, workflowMode]);
+  const pagePreviewMap = useMemo(
+    () => buildPagePreviewMap(pages, effectiveSnapshot),
+    [effectiveSnapshot, pages]
+  );
+
+  const loadSnapshot = useCallback(async () => {
+    setIsLoading(true);
+    setError("");
+    try {
+      const response = await fetch("/api/projects/bootstrap", {
+        method: "GET",
+        cache: "no-store",
+      });
+      if (response.status === 401) {
+        redirectToLogin();
+        return;
+      }
+      if (!response.ok) {
+        throw new Error("Failed to load project snapshot.");
+      }
+      const payload = await response.json();
+      const snapshot = payload?.snapshot || {};
+      setProjectId(normalizeText(payload?.project?.id));
+      setServerSnapshot(isPlainObject(snapshot) ? snapshot : {});
+    } catch (loadError) {
+      setError(loadError?.message || "Failed to load build context.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    let isCancelled = false;
-    async function loadSnapshot() {
-      setIsLoading(true);
-      setError("");
-      try {
-        const response = await fetch("/api/projects/bootstrap", {
-          method: "GET",
-          cache: "no-store",
-        });
-        if (response.status === 401) {
-          window.location.assign("/login?next=%2Fbuild");
-          return;
-        }
-        if (!response.ok) {
-          throw new Error("Failed to load project snapshot.");
-        }
-        const payload = await response.json();
-        if (isCancelled) {
-          return;
-        }
-
-        const snapshot = payload?.snapshot || {};
-        setProjectId(normalizeText(payload?.project?.id));
-        setBrief(snapshot?.inspire?.brief || {});
-        setStyle(snapshot?.inspire?.selectedStyle || {});
-        setGlobalNotes(normalizeText(snapshot?.inspire?.workspaceNote || ""));
-
-        const inspireRoot = normalizeTreeRoot(snapshot?.inspire?.tree);
-        const imageRoot = normalizeTreeRoot(snapshot?.imageToSite?.structureFlow);
-        const inferredPages = dedupePages([
-          ...collectPagesFromTree(inspireRoot, "inspire"),
-          ...collectPagesFromTree(imageRoot, "image-to-site"),
-        ]);
-
-        const pageFallback = inferredPages.length
-          ? inferredPages
-          : [
-              {
-                pageId: "home",
-                name: "Home",
-                route: "/",
-                notes: "",
-                actions: [],
-                treeNode: null,
-                source: "fallback",
-              },
-            ];
-        setPages(pageFallback);
-
-        const options = collectPreviewOptions(snapshot);
-        setPreviewOptions(options);
-
-        const firstOptionId = options[0]?.id || "";
-        const initialSelection = {};
-        for (const page of pageFallback) {
-          initialSelection[page.pageId] = firstOptionId;
-        }
-        setSelectedPreviewByPage(initialSelection);
-
-        if (!options.length) {
-          setError("No HTML previews found. Generate HTML previews before building.");
-        }
-      } catch (loadError) {
-        if (!isCancelled) {
-          setError(loadError?.message || "Failed to load build context.");
-        }
-      } finally {
-        if (!isCancelled) {
-          setIsLoading(false);
-        }
-      }
-    }
     loadSnapshot();
-    return () => {
-      isCancelled = true;
-    };
-  }, []);
+  }, [loadSnapshot]);
 
   useEffect(() => {
     if (!jobId) {
@@ -266,7 +479,7 @@ export default function BuildFlow() {
           cache: "no-store",
         });
         if (response.status === 401) {
-          window.location.assign("/login?next=%2Fbuild");
+          redirectToLogin();
           return;
         }
         const payload = await response.json().catch(() => ({}));
@@ -295,35 +508,23 @@ export default function BuildFlow() {
     };
   }, [jobId]);
 
-  const canSubmit = useMemo(() => {
-    if (!projectId || !pages.length || !previewOptions.length || isSubmitting) {
-      return false;
-    }
-    return pages.every((page) => {
-      const selectedId = selectedPreviewByPage[page.pageId];
-      return Boolean(selectedId && previewOptionsById[selectedId]?.html);
-    });
-  }, [
-    isSubmitting,
-    pages,
-    previewOptions.length,
-    previewOptionsById,
-    projectId,
-    selectedPreviewByPage,
-  ]);
-
+  const readyCount = useMemo(
+    () =>
+      pages.filter((page) => Boolean(pagePreviewMap?.[page.pageId]?.html)).length,
+    [pagePreviewMap, pages]
+  );
+  const missingCount = pages.length - readyCount;
+  const canSubmit = Boolean(
+    projectId &&
+      pages.length &&
+      !isSubmitting &&
+      pages.every((page) => pagePreviewMap?.[page.pageId]?.html)
+  );
   const isJobActive = Boolean(job && ACTIVE_JOB_STATUSES.has(job.status));
   const isJobComplete = Boolean(
     job &&
       (job.status === "completed" || job.status === "completed_with_warnings")
   );
-
-  const handleSelectPreview = (pageId, previewId) => {
-    setSelectedPreviewByPage((current) => ({
-      ...current,
-      [pageId]: previewId,
-    }));
-  };
 
   const handleSubmit = async () => {
     if (!canSubmit) {
@@ -332,11 +533,7 @@ export default function BuildFlow() {
     setIsSubmitting(true);
     setJobError("");
     try {
-      const generationPages = buildGenerationPages(
-        pages,
-        selectedPreviewByPage,
-        previewOptionsById
-      );
+      const generationPages = buildGenerationPages(pages, pagePreviewMap);
       const response = await fetch("/api/agentic/jobs", {
         method: "POST",
         headers: {
@@ -394,15 +591,41 @@ export default function BuildFlow() {
     }
   };
 
+  const handleBackToPreviews = () => {
+    if (workflowMode === "inspire") {
+      setInspireStep("previews");
+      return;
+    }
+    imageActions.setViewMode("preview");
+  };
+
+  const handleRegenerateMissing = async () => {
+    setIsRegenerating(true);
+    setJobError("");
+    try {
+      if (workflowMode === "inspire") {
+        await inspireActions.generatePagePreviews?.();
+        setInspireStep("previews");
+      } else {
+        await imageActions.handleGeneratePreviews?.();
+        imageActions.setViewMode("preview");
+      }
+    } catch (regenError) {
+      setJobError(regenError?.message || "Failed to regenerate page previews.");
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
+
   return (
     <div className="build-shell">
       <section className="build-panel">
         <div className="build-header">
           <p className="build-kicker">Build App</p>
-          <h1>Select one HTML preview per page.</h1>
+          <h1>Build from page previews.</h1>
           <p>
-            The backend agent uses these selected previews, your brief, style, and notes to
-            generate a full Next.js app.
+            The generator uses one HTML preview per page plus your brief, style, and
+            notes.
           </p>
         </div>
 
@@ -410,51 +633,54 @@ export default function BuildFlow() {
         {error ? <p className="build-error">{error}</p> : null}
 
         {!isLoading && !error ? (
-          <div className="build-page-list">
-            {pages.map((page) => {
-              const selectedId = selectedPreviewByPage[page.pageId];
-              const selectedOption = previewOptionsById[selectedId];
-              return (
-                <article key={page.pageId} className="build-page-card">
-                  <div className="build-page-head">
-                    <div>
-                      <strong>{page.name}</strong>
-                      <span>{page.route}</span>
+          <>
+            <div className="build-job-card">
+              <strong>
+                Ready pages: {readyCount}/{pages.length}
+              </strong>
+              <span>
+                {missingCount
+                  ? `${missingCount} pages are missing HTML previews.`
+                  : "All pages have HTML previews."}
+              </span>
+            </div>
+
+            <div className="build-page-list">
+              {pages.map((page) => {
+                const preview = pagePreviewMap?.[page.pageId];
+                const hasHtml = Boolean(preview?.html);
+                return (
+                  <article key={page.pageId} className="build-page-card">
+                    <div className="build-page-head">
+                      <div>
+                        <strong>{page.name}</strong>
+                        <span>{page.route}</span>
+                      </div>
+                      <span>{hasHtml ? "Ready" : "Missing"}</span>
                     </div>
-                    <select
-                      className="build-select"
-                      value={selectedId || ""}
-                      onChange={(event) =>
-                        handleSelectPreview(page.pageId, event.target.value)
-                      }
-                    >
-                      {previewOptions.map((option) => (
-                        <option key={option.id} value={option.id}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <p className="build-page-meta">
-                    {page.notes || "No page notes."}
-                    {page.actions.length ? ` Actions: ${page.actions.join(", ")}` : ""}
-                  </p>
-                  <div className="build-preview-wrap">
-                    {selectedOption?.html ? (
-                      <iframe
-                        title={`${page.name} preview`}
-                        srcDoc={selectedOption.html}
-                        sandbox=""
-                        className="build-preview-frame"
-                      />
-                    ) : (
-                      <div className="build-preview-empty">No preview selected.</div>
-                    )}
-                  </div>
-                </article>
-              );
-            })}
-          </div>
+                    <p className="build-page-meta">
+                      {page.notes || "No page notes."}
+                      {page.actions.length ? ` Actions: ${page.actions.join(", ")}` : ""}
+                    </p>
+                    <div className="build-preview-wrap">
+                      {hasHtml ? (
+                        <iframe
+                          title={`${page.name} preview`}
+                          srcDoc={preview.html}
+                          sandbox=""
+                          className="build-preview-frame"
+                        />
+                      ) : (
+                        <div className="build-preview-empty">
+                          Missing HTML preview for this page.
+                        </div>
+                      )}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </>
         ) : null}
 
         <div className="build-actions">
@@ -465,6 +691,30 @@ export default function BuildFlow() {
             onClick={handleSubmit}
           >
             {isSubmitting ? "Starting..." : "Generate App"}
+          </button>
+          <button
+            type="button"
+            className="build-button is-secondary"
+            onClick={handleRegenerateMissing}
+            disabled={isRegenerating || isLoading}
+          >
+            {isRegenerating ? "Regenerating..." : "Regenerate page previews"}
+          </button>
+          <button
+            type="button"
+            className="build-button is-secondary"
+            onClick={handleBackToPreviews}
+            disabled={isLoading}
+          >
+            Back to previews
+          </button>
+          <button
+            type="button"
+            className="build-button is-secondary"
+            onClick={loadSnapshot}
+            disabled={isLoading}
+          >
+            Refresh build context
           </button>
           {isJobComplete ? (
             <button

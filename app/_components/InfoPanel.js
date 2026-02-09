@@ -2,8 +2,42 @@ import { useImageToSite } from "./../_context/image-to-site-context";
 import FileTree from "./FileTree";
 import PreviewGenerationControls from "./PreviewGenerationControls";
 
+const getTreeChildren = (node) => {
+  if (!node || typeof node !== "object") {
+    return [];
+  }
+  if (Array.isArray(node.children)) {
+    return node.children;
+  }
+  if (Array.isArray(node.items)) {
+    return node.items;
+  }
+  if (Array.isArray(node.pages)) {
+    return node.pages;
+  }
+  if (Array.isArray(node.nodes)) {
+    return node.nodes;
+  }
+  return [];
+};
+
+const getStructureRoot = (tree) => {
+  if (!tree || typeof tree !== "object") {
+    return null;
+  }
+  if (tree.root && typeof tree.root === "object") {
+    return tree.root;
+  }
+  return tree;
+};
+
 export default function InfoPanel() {
   const { state, derived, actions } = useImageToSite();
+  const structureRoot = getStructureRoot(state.structureFlow);
+  const previewPageCount = Math.max(
+    getTreeChildren(structureRoot).length || (structureRoot ? 1 : 0),
+    1
+  );
 
   return (
     <aside className="imageflow-info">
@@ -117,12 +151,10 @@ export default function InfoPanel() {
           <div className="imageflow-info-header">
             {state.viewMode === "nodes" ? (
               <>
-                <p className="imageflow-info-kicker">Selected node</p>
-                <h1 className="imageflow-info-title">
-                  {derived.selectedNodeLabel}
-                </h1>
+                <p className="imageflow-info-kicker">Structure ready</p>
+                <h1 className="imageflow-info-title">Generate page previews</h1>
                 <p className="imageflow-info-subtitle">
-                  Pick how many previews to generate for this node.
+                  Creates one HTML preview for each top-level page in the tree.
                 </p>
               </>
             ) : state.viewMode === "preview" || state.viewMode === "selected" ? (
@@ -146,10 +178,10 @@ export default function InfoPanel() {
           </div>
           {state.viewMode === "nodes" ? (
             <PreviewGenerationControls
-              previewCount={state.previewCount}
+              previewCount={previewPageCount}
               quality={state.modelQuality}
               creativityValue={state.creativityValue}
-              onPreviewCountChange={actions.setPreviewCount}
+              onPreviewCountChange={() => {}}
               onQualityChange={actions.setModelQuality}
               onCreativityChange={actions.setCreativityValue}
               onGenerate={actions.handleGeneratePreviews}
@@ -165,8 +197,8 @@ export default function InfoPanel() {
                 disabled={state.isGeneratingPreviews}
               >
                 {state.isGeneratingPreviews
-                  ? "Generating previews..."
-                  : "Regenerate previews"}
+                  ? "Generating page previews..."
+                  : "Regenerate page previews"}
               </button>
             </div>
           ) : (

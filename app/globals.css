@@ -979,9 +979,12 @@ body:has(.imageflow-builder):has(#imageflow-sidebar-toggle:checked)
 
 .build-shell {
   display: flex;
+  align-items: flex-start;
   justify-content: center;
   width: 100%;
-  min-height: calc(100vh - 160px);
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 18px;
 }
 
@@ -994,6 +997,7 @@ body:has(.imageflow-builder):has(#imageflow-sidebar-toggle:checked)
   padding: 22px;
   display: grid;
   gap: 16px;
+  margin-bottom: 18px;
 }
 
 .build-header h1 {

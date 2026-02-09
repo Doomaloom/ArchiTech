@@ -11,6 +11,22 @@ const DEFAULT_BRIEF = {
   goals: "",
 };
 
+const normalizeText = (value, fallback = "") => {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+  const trimmed = value.trim();
+  return trimmed || fallback;
+};
+
+const slugify = (value, fallback = "page") => {
+  const slug = normalizeText(value, fallback)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || fallback;
+};
+
 const clampNumber = (value, min, max) =>
   Math.min(Math.max(value, min), max);
 
@@ -230,6 +246,28 @@ const resolveDefaultSelectedNodeId = (root) => {
   }
   const firstChild = getTreeChildren(root)[0];
   return firstChild?.id?.toString() || root.id?.toString() || null;
+};
+
+const collectTreePages = (root) => {
+  if (!root) {
+    return [];
+  }
+  const topLevel = getTreeChildren(root);
+  const pageNodes = topLevel.length ? topLevel : [root];
+  return pageNodes.map((node, index) => {
+    const pageId = normalizeText(node?.id?.toString(), `page-${index + 1}`);
+    const pageName = normalizeText(
+      node?.label?.toString() || node?.name?.toString(),
+      `Page ${index + 1}`
+    );
+    const route = normalizeText(
+      node?.route?.toString(),
+      index === 0 ? "/" : `/${slugify(pageId || pageName, `page-${index + 1}`)}`
+    );
+    const notes = normalizeText(node?.description?.toString(), "");
+    const actions = normalizeList(node?.requirements);
+    return { pageId, pageName, route, notes, actions };
+  });
 };
 
 export default function useInspireState() {
@@ -482,6 +520,147 @@ export default function useInspireState() {
     workspaceNote,
   ]);
 
+  const generatePagePreviews = useCallback(async () => {
+    if (isGeneratingPreviews) {
+      return;
+    }
+    setPreviewError("");
+    if (!treeRoot) {
+      setPreviewError("Generate a tree before creating page previews.");
+      return;
+    }
+    const pages = collectTreePages(treeRoot);
+    if (!pages.length) {
+      setPreviewError("No pages found in the tree.");
+      return;
+    }
+
+    setIsGeneratingPreviews(true);
+    setPreviewMode("html");
+    setSelectedPreviewIndex(0);
+    setPreviewItems(
+      pages.map((page, index) => ({
+        id: `${page.pageId || `page-${index + 1}`}-preview`,
+        pageId: page.pageId,
+        pageName: page.pageName,
+        route: page.route,
+        notes: page.notes,
+        actions: page.actions,
+        status: "loading",
+        imageUrl: null,
+        html: null,
+        plan: null,
+        renderError: null,
+      }))
+    );
+
+    try {
+      const results = await Promise.all(
+        pages.map(async (page, index) => {
+          const nodeContext = buildNodeContextFromTree(treeRoot, page.pageId);
+          if (!nodeContext?.node) {
+            return {
+              id: `${page.pageId || `page-${index + 1}`}-preview`,
+              pageId: page.pageId,
+              pageName: page.pageName,
+              route: page.route,
+              notes: page.notes,
+              actions: page.actions,
+              status: "empty",
+              imageUrl: null,
+              html: null,
+              plan: null,
+              renderError: "Selected page node was not found in the tree.",
+            };
+          }
+
+          try {
+            const response = await fetch("/api/inspire/previews", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                count: 1,
+                quality: modelQuality,
+                creativity: creativityValue,
+                previewMode: "html",
+                nodeContext,
+                brief,
+                style: selectedStyle,
+                workspace: {
+                  note: workspaceNote,
+                  mask: null,
+                },
+              }),
+            });
+            const payload = await response.json().catch(() => ({}));
+            const preview = Array.isArray(payload?.previews)
+              ? payload.previews[0] || null
+              : null;
+            const errorMessage =
+              payload?.error ||
+              payload?.message ||
+              preview?.renderError ||
+              (!preview?.html ? "Preview HTML was not returned." : "");
+            return {
+              id: preview?.id?.toString() || `${page.pageId}-preview`,
+              pageId: page.pageId,
+              pageName: page.pageName,
+              route: page.route,
+              notes: page.notes,
+              actions: page.actions,
+              status: preview?.html ? "ready" : "empty",
+              imageUrl: null,
+              html: preview?.html ?? null,
+              plan: preview?.plan ?? null,
+              renderError: !response.ok || !preview?.html ? errorMessage : null,
+            };
+          } catch (error) {
+            return {
+              id: `${page.pageId || `page-${index + 1}`}-preview`,
+              pageId: page.pageId,
+              pageName: page.pageName,
+              route: page.route,
+              notes: page.notes,
+              actions: page.actions,
+              status: "empty",
+              imageUrl: null,
+              html: null,
+              plan: null,
+              renderError: error?.message || "Failed to generate preview.",
+            };
+          }
+        })
+      );
+
+      setPreviewItems(results);
+      const firstReadyIndex = results.findIndex((entry) => entry?.html);
+      setSelectedPreviewIndex(firstReadyIndex >= 0 ? firstReadyIndex : 0);
+      const successCount = results.filter((entry) => entry?.html).length;
+      if (!successCount) {
+        setPreviewError("Failed to generate page previews.");
+      } else if (successCount < results.length) {
+        setPreviewError(
+          `Generated ${successCount}/${results.length} page previews.`
+        );
+      }
+    } catch (error) {
+      setPreviewError(error?.message || "Failed to generate page previews.");
+      setPreviewItems([]);
+    } finally {
+      setIsGeneratingPreviews(false);
+    }
+  }, [
+    brief,
+    creativityValue,
+    isGeneratingPreviews,
+    modelQuality,
+    selectedStyle,
+    treeRoot,
+    workspaceNote,
+  ]);
+
   const applyMaskEdit = useCallback(async () => {
     if (isApplyingMaskEdit) {
       return;
@@ -711,6 +890,7 @@ export default function useInspireState() {
       selectStyle: handleSelectStyle,
       generateTree,
       generatePreviews,
+      generatePagePreviews,
       applyMaskEdit,
       finalizeToHtml,
       setSelectedNodeId: handleSetSelectedNodeId,
@@ -728,6 +908,7 @@ export default function useInspireState() {
       applyMaskEdit,
       finalizeToHtml,
       generatePreviews,
+      generatePagePreviews,
       generateTree,
       handleSetSelectedNodeId,
       handleSelectStyle,

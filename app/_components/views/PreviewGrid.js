@@ -111,12 +111,18 @@ export default function PreviewGrid() {
             </div>
           ) : null}
           <div className="imageflow-preview-meta">
-            <span className="imageflow-preview-label">Preview {index + 1}</span>
-          {state.previewItems[index]?.plan?.title ? (
-            <span className="imageflow-preview-title">
-              {state.previewItems[index].plan.title}
+            <span className="imageflow-preview-label">
+              {state.previewItems[index]?.pageName || `Page ${index + 1}`}
             </span>
-          ) : null}
+            {state.previewItems[index]?.route ? (
+              <span className="imageflow-preview-title">
+                {state.previewItems[index].route}
+              </span>
+            ) : state.previewItems[index]?.plan?.title ? (
+              <span className="imageflow-preview-title">
+                {state.previewItems[index].plan.title}
+              </span>
+            ) : null}
             {!(state.previewItems[index]?.imageUrl ||
               state.previewItems[index]?.html) ? (
               <span className="imageflow-preview-placeholder">

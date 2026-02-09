@@ -16,6 +16,7 @@ import { useImageToSite } from "./../_context/image-to-site-context";
 import { useWorkflow } from "./../_context/workflow-context";
 import CodeEditorView from "./views/CodeEditorView";
 import BuilderView from "./views/BuilderView";
+import BuildFlow from "./build-flow";
 import InspireRadialSelector from "./InspireRadialSelector";
 import InspireStyleEditor from "./InspireStyleEditor";
 import PreviewGenerationControls from "./PreviewGenerationControls";
@@ -49,11 +50,6 @@ const STYLE_PRESETS = [
   },
 ];
 
-const PREVIEW_MODE_OPTIONS = [
-  { id: "image", label: "Image previews" },
-  { id: "html", label: "HTML previews" },
-];
-
 const INSPIRE_STEPS = {
   DESCRIPTION: "project-description",
   STYLE: "style",
@@ -61,6 +57,7 @@ const INSPIRE_STEPS = {
   WORKSPACE: "inspire-workspace",
   PREVIEWS: "previews",
   BUILDER: "builder",
+  BUILD_APP: "build-app",
   CODE: "code",
   SETTINGS: "settings",
 };
@@ -71,6 +68,25 @@ const BRIEF_QUESTION_IDS = {
   VALUE: "core-value",
   SECTION: "hero-section",
   CONVERSION: "primary-conversion",
+};
+
+const getTreeChildren = (node) => {
+  if (!node || typeof node !== "object") {
+    return [];
+  }
+  if (Array.isArray(node.children)) {
+    return node.children;
+  }
+  if (Array.isArray(node.items)) {
+    return node.items;
+  }
+  if (Array.isArray(node.pages)) {
+    return node.pages;
+  }
+  if (Array.isArray(node.nodes)) {
+    return node.nodes;
+  }
+  return [];
 };
 
 const getSelectionLabel = (questions, selections, questionId) => {
@@ -436,6 +452,7 @@ export default function InspireView() {
     }
     if (
       inspireStep !== INSPIRE_STEPS.BUILDER &&
+      inspireStep !== INSPIRE_STEPS.BUILD_APP &&
       inspireStep !== INSPIRE_STEPS.CODE &&
       (imageState.viewMode === "iterate" ||
         imageState.viewMode === "builder" ||
@@ -534,12 +551,22 @@ export default function InspireView() {
       inspireState.selectedStyle || inspireState.styleIdeas[0] || STYLE_PRESETS[0]
     );
   }, [inspireState.selectedStyle, inspireState.styleIdeas]);
+  const treePageCount = useMemo(() => {
+    const root = inspireDerived.treeRoot;
+    if (!root) {
+      return 1;
+    }
+    const children = getTreeChildren(root);
+    return Math.max(children.length || 1, 1);
+  }, [inspireDerived.treeRoot]);
   const isImagePreviewMode = inspireState.previewMode !== "html";
 
   const layoutClassName = `imageflow-layout inspire-layout${
     isTreeStep ? "" : " is-no-gallery"
   }${
     inspireStep === INSPIRE_STEPS.BUILDER
+      ? " is-builder"
+      : inspireStep === INSPIRE_STEPS.BUILD_APP
       ? " is-builder"
       : inspireStep === INSPIRE_STEPS.CODE
       ? " is-code"
@@ -549,8 +576,11 @@ export default function InspireView() {
   }`;
 
   const previewCards = useMemo(() => {
-    const targetCount =
-      inspireState.previewMode === "image" ? 6 : inspireState.previewCount;
+    const targetCount = Math.max(
+      inspireState.previewItems.length,
+      inspireState.previewCount,
+      1
+    );
     const items = inspireState.previewItems.slice(0, targetCount);
     return Array.from({ length: targetCount }, (_, index) => {
       const preview = items[index];
@@ -563,20 +593,11 @@ export default function InspireView() {
         imageUrl: null,
         html: null,
         plan: null,
+        pageName: null,
+        route: null,
       };
     });
-  }, [inspireState.previewCount, inspireState.previewItems, inspireState.previewMode]);
-
-  const handleContinueToWorkspace = () => {
-    if (inspireState.isGeneratingPreviews) {
-      return;
-    }
-    if (!inspireState.previewItems.length) {
-      setInspireStep(INSPIRE_STEPS.PREVIEWS);
-      return;
-    }
-    setInspireStep(INSPIRE_STEPS.WORKSPACE);
-  };
+  }, [inspireState.previewCount, inspireState.previewItems]);
 
   const handleContinueToIteration = () => {
     const selectedPreview = inspireDerived.selectedPreview;
@@ -603,19 +624,17 @@ export default function InspireView() {
   };
 
   const handleGenerateFromTree = useCallback(async () => {
-    const activeNodeId =
-      imageState.selectedNodeId || inspireState.selectedNodeId || null;
-    if (activeNodeId && activeNodeId !== inspireState.selectedNodeId) {
-      inspireActions.setSelectedNodeId(activeNodeId);
-    }
-    await inspireActions.generatePreviews({ nodeId: activeNodeId });
+    await inspireActions.generatePagePreviews();
     setInspireStep(INSPIRE_STEPS.PREVIEWS);
-  }, [
-    imageState.selectedNodeId,
-    inspireActions,
-    inspireState.selectedNodeId,
-    setInspireStep,
-  ]);
+  }, [inspireActions, setInspireStep]);
+
+  const handleContinueToBuild = useCallback(() => {
+    if (!inspireState.previewItems.length) {
+      setInspireStep(INSPIRE_STEPS.PREVIEWS);
+      return;
+    }
+    setInspireStep(INSPIRE_STEPS.BUILD_APP);
+  }, [inspireState.previewItems.length, setInspireStep]);
 
   const renderMainPanel = () => {
     if (inspireStep === INSPIRE_STEPS.DESCRIPTION) {
@@ -623,6 +642,9 @@ export default function InspireView() {
     }
     if (inspireStep === INSPIRE_STEPS.BUILDER) {
       return <BuilderView />;
+    }
+    if (inspireStep === INSPIRE_STEPS.BUILD_APP) {
+      return <BuildFlow />;
     }
     if (inspireStep === INSPIRE_STEPS.CODE) {
       return <CodeEditorView />;
@@ -678,9 +700,13 @@ export default function InspireView() {
                   )}
                 </div>
                 <div className="inspire-preview-meta">
-                  <span>{preview.plan?.title || `Preview ${index + 1}`}</span>
+                  <span>
+                    {preview.pageName ||
+                      preview.plan?.title ||
+                      `Page ${index + 1}`}
+                  </span>
                   <span className="inspire-preview-tag">
-                    {preview.plan?.title ? "Concept" : "Preview"}
+                    {preview.route || (preview.plan?.title ? "Concept" : "Preview")}
                   </span>
                 </div>
                 {!preview.imageUrl && !preview.html && preview.status !== "loading" ? (
@@ -839,6 +865,9 @@ export default function InspireView() {
     if (inspireStep === INSPIRE_STEPS.BUILDER) {
       return null;
     }
+    if (inspireStep === INSPIRE_STEPS.BUILD_APP) {
+      return null;
+    }
     if (inspireStep === INSPIRE_STEPS.CODE) {
       return (
         <aside className="imageflow-info inspire-info">
@@ -863,9 +892,11 @@ export default function InspireView() {
     }
     if (inspireStep === INSPIRE_STEPS.PREVIEWS) {
       const selectedLabel =
+        inspireDerived.selectedPreview?.pageName ||
+        inspireDerived.selectedPreview?.route ||
         inspireDerived.selectedPreview?.plan?.title ||
         (inspireState.previewItems.length
-          ? `Preview ${inspireState.selectedPreviewIndex + 1}`
+          ? `Page ${inspireState.selectedPreviewIndex + 1}`
           : "No preview selected");
       return (
         <aside className="imageflow-info inspire-info inspire-preview-info">
@@ -873,60 +904,36 @@ export default function InspireView() {
             <p className="imageflow-info-kicker">Inspire</p>
             <h1 className="imageflow-info-title">Select a preview</h1>
             <p className="imageflow-info-subtitle">
-              Choose the layout that best matches the direction.
+              One HTML preview is generated for each top-level page in the tree.
             </p>
           </div>
           <div className="inspire-info-summary inspire-preview-selection">
             <span>Selected</span>
             <strong>{selectedLabel}</strong>
           </div>
-          <div
-            className="imageflow-panel-switch inspire-preview-mode-switch"
-            role="tablist"
-          >
-            {PREVIEW_MODE_OPTIONS.map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                className={`imageflow-switch-button inspire-preview-mode-button${
-                  inspireState.previewMode === option.id ? " is-active" : ""
-                }`}
-                onClick={() => inspireActions.setPreviewMode(option.id)}
-                role="tab"
-                aria-selected={inspireState.previewMode === option.id}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
           <div className="imageflow-info-fields inspire-preview-actions">
             <button
               className="imageflow-generate-button inspire-preview-action is-primary"
               type="button"
-              onClick={() =>
-                inspireActions.generatePreviews({
-                  nodeId:
-                    imageState.selectedNodeId || inspireState.selectedNodeId || null,
-                })
-              }
+              onClick={inspireActions.generatePagePreviews}
               disabled={inspireState.isGeneratingPreviews}
             >
               {inspireState.isGeneratingPreviews
-                ? "Generating previews..."
+                ? "Generating page previews..."
                 : inspireState.previewItems.length
-                ? "Regenerate previews"
-                : "Generate previews"}
+                ? "Regenerate page previews"
+                : "Generate page previews"}
             </button>
             <button
               className="imageflow-generate-button inspire-preview-action is-ghost"
               type="button"
-              onClick={handleContinueToWorkspace}
+              onClick={handleContinueToBuild}
               disabled={
                 inspireState.isGeneratingPreviews ||
                 !inspireState.previewItems.length
               }
             >
-              Continue to workspace
+              Continue to build
             </button>
           </div>
         </aside>
@@ -964,48 +971,29 @@ export default function InspireView() {
         inspireDerived.selectedNode?.label ||
         imageDerived.selectedNodeLabel ||
         "Select a node";
-      const activeNodeId =
-        imageState.selectedNodeId || inspireState.selectedNodeId || null;
       return (
         <aside className="imageflow-info inspire-info">
           <div className="imageflow-info-header">
             <p className="imageflow-info-kicker">Structure</p>
             <h1 className="imageflow-info-title">Generate previews</h1>
             <p className="imageflow-info-subtitle">
-              Pick HTML or image output from the selected node, then open results
-              in the previews grid.
+              Generate one HTML preview per top-level page before building.
             </p>
           </div>
           <div className="inspire-info-summary">
             <span>Selected node</span>
             <strong>{selectedTreeNodeLabel}</strong>
           </div>
-          <div className="imageflow-panel-switch" role="tablist">
-            {PREVIEW_MODE_OPTIONS.map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                className={`imageflow-switch-button${
-                  inspireState.previewMode === option.id ? " is-active" : ""
-                }`}
-                onClick={() => inspireActions.setPreviewMode(option.id)}
-                role="tab"
-                aria-selected={inspireState.previewMode === option.id}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
           <PreviewGenerationControls
-            previewCount={inspireState.previewCount}
+            previewCount={treePageCount}
             quality={inspireState.modelQuality}
             creativityValue={inspireState.creativityValue}
-            onPreviewCountChange={inspireActions.setPreviewCount}
+            onPreviewCountChange={() => {}}
             onQualityChange={inspireActions.setModelQuality}
             onCreativityChange={inspireActions.setCreativityValue}
             onGenerate={handleGenerateFromTree}
             isGenerating={inspireState.isGeneratingPreviews}
-            isGenerateDisabled={!activeNodeId}
+            isGenerateDisabled={!treePageCount}
             generateLabel="Generate and open previews"
             errorMessage={inspireState.previewError || inspireState.treeError}
           />
@@ -1168,14 +1156,14 @@ export default function InspireView() {
   const dropzoneClassName = `imageflow-dropzone inspire-dropzone${
     inspireStep === INSPIRE_STEPS.BUILDER
       ? " is-builder"
+      : inspireStep === INSPIRE_STEPS.BUILD_APP
+      ? " is-builder"
       : inspireStep === INSPIRE_STEPS.CODE
       ? " is-code"
       : ""
   }${inspireStep === INSPIRE_STEPS.TREE ? " is-tree" : ""}${
     inspireStep === INSPIRE_STEPS.PREVIEWS ? " is-preview" : ""
-  }${
-    isDescriptionStep ? " is-full" : ""
-  }`;
+  }${isDescriptionStep || inspireStep === INSPIRE_STEPS.BUILD_APP ? " is-full" : ""}`;
 
   return (
     <div className="imageflow-shell inspire-shell">

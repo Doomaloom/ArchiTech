@@ -1,5 +1,7 @@
 "use client";
 
+import { usePathname, useRouter } from "next/navigation";
+import { useImageToSite } from "../_context/image-to-site-context";
 import { useWorkflow } from "../_context/workflow-context";
 
 const ICONS = {
@@ -199,6 +201,12 @@ const IMAGE_TO_SITE_BUTTONS = [
     icon: "builder",
     step: "builder",
   },
+  {
+    id: "build-app",
+    label: "Build app",
+    icon: "document",
+    step: "build-app",
+  },
 ];
 
 const INSPIRE_BUTTONS = [
@@ -228,6 +236,12 @@ const INSPIRE_BUTTONS = [
     icon: "builder",
     step: "builder",
   },
+  {
+    id: "build-app",
+    label: "Build app",
+    icon: "document",
+    step: "build-app",
+  },
 ];
 
 const BUTTON_SETS = {
@@ -235,12 +249,49 @@ const BUTTON_SETS = {
   inspire: INSPIRE_BUTTONS,
 };
 
+const isImageStepActive = (step, viewMode) => {
+  if (!step) {
+    return false;
+  }
+  if (step === "preview") {
+    return (
+      viewMode === "preview" || viewMode === "selected" || viewMode === "iterate"
+    );
+  }
+  return step === viewMode;
+};
+
 export default function SidebarRail() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const { state: imageState, actions: imageActions } = useImageToSite();
   const { workflowMode, inspireStep, setWorkflowMode, setInspireStep } =
     useWorkflow();
   const buttonSets = BUTTON_SETS;
   const handleHomeClick = () => {
     setWorkflowMode("home");
+  };
+  const handleImageFlowClick = (button) => {
+    if (button.route) {
+      router.push(button.route);
+      return;
+    }
+    if (!button.step) {
+      return;
+    }
+    setWorkflowMode("image-to-site");
+    imageActions.setViewMode(button.step);
+  };
+  const handleInspireClick = (button) => {
+    if (button.route) {
+      router.push(button.route);
+      return;
+    }
+    if (!button.step) {
+      return;
+    }
+    setWorkflowMode("inspire");
+    setInspireStep(button.step);
   };
 
   return (
@@ -267,10 +318,24 @@ export default function SidebarRail() {
               {buttonSets["image-to-site"].map((button) => (
                 <button
                   key={button.id}
-                  className="rail-button"
+                  className={`rail-button${
+                    button.route
+                      ? pathname === button.route
+                        ? " is-active"
+                        : ""
+                      : isImageStepActive(button.step, imageState.viewMode)
+                      ? " is-active"
+                      : ""
+                  }`}
                   type="button"
+                  onClick={() => handleImageFlowClick(button)}
                   aria-label={button.label}
-                  data-imageflow-step={button.step}
+                  aria-pressed={
+                    button.route
+                      ? pathname === button.route
+                      : isImageStepActive(button.step, imageState.viewMode)
+                  }
+                  data-imageflow-step={button.step || undefined}
                 >
                   {ICONS[button.icon]}
                 </button>
@@ -281,13 +346,21 @@ export default function SidebarRail() {
                 <button
                   key={button.id}
                   className={`rail-button${
-                    inspireStep === button.step ? " is-active" : ""
+                    button.route
+                      ? pathname === button.route
+                        ? " is-active"
+                        : ""
+                      : inspireStep === button.step
+                      ? " is-active"
+                      : ""
                   }`}
                   type="button"
-                  onClick={() => setInspireStep(button.step)}
+                  onClick={() => handleInspireClick(button)}
                   aria-label={button.label}
-                  aria-pressed={inspireStep === button.step}
-                  data-workflow-step={button.step}
+                  aria-pressed={
+                    button.route ? pathname === button.route : inspireStep === button.step
+                  }
+                  data-workflow-step={button.step || undefined}
                 >
                   {ICONS[button.icon]}
                 </button>
