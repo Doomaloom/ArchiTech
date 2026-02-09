@@ -15,7 +15,7 @@ function resolveNextPath(nextValue) {
 export async function GET(request) {
   const nextPath = resolveNextPath(request.nextUrl.searchParams.get("next"));
   if (BYPASS_AUTH) {
-    return NextResponse.redirect(new URL(nextPath, request.url));
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   const supabase = await createServerSupabaseClient();

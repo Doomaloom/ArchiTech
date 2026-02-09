@@ -633,6 +633,7 @@ export default function InspireRadialSelector({
     return categoryQuestions;
   }, [categoryQuestions, question, options, questions]);
   const [questionIndex, setQuestionIndex] = useState(0);
+  const [isCompletionArmed, setIsCompletionArmed] = useState(false);
   useEffect(() => {
     if (questionIndex < resolvedQuestions.length) {
       return;
@@ -661,7 +662,20 @@ export default function InspireRadialSelector({
   const isLastQuestion = useMemo(() => {
     return questionIndex >= Math.max(0, resolvedQuestions.length - 1);
   }, [questionIndex, resolvedQuestions.length]);
-  const showCompleteAction = isLastQuestion || allQuestionsAnswered;
+  const isCurrentQuestionAnswered = useMemo(() => {
+    if (!currentQuestion?.id) {
+      return false;
+    }
+    return Boolean(selectedByQuestion[currentQuestion.id]);
+  }, [currentQuestion, selectedByQuestion]);
+  const showCompleteAction = allQuestionsAnswered;
+  const hideRingOptionText = isLastQuestion && isCurrentQuestionAnswered;
+
+  useEffect(() => {
+    if (!allQuestionsAnswered && isCompletionArmed) {
+      setIsCompletionArmed(false);
+    }
+  }, [allQuestionsAnswered, isCompletionArmed]);
   const visibleSelectionItems = useMemo(() => {
     return selectionItems.filter((item) => item.isSelected);
   }, [selectionItems]);
@@ -755,8 +769,15 @@ export default function InspireRadialSelector({
       Boolean(nextSelections?.[entry.id])
     );
     if (isFullyAnswered) {
+      if (!isCompletionArmed) {
+        setIsCompletionArmed(true);
+        return;
+      }
       onComplete?.(nextSelections, nextQuestions);
       return;
+    }
+    if (isCompletionArmed) {
+      setIsCompletionArmed(false);
     }
     setQuestionIndex((current) => {
       if (nextQuestions.length <= 1) {
@@ -815,7 +836,9 @@ export default function InspireRadialSelector({
               onClick={handleConfirm}
               aria-label={
                 showCompleteAction
-                  ? "Complete brief and continue"
+                  ? isCompletionArmed
+                    ? "Complete brief and continue"
+                    : "Ready to complete brief"
                   : "Confirm answer"
               }
               disabled={!activeOption}
@@ -860,7 +883,9 @@ export default function InspireRadialSelector({
                   className="inspire-radial-item"
                   data-active={activeId === option.id}
                 >
-                  <span className="inspire-radial-label">{option.label}</span>
+                  {!hideRingOptionText ? (
+                    <span className="inspire-radial-label">{option.label}</span>
+                  ) : null}
                   <span className="inspire-radial-icon">{option.icon}</span>
                 </div>
               </MenuItem>

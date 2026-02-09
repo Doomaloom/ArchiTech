@@ -17,7 +17,7 @@ export async function GET(request) {
   const code = requestUrl.searchParams.get("code");
   const nextPath = resolveNextPath(requestUrl.searchParams.get("next"));
   if (BYPASS_AUTH) {
-    return NextResponse.redirect(new URL(nextPath, request.url));
+    return NextResponse.redirect(new URL("/", request.url));
   }
   const fallbackRedirect = new URL("/login", request.url);
   fallbackRedirect.searchParams.set("next", nextPath);

@@ -20,9 +20,7 @@ export default async function LoginPage({ searchParams }) {
   const params = await searchParams;
   const next = typeof params?.next === "string" ? params.next : "/";
   const error = typeof params?.error === "string" ? params.error : "";
-  const loginHref = BYPASS_AUTH
-    ? next
-    : `/auth/login?next=${encodeURIComponent(next)}`;
+  const loginHref = BYPASS_AUTH ? "/" : `/auth/login?next=${encodeURIComponent(next)}`;
 
   return (
     <main className="landing-shell login-shell">
@@ -33,12 +31,16 @@ export default async function LoginPage({ searchParams }) {
         </h1>
         <p>
           {BYPASS_AUTH
-            ? "Auth bypass mode is enabled. Continue directly to the app."
+            ? "Make it real before you make it perfect."
             : "Continue with Google to access your private ProtoBop projects."}
         </p>
         {error ? <p className="landing-error">{error}</p> : null}
         <div className="landing-actions">
-          <Link className="landing-button landing-button-google" href={loginHref}>
+          <Link
+            className="landing-button landing-button-google"
+            href={loginHref}
+            replace={BYPASS_AUTH}
+          >
             <span className="landing-button-google-icon" aria-hidden="true">
               <svg viewBox="0 0 18 18" role="img" aria-label="Google">
                 <path
