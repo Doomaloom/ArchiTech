@@ -18,7 +18,7 @@ export default function useIterationSelection({
     ActiveSelection.empty()
   );
 
-  const updateSelectedElements = (ids, primaryId) => {
+  const updateSelectedElements = (ids, primaryId = null) => {
     const nextIds = (ids ?? []).filter(
       (id) => !layers.helpers.isLayerDeleted(id)
     );

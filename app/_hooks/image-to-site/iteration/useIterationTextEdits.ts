@@ -9,18 +9,18 @@ export default function useIterationTextEdits({
   iterationSiteRef,
   scheduleHistoryCommit,
 }) {
-  const [textEdits, setTextEdits] = useState(() => ({}));
-  const [textEditDraft, setTextEditDraft] = useState(null);
-  const textBaseRef = useRef({});
+  const [textEdits, setTextEdits] = useState<Record<string, any>>(() => ({}));
+  const [textEditDraft, setTextEditDraft] = useState<any>(null);
+  const textBaseRef = useRef<Record<string, any>>({});
 
   useEffect(() => {
     if (!isIterationMode || !iterationSiteRef.current) {
       return;
     }
     const container = iterationSiteRef.current;
-    const editedIds = new Set(Object.keys(textEdits));
+    const editedIds = new Set<string>(Object.keys(textEdits));
 
-    Object.entries(textEdits).forEach(([id, entry]) => {
+    Object.entries(textEdits as Record<string, any>).forEach(([id, entry]) => {
       const element = container.querySelector(`[data-gem-id="${id}"]`);
       if (!element) {
         return;

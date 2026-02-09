@@ -3,29 +3,28 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { normalizeTransform } from "./constants";
 
 const buildDetachedLayerIds = (
-  baseLayout,
-  layerParentMap,
-  isIterationMode,
-  hasFolderState
-) => {
+  baseLayout: Record<string, any> | null | undefined,
+  layerParentMap: Record<string, string | null | undefined> | null | undefined,
+  isIterationMode: boolean,
+  hasFolderState: boolean
+): string[] => {
   if (!isIterationMode || !baseLayout) {
     return [];
   }
-  const hasFolderEntries = Object.values(baseLayout).some(
-    (entry) => entry.folderId
-  );
+  const layoutEntries = Object.values(baseLayout as Record<string, any>);
+  const hasFolderEntries = layoutEntries.some((entry: any) => entry.folderId);
   if (hasFolderEntries && !hasFolderState) {
     return [];
   }
-  return Object.values(baseLayout)
+  return layoutEntries
     .filter(
-      (entry) =>
+      (entry: any) =>
         entry.folderId &&
         entry.parentId &&
         entry.parentId !== "root" &&
         !layerParentMap?.[entry.id]
     )
-    .map((entry) => entry.id);
+    .map((entry: any) => entry.id);
 };
 
 const getCenterFromRect = (rect, containerRect) => ({
@@ -89,7 +88,7 @@ export default function useIterationDetachedLayers({
   zoomLevel,
 }) {
   const [detachedSizes, setDetachedSizes] = useState(() => ({}));
-  const detachedLayerIds = useMemo(
+  const detachedLayerIds = useMemo<string[]>(
     () =>
       buildDetachedLayerIds(
         baseLayout,
@@ -99,7 +98,7 @@ export default function useIterationDetachedLayers({
       ),
     [baseLayout, hasFolderState, isIterationMode, layerParentMap]
   );
-  const detachedIdsRef = useRef(new Set());
+  const detachedIdsRef = useRef<Set<string>>(new Set<string>());
 
   useEffect(() => {
     const container = iterationSiteRef.current;
@@ -134,8 +133,8 @@ export default function useIterationDetachedLayers({
 
     const containerRect = container.getBoundingClientRect();
     const zoom = zoomLevel || 1;
-    const transformUpdates = {};
-    const sizeUpdates = {};
+    const transformUpdates: Record<string, any> = {};
+    const sizeUpdates: Record<string, { width: number; height: number }> = {};
 
     newlyDetached.forEach((id) => {
       const entry = baseLayout?.[id];

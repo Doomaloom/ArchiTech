@@ -7,7 +7,7 @@ const hasLayerIdsChanged = (prevIds, nextIds) => {
   return prevIds.some((id, index) => id !== nextIds[index]);
 };
 
-const resolveFolderParentId = (folder) => {
+const resolveFolderParentId = (folder: any) => {
   const layerIds = folder?.layerIds ?? [];
   if (folder?.parentId && layerIds.includes(folder.parentId)) {
     return folder.parentId;
@@ -25,7 +25,11 @@ const formatFolderName = (value) => {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
-const sanitizeFolder = (folder, validIds, fallbackParentId) => {
+const sanitizeFolder = (
+  folder: any,
+  validIds?: Set<string> | null,
+  fallbackParentId?: string | null
+) => {
   const layerIds = (folder.layerIds ?? []).filter(
     (layerId) => !validIds || validIds.has(layerId)
   );
@@ -42,6 +46,9 @@ const sanitizeFolder = (folder, validIds, fallbackParentId) => {
     parentId,
   };
 };
+
+const valuesOf = <T = any>(record: Record<string, T> | null | undefined): T[] =>
+  Object.values((record ?? {}) as Record<string, T>);
 
 export default function useIterationLayersState({
   isIterationMode,
@@ -65,7 +72,7 @@ export default function useIterationLayersState({
         return current;
       }
       const nextLayers = {};
-      Object.values(baseLayout).forEach((entry) => {
+      valuesOf<any>(baseLayout).forEach((entry) => {
         const label = entry.text || entry.id;
         nextLayers[entry.id] = {
           id: entry.id,
@@ -86,7 +93,7 @@ export default function useIterationLayersState({
     setLayerFolders((current) => {
       let changed = false;
       const next = {};
-      Object.values(current).forEach((folder) => {
+      valuesOf<any>(current).forEach((folder) => {
         const sanitized = sanitizeFolder(folder, validIds);
         if (
           hasLayerIdsChanged(folder.layerIds ?? [], sanitized.layerIds) ||
@@ -108,7 +115,7 @@ export default function useIterationLayersState({
       return;
     }
     const groups = new Map();
-    Object.values(baseLayout).forEach((entry) => {
+    valuesOf<any>(baseLayout).forEach((entry) => {
       if (!entry.folderId) {
         return;
       }
@@ -234,7 +241,9 @@ export default function useIterationLayersState({
     });
   };
 
-  const handleCreateLayerFolder = (options = {}) => {
+  const handleCreateLayerFolder = (
+    options: { parentId?: string | null } = {}
+  ) => {
     scheduleHistoryCommit("Layer");
     const folderId = `folder-${Date.now()}`;
     const selected = selectionApiRef.current?.getSelectedIds?.() ?? [];
@@ -250,7 +259,7 @@ export default function useIterationLayersState({
     setLayerFolders((current) => {
       const folderName = `Folder ${Object.keys(current).length + 1}`;
       const next = {};
-      Object.values(current).forEach((folder) => {
+      valuesOf<any>(current).forEach((folder) => {
         const filtered = (folder.layerIds ?? []).filter(
           (layerId) => !selectedSet.has(layerId)
         );
@@ -316,7 +325,10 @@ export default function useIterationLayersState({
     });
   };
 
-  const handleAddSelectionToFolder = (folderId, options = {}) => {
+  const handleAddSelectionToFolder = (
+    folderId,
+    options: { parentId?: string | null } = {}
+  ) => {
     const selected = selectionApiRef.current?.getSelectedIds?.() ?? [];
     if (!selected.length) {
       return;
@@ -333,7 +345,7 @@ export default function useIterationLayersState({
       null;
     setLayerFolders((current) => {
       const next = {};
-      Object.values(current).forEach((folder) => {
+      valuesOf<any>(current).forEach((folder) => {
         const filtered = (folder.layerIds ?? []).filter(
           (layerId) => !selectedSet.has(layerId)
         );
@@ -367,7 +379,7 @@ export default function useIterationLayersState({
     setLayerFolders((current) => {
       let changed = false;
       const next = {};
-      Object.values(current).forEach((folder) => {
+      valuesOf<any>(current).forEach((folder) => {
         const filtered = (folder.layerIds ?? []).filter(
           (layerId) => !removalSet.has(layerId)
         );
@@ -454,7 +466,7 @@ export default function useIterationLayersState({
     setLayerFolders((current) => {
       let changed = false;
       const next = {};
-      Object.values(current).forEach((folder) => {
+      valuesOf<any>(current).forEach((folder) => {
         const filtered = (folder.layerIds ?? []).filter(
           (layerId) => !ids.includes(layerId)
         );
@@ -484,7 +496,7 @@ export default function useIterationLayersState({
 
   const layerFolderMap = useMemo(() => {
     const map = {};
-    Object.values(layerFolders).forEach((folder) => {
+    valuesOf<any>(layerFolders).forEach((folder) => {
       (folder.layerIds ?? []).forEach((layerId) => {
         map[layerId] = folder.id;
       });
@@ -494,7 +506,7 @@ export default function useIterationLayersState({
 
   const layerParentMap = useMemo(() => {
     const map = {};
-    Object.values(layerFolders).forEach((folder) => {
+    valuesOf<any>(layerFolders).forEach((folder) => {
       const parentId = resolveFolderParentId(folder);
       if (!parentId) {
         return;
@@ -514,7 +526,7 @@ export default function useIterationLayersState({
   );
 
   const parentLayerIds = useMemo(() => {
-    const parents = new Set(Object.values(layerParentMap));
+    const parents = new Set(valuesOf<string>(layerParentMap));
     return Array.from(parents).filter(Boolean);
   }, [layerParentMap]);
 
@@ -523,7 +535,7 @@ export default function useIterationLayersState({
   const isLayerNested = (id) => Boolean(layerParentMap[id]);
 
   const layerEntries = useMemo(() => {
-    return Object.values(baseLayout)
+    return valuesOf<any>(baseLayout)
       .filter((entry) => !isLayerDeleted(entry.id))
       .map((entry) => ({
         id: entry.id,

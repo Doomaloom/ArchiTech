@@ -59,7 +59,7 @@ export default function useIterationNestedSizing({
     if (isTransforming) {
       return;
     }
-    const skipParents = new Set(selectedElementIds ?? []);
+    const skipParents = new Set((selectedElementIds ?? []) as string[]);
     const { sizeUpdates, transformUpdates } = computeNestedSizingUpdates({
       site: iterationSiteRef.current,
       childrenByParent,

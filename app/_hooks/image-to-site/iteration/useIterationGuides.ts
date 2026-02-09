@@ -14,7 +14,7 @@ export default function useIterationGuides({ stageSize, setShowGuides }) {
     return GUIDE_COLORS[index] ?? GUIDE_COLORS[0];
   };
 
-  const handleCreateGuide = (axis, position) => {
+  const handleCreateGuide = (axis, position?: number) => {
     const maxSize = axis === "vertical" ? stageSize.width : stageSize.height;
     if (!maxSize) {
       return null;

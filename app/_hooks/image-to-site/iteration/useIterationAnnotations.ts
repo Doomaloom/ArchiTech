@@ -164,12 +164,12 @@ export default function useIterationAnnotations({
       for (let i = 0; i < points.length; i += 2) {
         polygon.push({ x: points[i], y: points[i + 1] });
       }
-      const entries = Object.values(baseLayout);
+      const entries = Object.values(baseLayout as Record<string, any>);
       if (!entries.length) {
         return;
       }
       const selected = entries
-        .filter((entry) => {
+        .filter((entry: any) => {
           const transform = normalizeTransform(elementTransforms[entry.id]);
           const center = {
             x:
@@ -183,7 +183,7 @@ export default function useIterationAnnotations({
           };
           return isPointInPolygon(center, polygon);
         })
-        .map((entry) => entry.id)
+        .map((entry: any) => entry.id)
         .filter((id) => !isLayerHidden(id) && !isLayerDeleted(id));
       updateSelectedElements(selected);
     }

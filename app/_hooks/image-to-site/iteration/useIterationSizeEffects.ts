@@ -5,7 +5,7 @@ export default function useIterationSizeEffects({
   iterationSiteRef,
   elementSizes,
 }) {
-  const appliedIdsRef = useRef(new Set());
+  const appliedIdsRef = useRef<Set<string>>(new Set<string>());
 
   useLayoutEffect(() => {
     const site = iterationSiteRef.current;
@@ -23,7 +23,7 @@ export default function useIterationSizeEffects({
       appliedIdsRef.current.clear();
       return;
     }
-    const nextIds = new Set(Object.keys(elementSizes ?? {}));
+    const nextIds = new Set<string>(Object.keys(elementSizes ?? {}));
 
     appliedIdsRef.current.forEach((id) => {
       if (nextIds.has(id)) {

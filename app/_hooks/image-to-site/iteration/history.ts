@@ -74,7 +74,7 @@ export const useIterationHistory = ({
     });
   };
 
-  const scheduleHistoryCommit = (label) => {
+  const scheduleHistoryCommit = (label?: string) => {
     if (!isIterationMode || historyLockRef.current) {
       return;
     }

@@ -42,9 +42,11 @@ export default function useIterationLayout({
       width: containerRect.width,
       height: containerRect.height,
     });
-    const elements = Array.from(container.querySelectorAll("[data-gem-id]"));
-    const nextLayout = {};
-    const orderByParent = {};
+    const elements = Array.from(
+      container.querySelectorAll("[data-gem-id]")
+    ) as HTMLElement[];
+    const nextLayout: Record<string, any> = {};
+    const orderByParent: Record<string, string[]> = {};
 
     elements.forEach((element) => {
       const id = element.dataset.gemId;
@@ -52,7 +54,9 @@ export default function useIterationLayout({
         return;
       }
       const rect = element.getBoundingClientRect();
-      const parentElement = element.parentElement?.closest("[data-gem-id]");
+      const parentElement = element.parentElement?.closest(
+        "[data-gem-id]"
+      ) as HTMLElement | null;
       const parentId = parentElement?.dataset?.gemId ?? "root";
       const folderId = element.dataset?.gemFolder ?? null;
       const folderName = element.dataset?.gemFolderName ?? null;

@@ -20,12 +20,13 @@ export const buildIterationPatch = ({
   iterationTool,
   annotations,
   textEdits,
-}) => {
+}: any) => {
   if (!isIterationMode || !Object.keys(baseLayout).length) {
     return null;
   }
 
-  const elements = Object.values(baseLayout).map((entry) => {
+  const elements = Object.values(baseLayout as Record<string, any>).map(
+    (entry: any) => {
     const transform = normalizeTransform(elementTransforms[entry.id]);
     const sizeOverride = elementSizes?.[entry.id];
     const baseWidth = sizeOverride?.width ?? entry.base.width;
@@ -46,7 +47,8 @@ export const buildIterationPatch = ({
       base: entry.base,
       next,
     };
-  });
+    }
+  );
 
   const transformDeltas = {};
   elements.forEach((entry) => {
@@ -64,7 +66,7 @@ export const buildIterationPatch = ({
 
   const locked = [];
   const hidden = [];
-  Object.values(layerState).forEach((layer) => {
+  Object.values(layerState as Record<string, any>).forEach((layer: any) => {
     if (layer.locked) {
       locked.push(layer.id);
     }
@@ -74,9 +76,9 @@ export const buildIterationPatch = ({
   });
   const deleted = deletedLayerIds;
 
-  const folderSnapshot = layerFolderOrder
+  const folderSnapshot = (layerFolderOrder as string[])
     .map((id, index) => {
-      const folder = layerFolders[id];
+      const folder = (layerFolders as Record<string, any>)[id];
       if (!folder) {
         return null;
       }
@@ -90,7 +92,7 @@ export const buildIterationPatch = ({
     })
     .filter(Boolean);
 
-  const annotationsSnapshot = annotations.map((annotation) => ({
+  const annotationsSnapshot = (annotations as any[]).map((annotation: any) => ({
     id: annotation.id,
     x: roundValue(annotation.x),
     y: roundValue(annotation.y),
@@ -99,9 +101,10 @@ export const buildIterationPatch = ({
   }));
 
   const textEditsSnapshot = {};
-  Object.entries(textEdits).forEach(([id, entry]) => {
+  Object.entries(textEdits as Record<string, any>).forEach(
+    ([id, entry]: [string, any]) => {
     const styles = entry?.styles ?? {};
-    const normalizedStyles = {};
+    const normalizedStyles: Record<string, any> = {};
     if (styles.fontSize != null) {
       normalizedStyles.fontSize = roundValue(styles.fontSize);
     }
@@ -133,10 +136,11 @@ export const buildIterationPatch = ({
         styles: normalizedStyles,
       };
     }
-  });
+    }
+  );
 
   const layoutHints = [];
-  const groups = elements.reduce((acc, entry) => {
+  const groups = elements.reduce<Record<string, any[]>>((acc, entry: any) => {
     const key = entry.parentId ?? "root";
     if (!acc[key]) {
       acc[key] = [];
@@ -146,14 +150,15 @@ export const buildIterationPatch = ({
   }, {});
 
   Object.entries(groups).forEach(([parentId, entries]) => {
-    if (entries.length < 2) {
+    const groupedEntries = entries as any[];
+    if (groupedEntries.length < 2) {
       return;
     }
-    const basePositions = entries.map((entry) => ({
+    const basePositions = groupedEntries.map((entry) => ({
       x: entry.base.x + entry.base.width / 2,
       y: entry.base.y + entry.base.height / 2,
     }));
-    const nextPositions = entries.map((entry) => ({
+    const nextPositions = groupedEntries.map((entry) => ({
       x: entry.next.x + entry.next.width / 2,
       y: entry.next.y + entry.next.height / 2,
     }));
@@ -164,9 +169,9 @@ export const buildIterationPatch = ({
         parentId,
         from: baseAxis,
         to: nextAxis,
-        ids: entries.map((entry) => entry.id),
-      });
-    }
+          ids: groupedEntries.map((entry) => entry.id),
+        });
+      }
   });
 
   return {

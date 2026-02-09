@@ -33,13 +33,13 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
   const [isTransforming, setIsTransforming] = useState(false);
   const skipSizingRef = useRef(false);
 
-  const historyRef = useRef(() => {});
-  const scheduleHistoryCommit = (label) => historyRef.current(label);
-  const selectionApiRef = useRef({
+  const historyRef = useRef<(label?: string) => void>(() => {});
+  const scheduleHistoryCommit = (label?: string) => historyRef.current(label);
+  const selectionApiRef = useRef<any>({
     removeSelectionIds: () => {},
     getSelectedIds: () => [],
   });
-  const textEditsApiRef = useRef({
+  const textEditsApiRef = useRef<any>({
     removeTextEditsForIds: () => {},
     applyTextStyles: () => {},
     getTextStyles: () => null,
@@ -188,12 +188,12 @@ export default function useIterationState({ isIterationMode, selectedPreviewInde
     ) {
       return {};
     }
-    const merged = { ...nestedSizes };
+    const merged: Record<string, any> = { ...nestedSizes };
     Object.entries(parentSizes).forEach(([id, size]) => {
-      merged[id] = { ...merged[id], ...size };
+      merged[id] = { ...(merged[id] ?? {}), ...(size as Record<string, any>) };
     });
     Object.entries(detachedSizes).forEach(([id, size]) => {
-      merged[id] = { ...merged[id], ...size };
+      merged[id] = { ...(merged[id] ?? {}), ...(size as Record<string, any>) };
     });
     return merged;
   }, [

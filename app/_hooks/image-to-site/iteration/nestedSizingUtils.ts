@@ -1,12 +1,30 @@
-export const buildChildrenByParent = (layerParentMap) =>
-  Object.entries(layerParentMap ?? {}).reduce((acc, [childId, parentId]) => {
-    if (!parentId) return acc;
-    if (!acc[parentId]) {
-      acc[parentId] = [];
-    }
-    acc[parentId].push(childId);
-    return acc;
-  }, {});
+export const buildChildrenByParent = (
+  layerParentMap: Record<string, string | null | undefined> | null | undefined
+) =>
+  Object.entries(layerParentMap ?? {}).reduce<Record<string, string[]>>(
+    (acc, [childId, parentId]) => {
+      if (typeof parentId !== "string" || !parentId) return acc;
+      if (!acc[parentId]) {
+        acc[parentId] = [];
+      }
+      acc[parentId].push(childId);
+      return acc;
+    },
+    {}
+  );
+
+type TransformValue = {
+  x: number;
+  y: number;
+  scaleX: number;
+  scaleY: number;
+  [key: string]: unknown;
+};
+
+type SizeValue = {
+  width: number;
+  height: number;
+};
 
 export const getPixelScale = (zoomLevel, scale) =>
   1 / ((zoomLevel || 1) * (scale || 1));
@@ -25,10 +43,17 @@ export const computeNestedSizingUpdates = ({
   zoomLevel,
   normalizeTransform,
   skipParents,
+}: {
+  site: ParentNode;
+  childrenByParent: Record<string, string[]>;
+  elementTransforms: Record<string, unknown>;
+  zoomLevel: number;
+  normalizeTransform: (value: unknown) => TransformValue;
+  skipParents?: Set<string>;
 }) => {
-  const sizeUpdates = {};
-  const transformUpdates = {};
-  const childTransformUpdates = {};
+  const sizeUpdates: Record<string, SizeValue> = {};
+  const transformUpdates: Record<string, TransformValue> = {};
+  const childTransformUpdates: Record<string, TransformValue> = {};
 
   Object.entries(childrenByParent).forEach(([parentId, childIds]) => {
     if (skipParents?.has(parentId)) return;
@@ -43,7 +68,7 @@ export const computeNestedSizingUpdates = ({
     let maxRight = -Infinity;
     let minTop = Infinity;
     let maxBottom = -Infinity;
-    const nestedChildIds = [];
+    const nestedChildIds: string[] = [];
 
     childIds.forEach((childId) => {
       const childElement = site.querySelector(`[data-gem-id="${childId}"]`);
