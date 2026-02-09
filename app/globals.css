@@ -1310,6 +1310,75 @@ body:has(.imageflow-builder):has(#imageflow-sidebar-toggle:checked)
   font-size: 12px;
 }
 
+.login-shell {
+  background:
+    radial-gradient(
+      1100px 620px at 12% 0%,
+      rgba(var(--brand-blue-rgb), 0.28) 0%,
+      transparent 64%
+    ),
+    radial-gradient(
+      980px 600px at 95% 100%,
+      rgba(var(--brand-orange-rgb), 0.3) 0%,
+      transparent 66%
+    ),
+    linear-gradient(135deg, #f8fbff 0%, #eef4ff 48%, #fff4e8 100%);
+}
+
+.login-panel {
+  width: min(520px, 100%);
+  border: 1px solid rgba(255, 255, 255, 0.86);
+  background:
+    linear-gradient(
+      145deg,
+      rgba(var(--brand-blue-rgb), 0.09) 0%,
+      rgba(var(--brand-orange-rgb), 0.11) 100%
+    ),
+    rgba(255, 255, 255, 0.76);
+  box-shadow:
+    0 28px 64px rgba(37, 99, 235, 0.12),
+    0 24px 56px rgba(249, 115, 22, 0.12);
+}
+
+.login-panel .landing-button {
+  box-shadow: none;
+}
+
+.login-panel .landing-button:not(.landing-button-google):hover {
+  background: #0f172a;
+}
+
+.landing-button-google {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #ffffff;
+  color: #0f172a;
+  border: 1px solid rgba(15, 23, 42, 0.16);
+  letter-spacing: 0;
+  text-transform: none;
+  font-weight: 600;
+  padding: 10px 14px;
+}
+
+.landing-button-google:hover {
+  background: #f8fafc;
+}
+
+.landing-button-google-icon {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.landing-button-google-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
 @media (max-width: 900px) {
   .landing-actions {
     flex-direction: column;
