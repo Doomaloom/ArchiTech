@@ -605,6 +605,7 @@ export default function InspireRadialSelector({
   questions,
   onSelect,
   onConfirm,
+  onComplete,
 }) {
   const surfaceRef = useRef(null);
   const [menuMetrics, setMenuMetrics] = useState(null);
@@ -651,6 +652,16 @@ export default function InspireRadialSelector({
     }
     return buildSelectionItems(resolvedQuestions, selectedByQuestion);
   }, [resolvedQuestions, selectedByQuestion]);
+  const allQuestionsAnswered = useMemo(() => {
+    if (!resolvedQuestions.length) {
+      return false;
+    }
+    return resolvedQuestions.every((entry) => Boolean(selectedByQuestion[entry.id]));
+  }, [resolvedQuestions, selectedByQuestion]);
+  const isLastQuestion = useMemo(() => {
+    return questionIndex >= Math.max(0, resolvedQuestions.length - 1);
+  }, [questionIndex, resolvedQuestions.length]);
+  const showCompleteAction = isLastQuestion || allQuestionsAnswered;
   const visibleSelectionItems = useMemo(() => {
     return selectionItems.filter((item) => item.isSelected);
   }, [selectionItems]);
@@ -740,14 +751,21 @@ export default function InspireRadialSelector({
             CATEGORY_OPTIONS[0]?.id
         );
     onConfirm?.(activeOption, currentQuestion, nextSelections, nextQuestions);
+    const isFullyAnswered = nextQuestions.every((entry) =>
+      Boolean(nextSelections?.[entry.id])
+    );
+    if (isFullyAnswered) {
+      onComplete?.(nextSelections, nextQuestions);
+      return;
+    }
     setQuestionIndex((current) => {
-      if (resolvedQuestions.length <= 1) {
+      if (nextQuestions.length <= 1) {
         return current;
       }
       if (isCategoryQuestion) {
         return 1;
       }
-      return (current + 1) % resolvedQuestions.length;
+      return Math.min(current + 1, nextQuestions.length - 1);
     });
   };
 
@@ -756,9 +774,12 @@ export default function InspireRadialSelector({
       <div className="inspire-radial-left">
         <div className="inspire-radial-question">
           <span className="inspire-radial-kicker">
-            Website brief question {Math.min(questionIndex + 1, resolvedQuestions.length)}
-            {" "}
-            of {resolvedQuestions.length || 1}
+            {allQuestionsAnswered
+              ? "Website brief complete"
+              : `Website brief question ${Math.min(
+                  questionIndex + 1,
+                  resolvedQuestions.length
+                )} of ${resolvedQuestions.length || 1}`}
           </span>
           <h2>{currentQuestion?.prompt || question}</h2>
           <p>
@@ -777,18 +798,31 @@ export default function InspireRadialSelector({
       </div>
       <div className="inspire-radial-surface" ref={surfaceRef}>
         <div className="inspire-radial-center">
-          <span className="inspire-radial-center-kicker">Selected answer</span>
+          <span className="inspire-radial-center-kicker">
+            {showCompleteAction ? "Ready to continue" : "Selected answer"}
+          </span>
           <div className="inspire-radial-center-row">
-            <div className="inspire-radial-center-pill" style={centerStyle}>
-              <strong>{activeOption?.label || "Select"}</strong>
-            </div>
+            {!showCompleteAction ? (
+              <div className="inspire-radial-center-pill" style={centerStyle}>
+                <strong>{activeOption?.label || "Select"}</strong>
+              </div>
+            ) : null}
             <button
-              className="inspire-radial-confirm"
+              className={`inspire-radial-confirm${
+                showCompleteAction ? " is-complete" : ""
+              }`}
               type="button"
               onClick={handleConfirm}
-              aria-label="Confirm answer"
+              aria-label={
+                showCompleteAction
+                  ? "Complete brief and continue"
+                  : "Confirm answer"
+              }
               disabled={!activeOption}
             >
+              {showCompleteAction ? (
+                <span className="inspire-radial-confirm-text">Complete</span>
+              ) : null}
               <svg
                 viewBox="0 0 20 20"
                 fill="none"

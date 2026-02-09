@@ -7,6 +7,9 @@ let sharpPromise = null;
 const MIN_MASK_COVERAGE = 0.0015;
 const MAX_MASK_COVERAGE = 0.95;
 const MASK_ALPHA_THRESHOLD = 10;
+const MASK_DEBUG_ENABLED =
+  process.env.NODE_ENV !== "production" ||
+  process.env.INSPIRE_MASK_DEBUG === "1";
 
 const isFileLike = (value) =>
   value && typeof value === "object" && typeof value.arrayBuffer === "function";
@@ -103,6 +106,62 @@ const normalizeTextManifest = (value, maxItems = 10) => {
       return true;
     })
     .slice(0, maxItems);
+};
+
+const extractQuotedText = (value) => {
+  if (typeof value !== "string") {
+    return [];
+  }
+  const matches = [];
+  const matcher = /"([^"\n]{2,120})"|'([^'\n]{2,120})'/g;
+  let match;
+  while ((match = matcher.exec(value)) !== null) {
+    const candidate = normalizeInlineText(match[1] || match[2], 72);
+    if (candidate) {
+      matches.push(candidate);
+    }
+  }
+  return matches;
+};
+
+const extractRequestedTextLines = (value) => {
+  if (typeof value !== "string") {
+    return [];
+  }
+  const text = value.trim();
+  if (!text) {
+    return [];
+  }
+  const ruleMatches = [];
+  const markers = [
+    "text:",
+    "copy:",
+    "title:",
+    "headline:",
+    "button:",
+    "cta:",
+    "label:",
+  ];
+  text.split(/\r?\n/).forEach((line) => {
+    const normalizedLine = line.trim();
+    if (!normalizedLine) {
+      return;
+    }
+    const marker = markers.find((entry) =>
+      normalizedLine.toLowerCase().startsWith(entry)
+    );
+    if (!marker) {
+      return;
+    }
+    const valueText = normalizeInlineText(
+      normalizedLine.slice(marker.length).trim(),
+      72
+    );
+    if (valueText) {
+      ruleMatches.push(valueText);
+    }
+  });
+  return ruleMatches;
 };
 
 const extractField = (text, label) => {
@@ -269,58 +328,32 @@ const buildEditPrompt = ({
   ideaContext,
 }) => {
   const note = prompt?.toString().trim();
-  const planTitle = plan?.title?.toString().trim();
-  const planSummary = plan?.summary?.toString().trim();
-  const visualDirection = plan?.visualDirection?.toString().trim();
-  const styleTitle = style?.title?.toString().trim();
-  const styleSummary = style?.summary?.toString().trim();
-  const pageLabel = nodeContext?.node?.label?.toString().trim();
-  const pageDescription = nodeContext?.node?.description?.toString().trim();
-  const goals = brief?.goals?.toString().trim();
-  const normalizedIdeaContext = normalizeIdeaContext(ideaContext, brief);
-  const ideaContextText = formatIdeaContext(normalizedIdeaContext, brief);
-  const textManifest = resolvePlanTextManifest({
-    plan,
-    nodeContext,
-    brief,
-    ideaContext: normalizedIdeaContext,
-  });
-  const textManifestBlock = textManifest.length
+
+  // Keep text extraction focused on explicit user intent only.
+  const explicitQuotedText = extractQuotedText(note);
+  const explicitRuleText = extractRequestedTextLines(note);
+  const exactTextLines = normalizeTextManifest([...explicitQuotedText, ...explicitRuleText]);
+  const hasExplicitText = exactTextLines.length > 0;
+  const exactTextBlock = exactTextLines.length
     ? [
-        "Text manifest (allowed visible copy in edited region):",
-        ...textManifest.map((line, index) => `${index + 1}. "${line}"`),
+        "EXACT TEXT TO RENDER (highest priority, verbatim):",
+        ...exactTextLines.map(
+          (line, index) => `${index + 1}. "${line}"`
+        ),
       ].join("\n")
     : "";
-  const sections = Array.isArray(plan?.sections)
-    ? plan.sections.filter(Boolean)
-    : [];
-  const styleKeywords = Array.isArray(plan?.styleKeywords)
-    ? plan.styleKeywords.filter(Boolean)
-    : [];
 
   return [
-    "Edit the existing web UI image using the provided mask.",
-    "Treat the mask as a strict boundary: change only masked regions.",
-    "Keep all unmasked regions visually unchanged.",
+    "Edit the image using the provided mask.",
+    "STRICT MASK RULE: change only masked regions.",
+    "STRICT PRESERVE RULE: keep all unmasked regions visually unchanged.",
     note ? `User request (highest priority): ${note}` : null,
-    note ? "Implement the user request faithfully with concrete visual changes." : null,
-    planTitle ? `Concept: ${planTitle}` : null,
-    planSummary ? `Concept summary: ${planSummary}` : null,
-    visualDirection ? `Visual direction: ${visualDirection}` : null,
-    sections.length ? `Sections: ${sections.join(", ")}` : null,
-    styleKeywords.length ? `Plan style cues: ${styleKeywords.join(", ")}` : null,
-    styleTitle ? `Style title: ${styleTitle}` : null,
-    styleSummary ? `Style summary: ${styleSummary}` : null,
-    pageLabel ? `Page: ${pageLabel}` : null,
-    pageDescription ? `Page description: ${pageDescription}` : null,
-    goals ? `Goals: ${goals}` : null,
-    ideaContextText ? `Idea context:\n${ideaContextText}` : null,
-    textManifestBlock || null,
-    "Preserve overall style continuity with the existing composition.",
-    "If text appears in the edited area, keep it coherent and render exact wording only.",
-    "Never output gibberish, pseudo letters, placeholder copy, or watermarked text.",
-    "Return a polished full-page web UI image that matches the original background treatment.",
-    "Keep text legible and avoid watermarks or blurry details.",
+    "Interpret and apply the user request strictly and literally.",
+    exactTextBlock || null,
+    "TEXT RULE: if text is edited, render exact wording only with normal readable letters.",
+    "Do not generate gibberish, pseudo letters, placeholder text, or extra words.",
+    hasExplicitText ? "Do not render any text other than the exact text list." : null,
+    "Keep edited text sharp and legible.",
   ]
     .filter(Boolean)
     .join("\n");
@@ -527,6 +560,10 @@ export async function POST(request) {
     formData.append("num_images", "1");
     formData.append("rendering_speed", "QUALITY");
     formData.append("magic_prompt", "OFF");
+    formData.append(
+      "negative_prompt",
+      "gibberish text, fake letters, random symbols, lorem ipsum, unreadable text, blurry text, watermark, misspelled words, distorted typography"
+    );
 
     const response = await fetch(IDEOGRAM_EDIT_ENDPOINT, {
       method: "POST",
@@ -540,6 +577,12 @@ export async function POST(request) {
       return NextResponse.json(
         {
           error: toIdeogramErrorMessage(response.status, responsePayload),
+          debug: MASK_DEBUG_ENABLED
+            ? {
+                userPrompt: promptText,
+                maskPrompt: prompt,
+              }
+            : undefined,
         },
         { status: response.status }
       );
@@ -559,6 +602,12 @@ export async function POST(request) {
       resizedMask: resized,
       maskCoverage: coverage,
       model: "ideogram-v3-edit",
+      debug: MASK_DEBUG_ENABLED
+        ? {
+            userPrompt: promptText,
+            maskPrompt: prompt,
+          }
+        : undefined,
     });
   } catch (error) {
     return NextResponse.json(

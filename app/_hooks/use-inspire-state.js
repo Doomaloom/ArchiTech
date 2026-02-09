@@ -600,10 +600,22 @@ export default function useInspireState() {
       });
       const payload = await response.json();
       if (!response.ok) {
+        if (payload?.debug?.maskPrompt) {
+          console.info("[Inspire][Mask Edit] Prompt sent to Ideogram", {
+            userPrompt: payload.debug.userPrompt || "",
+            maskPrompt: payload.debug.maskPrompt,
+          });
+        }
         throw new Error(payload?.error || "Failed to apply mask edit.");
       }
       if (!payload?.imageUrl) {
         throw new Error("Edited image was not returned.");
+      }
+      if (payload?.debug?.maskPrompt) {
+        console.info("[Inspire][Mask Edit] Prompt sent to Ideogram", {
+          userPrompt: payload.debug.userPrompt || "",
+          maskPrompt: payload.debug.maskPrompt,
+        });
       }
 
       setPreviewItems((current) =>
@@ -621,7 +633,9 @@ export default function useInspireState() {
       );
       setWorkspaceMask(null);
       setWorkspaceStatusMessage(
-        "Mask edit complete. The mask was cleared for the next change."
+        payload?.debug?.maskPrompt
+          ? "Mask edit complete. Debug prompt logged to console."
+          : "Mask edit complete. The mask was cleared for the next change."
       );
     } catch (error) {
       setWorkspaceStatusMessage("");

@@ -8387,6 +8387,26 @@ body:has(.inspire-shell) .imageflow-tree .react-flow__node-default.selected {
   color: rgb(var(--inspire-accent-strong-rgb));
 }
 
+.inspire-shell .imageflow-generate-button:hover:not(:disabled),
+.inspire-shell .imageflow-generate-button:focus-visible {
+  border-color: rgba(var(--inspire-accent-rgb), 0.5);
+  background: rgba(var(--inspire-accent-rgb), 0.12);
+  color: rgb(var(--inspire-accent-strong-rgb));
+}
+
+.inspire-shell .imageflow-input-field:focus,
+.inspire-shell .imageflow-textarea:focus {
+  border-color: rgba(var(--inspire-accent-rgb), 0.45);
+  box-shadow: 0 0 0 1px rgba(var(--inspire-accent-rgb), 0.08);
+  background: rgba(255, 255, 255, 0.56);
+}
+
+.inspire-shell .imageflow-input-field:focus-visible,
+.inspire-shell .imageflow-textarea:focus-visible {
+  outline: 2px solid rgba(var(--inspire-accent-rgb), 0.3);
+  outline-offset: 1px;
+}
+
 .inspire-shell .imageflow-dropzone.is-ready {
   border-color: rgba(var(--inspire-accent-rgb), 0.45);
 }
@@ -8630,6 +8650,20 @@ body:has(.inspire-shell) .imageflow-tree .react-flow__node-default.selected {
 .inspire-radial-confirm svg {
   width: 16px;
   height: 16px;
+}
+
+.inspire-radial-confirm.is-complete {
+  width: auto;
+  min-width: 104px;
+  padding: 0 12px;
+  gap: 6px;
+}
+
+.inspire-radial-confirm-text {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .inspire-radial-confirm:hover:not(:disabled) {

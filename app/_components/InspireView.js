@@ -510,6 +510,27 @@ export default function InspireView() {
     [inspireActions]
   );
 
+  const handleDescriptionComplete = useCallback(
+    (selections, resolvedQuestions) => {
+      if (!selections || !resolvedQuestions?.length) {
+        return;
+      }
+      const nextBrief = buildBriefFromSelections(resolvedQuestions, selections);
+      const nextIdeaContext = buildIdeaContextFromSelections(
+        resolvedQuestions,
+        selections
+      );
+      inspireActions.updateBrief("title", nextBrief.title);
+      inspireActions.updateBrief("name", nextBrief.name);
+      inspireActions.updateBrief("details", nextBrief.details);
+      inspireActions.updateBrief("audience", nextBrief.audience);
+      inspireActions.updateBrief("goals", nextBrief.goals);
+      inspireActions.setIdeaContext(nextIdeaContext);
+      setInspireStep(INSPIRE_STEPS.STYLE);
+    },
+    [inspireActions, setInspireStep]
+  );
+
   useEffect(() => {
     if (inspireStep === INSPIRE_STEPS.BUILDER && imageState.viewMode !== "builder") {
       imageActions.setViewMode("builder");
@@ -704,7 +725,12 @@ export default function InspireView() {
 
   const renderMainPanel = () => {
     if (inspireStep === INSPIRE_STEPS.DESCRIPTION) {
-      return <InspireRadialSelector onConfirm={handleDescriptionConfirm} />;
+      return (
+        <InspireRadialSelector
+          onConfirm={handleDescriptionConfirm}
+          onComplete={handleDescriptionComplete}
+        />
+      );
     }
     if (inspireStep === INSPIRE_STEPS.BUILDER) {
       return <BuilderView />;

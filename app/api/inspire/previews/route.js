@@ -113,6 +113,22 @@ const normalizeTextManifest = (value, maxItems = MAX_TEXT_LINES) => {
     .slice(0, maxItems);
 };
 
+const extractQuotedText = (value) => {
+  if (typeof value !== "string") {
+    return [];
+  }
+  const matches = [];
+  const matcher = /"([^"\n]{2,120})"|'([^'\n]{2,120})'/g;
+  let match;
+  while ((match = matcher.exec(value)) !== null) {
+    const candidate = normalizeInlineText(match[1] || match[2], MAX_TEXT_LINE_LENGTH);
+    if (candidate) {
+      matches.push(candidate);
+    }
+  }
+  return matches;
+};
+
 const normalizePlan = (plan, index) => {
   const safe = plan ?? {};
   const sections = normalizeStringList(safe.sections);
@@ -309,21 +325,35 @@ const buildFallbackTextManifest = ({ plan, nodeContext, brief, ideaContext }) =>
   ]);
 };
 
-const resolvePlanTextManifest = ({ plan, nodeContext, brief, ideaContext }) => {
+const resolvePlanTextManifest = ({
+  plan,
+  nodeContext,
+  brief,
+  ideaContext,
+  workspace,
+}) => {
   const planLines = normalizeTextManifest(plan?.textContent);
+  const workspaceNote = workspace?.note?.toString().trim() || "";
+  const workspaceLines = normalizeTextManifest(extractQuotedText(workspaceNote));
   const fallbackLines = buildFallbackTextManifest({
     plan,
     nodeContext,
     brief,
     ideaContext,
   });
-  return normalizeTextManifest([...planLines, ...fallbackLines]);
+  return normalizeTextManifest([...workspaceLines, ...planLines, ...fallbackLines]);
 };
 
-const enrichPlan = ({ plan, nodeContext, brief, ideaContext }) => {
+const enrichPlan = ({ plan, nodeContext, brief, ideaContext, workspace }) => {
   return {
     ...plan,
-    textContent: resolvePlanTextManifest({ plan, nodeContext, brief, ideaContext }),
+    textContent: resolvePlanTextManifest({
+      plan,
+      nodeContext,
+      brief,
+      ideaContext,
+      workspace,
+    }),
     internalExperience: normalizeStringList(plan?.internalExperience),
     mustInclude: normalizeStringList(plan?.mustInclude),
   };
@@ -418,6 +448,7 @@ const buildHtmlPrompt = ({
     nodeContext,
     brief,
     ideaContext,
+    workspace,
   });
   return [
     "You are an expert frontend designer.",
@@ -507,6 +538,7 @@ const buildIdeogramPrompt = ({
     nodeContext,
     brief,
     ideaContext,
+    workspace,
   });
   const textManifestBlock = textManifest.length
     ? [
@@ -812,7 +844,7 @@ export async function POST(request) {
       );
     }
     const plans = parsedPlans.map((plan) =>
-      enrichPlan({ plan, nodeContext, brief, ideaContext })
+      enrichPlan({ plan, nodeContext, brief, ideaContext, workspace })
     );
 
     if (previewMode === "html") {
