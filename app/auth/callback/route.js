@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { createServerSupabaseClient } from "../../_lib/supabase/server";
+import { createServerClient } from "@supabase/ssr";
+import { getSupabasePublishableKey, getSupabaseUrl } from "../../_lib/supabase/env";
 import { BYPASS_AUTH } from "../../_lib/runtime-flags";
 import { getRequestOrigin } from "../../_lib/request-origin";
 
@@ -55,7 +56,23 @@ export async function GET(request) {
     return NextResponse.redirect(fallbackRedirect);
   }
 
-  const supabase = await createServerSupabaseClient();
+  const response = NextResponse.redirect(new URL(nextPath, origin));
+  const supabase = createServerClient(
+    getSupabaseUrl(),
+    getSupabasePublishableKey(),
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          );
+        },
+      },
+    }
+  );
   const { error } = await supabase.auth.exchangeCodeForSession(code);
   if (error) {
     fallbackRedirect.searchParams.set(
@@ -65,5 +82,5 @@ export async function GET(request) {
     return NextResponse.redirect(fallbackRedirect);
   }
 
-  return NextResponse.redirect(new URL(nextPath, origin));
+  return response;
 }
