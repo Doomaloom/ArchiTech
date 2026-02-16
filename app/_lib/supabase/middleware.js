@@ -10,6 +10,7 @@ const PUBLIC_PATHS = new Set([
   "/auth/callback",
   "/auth/login",
   "/auth/logout",
+  "/auth/debug",
 ]);
 
 function isStaticAsset(pathname) {
