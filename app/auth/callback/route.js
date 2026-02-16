@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "../../_lib/supabase/server";
 import { BYPASS_AUTH } from "../../_lib/runtime-flags";
+import { getRequestOrigin } from "../../_lib/request-origin";
 
 function resolveNextPath(nextValue) {
   if (typeof nextValue !== "string") {
@@ -13,13 +14,14 @@ function resolveNextPath(nextValue) {
 }
 
 export async function GET(request) {
-  const requestUrl = new URL(request.url);
+  const origin = getRequestOrigin(request);
+  const requestUrl = request.nextUrl;
   const code = requestUrl.searchParams.get("code");
   const nextPath = resolveNextPath(requestUrl.searchParams.get("next"));
   if (BYPASS_AUTH) {
-    return NextResponse.redirect(new URL("/", request.url));
+    return NextResponse.redirect(new URL("/", origin));
   }
-  const fallbackRedirect = new URL("/login", request.url);
+  const fallbackRedirect = new URL("/login", origin);
   fallbackRedirect.searchParams.set("next", nextPath);
 
   if (!code) {
@@ -34,5 +36,5 @@ export async function GET(request) {
     return NextResponse.redirect(fallbackRedirect);
   }
 
-  return NextResponse.redirect(new URL(nextPath, request.url));
+  return NextResponse.redirect(new URL(nextPath, origin));
 }

@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import { getSupabasePublishableKey, getSupabaseUrl } from "./env";
 import { BYPASS_AUTH } from "../runtime-flags";
+import { getRequestOrigin } from "../request-origin";
 
 const PUBLIC_PATHS = new Set([
   "/",
@@ -20,6 +21,7 @@ function isStaticAsset(pathname) {
 }
 
 export async function updateSession(request) {
+  const origin = getRequestOrigin(request);
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -67,12 +69,12 @@ export async function updateSession(request) {
   } = await supabase.auth.getUser();
 
   if (pathname === "/login" && user) {
-    return NextResponse.redirect(new URL("/", request.url));
+    return NextResponse.redirect(new URL("/", origin));
   }
 
   if (!user && !PUBLIC_PATHS.has(pathname) && !pathname.startsWith("/api")) {
     const next = `${pathname}${request.nextUrl.search || ""}`;
-    const loginUrl = new URL("/login", request.url);
+    const loginUrl = new URL("/login", origin);
     loginUrl.searchParams.set("next", next);
     return NextResponse.redirect(loginUrl);
   }
