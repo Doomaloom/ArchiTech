@@ -36,11 +36,7 @@ export default async function LoginPage({ searchParams }) {
         </p>
         {error ? <p className="landing-error">{error}</p> : null}
         <div className="landing-actions">
-          <Link
-            className="landing-button landing-button-google"
-            href={loginHref}
-            replace={BYPASS_AUTH}
-          >
+          <a className="landing-button landing-button-google" href={loginHref}>
             <span className="landing-button-google-icon" aria-hidden="true">
               <svg viewBox="0 0 18 18" role="img" aria-label="Google">
                 <path
@@ -62,7 +58,7 @@ export default async function LoginPage({ searchParams }) {
               </svg>
             </span>
             <span>{BYPASS_AUTH ? "Enter app" : "Continue with Google"}</span>
-          </Link>
+          </a>
           <Link className="landing-link" href="/">
             Back to ProtoBop
           </Link>
