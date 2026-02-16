@@ -13,26 +13,55 @@ function resolveNextPath(nextValue) {
   return nextValue;
 }
 
+function formatAuthError(message) {
+  if (typeof message !== "string") {
+    return "Sign in failed.";
+  }
+  const sanitized = message.replace(/\s+/g, " ").trim();
+  if (!sanitized) {
+    return "Sign in failed.";
+  }
+  return sanitized.length > 200 ? `${sanitized.slice(0, 200)}…` : sanitized;
+}
+
 export async function GET(request) {
   const origin = getRequestOrigin(request);
   const requestUrl = request.nextUrl;
   const code = requestUrl.searchParams.get("code");
   const nextPath = resolveNextPath(requestUrl.searchParams.get("next"));
+  const oauthError = requestUrl.searchParams.get("error");
+  const oauthErrorDescription = requestUrl.searchParams.get(
+    "error_description"
+  );
   if (BYPASS_AUTH) {
     return NextResponse.redirect(new URL("/", origin));
   }
   const fallbackRedirect = new URL("/login", origin);
   fallbackRedirect.searchParams.set("next", nextPath);
 
+  if (oauthError) {
+    const combined = oauthErrorDescription
+      ? `${oauthError}: ${oauthErrorDescription}`
+      : oauthError;
+    fallbackRedirect.searchParams.set("error", formatAuthError(combined));
+    return NextResponse.redirect(fallbackRedirect);
+  }
+
   if (!code) {
-    fallbackRedirect.searchParams.set("error", "Missing auth code.");
+    fallbackRedirect.searchParams.set(
+      "error",
+      formatAuthError("Missing auth code.")
+    );
     return NextResponse.redirect(fallbackRedirect);
   }
 
   const supabase = await createServerSupabaseClient();
   const { error } = await supabase.auth.exchangeCodeForSession(code);
   if (error) {
-    fallbackRedirect.searchParams.set("error", "Sign in failed.");
+    fallbackRedirect.searchParams.set(
+      "error",
+      formatAuthError(`Sign in failed: ${error.message ?? "Unknown error"}`)
+    );
     return NextResponse.redirect(fallbackRedirect);
   }
 
